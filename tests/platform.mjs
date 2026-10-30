@@ -131,6 +131,13 @@ try {
   docs = (await call('zey', 'workspace', 'bootstrap')).data.items.filter(i => i.kind === 'document' && i.id === up.data.id);
   assert.ok(docs[0].data.autoCheck); assert.equal(docs[0].data.status, 'İncelemede');
 
+  // pre-assessment lead gate: e-mail + consent required, visible to admin only
+  assert.equal((await call('v', 'auth', 'lead', {email: 'bad', consent: true})).status, 400);
+  assert.equal((await call('v', 'auth', 'lead', {email: 'lead@test.com'})).status, 400);
+  assert.equal((await call('v', 'auth', 'lead', {email: 'lead@test.com', consent: true, answers: {goal: 'cpf', status: 'hic', bond: 'yok'}, results: [{id: 'cpf', title: 'CPF', score: 99}]})).status, 200);
+  assert.equal((await call('admin', 'admin', 'leads')).data.leads[0].email, 'lead@test.com');
+  assert.equal((await call('zey', 'admin', 'leads')).status, 401);
+
   // logout ends the session
   await call('zey', 'auth', 'logout', {});
   assert.equal((await call('zey', 'workspace', 'bootstrap')).status, 401);

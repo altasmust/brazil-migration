@@ -1,7 +1,7 @@
 // Unified login, registration, partner onboarding, admin account management and panel modules.
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
-  createSession, currentUser, destroySession, createToken, useToken, siteUrl, adminUrl, isAdminRequest, adminHosts,
+  createSession, currentUser, destroySession, createToken, useToken, siteUrl, adminUrl, isAdminRequest, adminHosts, sha,
 } from './auth.mjs';
 import {sendMail, mailConfigured} from './mail.mjs';
 import {CITIES, locate, fromRequest, distanceKm} from './geo.mjs';
@@ -101,7 +101,7 @@ export async function handleAuth(req, env, route) {
   route = route.replace(/^admin\//, '');
   if (req.method !== 'GET') sameOrigin(req);
   if (route === 'cities' && req.method === 'GET') return json({countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES});
-  if (route === 'config' && req.method === 'GET') return json({mail: mailConfigured(), verifier: verifierConfigured(), adminSeparate: adminHosts().length > 0});
+  if (route === 'config' && req.method === 'GET') return json({mail: mailConfigured(), verifier: verifierConfigured(), adminSeparate: adminHosts().length > 0, whatsapp: (process.env.WHATSAPP_NUMBER || '').replace(/\D/g, '') || null});
 
   if (route === 'me' && req.method === 'GET') {
     const u = await currentUser(db, req); if (!u) return json({user: null});
@@ -160,6 +160,25 @@ export async function handleAuth(req, env, route) {
     return json({ok: true, verifyRequired: true, mailSent: mail.sent, devLink: mail.devLink});
   }
 
+  if (route === 'lead' && req.method === 'POST') { // pre-assessment result gate (public)
+    const email = clean(b.email, 254).toLowerCase();
+    if (!validEmail(email)) fail(400, 'Geçerli bir e-posta adresi girin.');
+    if (!b.consent) fail(400, 'Devam etmek için abonelik koşullarını onaylayın.');
+    const answers = {goal: clean(b.answers?.goal, 30), status: clean(b.answers?.status, 30), bond: clean(b.answers?.bond, 30)};
+    const results = (Array.isArray(b.results) ? b.results : []).slice(0, 5).map(r => ({id: clean(r.id, 40), title: clean(r.title, 120), score: Math.max(0, Math.min(100, Number(r.score) || 0))}));
+    const id = 'lead-' + sha(email).slice(0, 24);
+    const old = await getItem(db, id);
+    if (old && now() - (old.data.at || 0) < 60e3 && !b.send) return json({ok: true});
+    const data = {email, name: clean(b.name, 100), answers, results, consent: true, consentText: clean(b.consentText, 300), at: now(), count: (old?.data.count || 0) + 1, sent: old?.data.sent || false};
+    let mail = {sent: false};
+    if (b.send) {
+      const lines = results.map((r, i) => `${i + 1}. ${r.title} — ${r.score}/100`).join('\n');
+      mail = await sendMail({to: email, subject: 'Brezilya yol haritanız', title: 'Kişisel Brezilya yol haritanız', text: `Ön değerlendirme sonuçlarınız:\n${lines}\n\nDanışmanlarımız sizinle iletişime geçecek. Ücretsiz 15 dakikalık ön görüşme için sitemizi ziyaret edebilirsiniz.`, link: siteUrl(req) + '/giris/?kayit=1', button: 'Ücretsiz hesap oluştur'});
+      data.sent = data.sent || mail.sent; data.roadmapRequested = true;
+    }
+    await db.batch([putItem(db, id, 'lead', 'owner', data), ...(!old || b.send ? [notice(db, 'owner', (b.send ? 'Yol haritası talebi: ' : 'Yeni ön değerlendirme: ') + email, 'leads')] : [])]);
+    return json({ok: true, mailSent: mail.sent});
+  }
   if (route === 'verify' && req.method === 'POST') {
     const t = await useToken(db, b.token, ['verify']);
     await q(db, 'UPDATE auth_users SET verified=1 WHERE id=?', t.user).run();
@@ -477,6 +496,10 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     return streamFile(env, p.docs[doc]);
   }
 
+  if (route === 'leads' && req.method === 'GET') {
+    const list = await rows(db, "SELECT * FROM items WHERE kind='lead' ORDER BY updated DESC LIMIT 500");
+    return json({leads: list.map(r => ({id: r.id, ...parse(r.data), updated: r.updated}))});
+  }
   if (route === 'modules' && req.method === 'GET') {
     const list = (await rows(db, "SELECT * FROM items WHERE kind='panel_module' ORDER BY created")).map(r => ({id: r.id, ...parse(r.data)}));
     return json({modules: list, builtins: (await getItem(db, 'panel-builtins'))?.data || {}});

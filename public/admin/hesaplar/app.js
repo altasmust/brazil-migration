@@ -141,6 +141,16 @@
     };
   }
 
+  // ---------- Pre-assessment leads ----------
+  const ANS = {goal: {vatandaslik: 'Vatandaşlık', ikamet: 'Yasal ikamet / CRNM', sirket: 'Şirket kurmak', cpf: 'CPF', evlilik: 'Brezilyalı ile evlilik', tasinma: 'Taşınma planı'}, status: {hic: 'Hiç gitmedi', kisa: 'Kısa süre gitti', turist: 'Brezilya’da turist', vize: 'Vizesi var', ikamet: 'Yasal ikametli'}, bond: {es: 'Brezilyalı eş', cocuk: 'Brezilyalı çocuk', is: 'İş teklifi/planı', yatirim: 'Yatırım sermayesi', gelir: 'Uzaktan/emekli geliri', yok: 'Yok'}};
+  async function leads() {
+    const d = await api('leads');
+    const csv = () => { const rows = [['E-posta', 'Ad', 'Hedef', 'Durum', 'Bağ', 'Sonuçlar', 'Yol haritası istedi', 'Tarih']].concat(d.leads.map(l => [l.email, l.name || '', ANS.goal[l.answers?.goal] || '', ANS.status[l.answers?.status] || '', ANS.bond[l.answers?.bond] || '', (l.results || []).map(r => r.title + ' ' + r.score).join(' | '), l.roadmapRequested ? 'Evet' : '', new Date(l.updated).toLocaleString('tr-TR')])); const blob = new Blob(['\ufeff' + rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(';')).join('\n')], {type: 'text/csv'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'on-degerlendirmeler.csv'; a.click(); };
+    $('#view').innerHTML = `<div class="bm-box"><div class="bm-flex"><div><h2 style="margin:0">Ön değerlendirme sonuçları (${d.leads.length})</h2><p class="muted" style="margin:4px 0 0;font-size:12.5px">/degerlendirme/ sayfasında testi tamamlayıp e-posta ve abonelik onayı veren ziyaretçiler.</p></div><span class="sp"></span><button class="b" id="csv">CSV indir</button></div></div>
+    <div class="bm-box" style="padding:8px"><table class="bm-t"><thead><tr><th>E-posta</th><th>Yanıtlar</th><th>Önerilen seçenekler</th><th>Tarih</th></tr></thead><tbody>${d.leads.map(l => `<tr><td><b>${esc(l.email)}</b>${l.name ? `<br><small class="muted">${esc(l.name)}</small>` : ''}${l.roadmapRequested ? '<br><span class="tag g">Yol haritası istedi</span>' : ''}</td><td><small>${esc(ANS.goal[l.answers?.goal] || '-')}<br>${esc(ANS.status[l.answers?.status] || '-')}<br>${esc(ANS.bond[l.answers?.bond] || '-')}</small></td><td><small>${(l.results || []).map(r => esc(r.title) + ' — <b>' + r.score + '</b>').join('<br>')}</small></td><td><small>${date(l.updated)}</small></td></tr>`).join('') || '<tr><td colspan="4" class="muted">Henüz kayıt yok.</td></tr>'}</tbody></table></div>`;
+    $('#csv').onclick = csv;
+  }
+
   async function route() {
     tab = (location.hash || '#hesaplar').slice(1) || 'hesaplar';
     $$('#tabs a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + tab));
@@ -149,6 +159,7 @@
       if (tab === 'yeni') { if (!ACCOUNTS.length) ACCOUNTS = (await api('accounts')).accounts; newForm(); }
       else if (tab === 'partnerler') await partners();
       else if (tab === 'moduller') await modulesView();
+      else if (tab === 'degerlendirmeler') await leads();
       else await accounts();
     } catch (err) { if (err.message !== 'Giriş gerekli') note('err', esc(err.message)); }
   }
