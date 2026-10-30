@@ -46,3 +46,22 @@ body[data-page="home"] .services .kicker:before,body[data-page="home"] .why .kic
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) :is(.service-card.bm-live,.why .why-grid article.bm-live,.bm-ribbon div){background:#13201b}:root:not([data-theme=light]) .bm-thumb:after{background:linear-gradient(180deg,transparent 45%,rgba(19,32,27,.9))}:root:not([data-theme=light]) .service-card.bm-live .bm-ico{background:#1c2e26}}
 :root[data-theme=dark] :is(.service-card.bm-live,.why .why-grid article.bm-live,.bm-ribbon div){background:#13201b}:root[data-theme=dark] .bm-thumb:after{background:linear-gradient(180deg,transparent 45%,rgba(19,32,27,.9))}:root[data-theme=dark] .service-card.bm-live .bm-ico{background:#1c2e26}
 @media (prefers-reduced-motion:reduce){.service-card.bm-live,.why .why-grid article.bm-live{transition:none}.service-card.bm-live:hover,.why .why-grid article.bm-live:hover{transform:none}}
+/* düzeltmeler: ikonlar kutuda tam ortalı, eski span kurallarından bağımsız */
+body[data-page="home"] span.bm-ico{display:inline-grid!important;place-items:center;flex:none;margin-bottom:0;font-size:0;line-height:0;color:var(--forest)}
+body[data-page="home"] span.bm-ico.gold{color:#8a6510}
+body[data-page="home"] span.bm-ico:before{display:none!important;content:none!important}
+body[data-page="home"] span.bm-ico svg{display:block;margin:0}
+/* güven şeridi: 4 eşit sütun, her öğe ortada */
+.trust.bm-live{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:center}
+.trust.bm-live>span{justify-content:center;text-align:left;line-height:1.35}
+@media (max-width:760px){.trust.bm-live{grid-template-columns:1fr 1fr}.trust.bm-live>span{justify-content:flex-start}}
+/* hizmet kartı görseli: beyaz geçiş yok, temiz kesim */
+.bm-thumb:after{display:none!important}
+.bm-thumb{border-bottom:1px solid var(--line);background-color:#f3f6ee}
+.service-card.bm-live>span.bm-ico{margin:-22px 12px 14px 0;vertical-align:middle;background:#fff;border:1px solid var(--line)}
+.service-card.bm-live .card-number{vertical-align:middle;margin-left:2px}
+/* neden biz: ikon kutusu ortalı, numarayla arasında boşluk */
+.why .why-grid article.bm-live>span.bm-ico{width:48px;height:48px;border-radius:14px;margin:0 0 16px}
+.why .why-grid article.bm-live>span.bm-ico svg{width:22px;height:22px}
+.settling-list.bm-live span.bm-ico svg{width:16px;height:16px}
+.trust.bm-live span.bm-ico svg{width:18px;height:18px}
