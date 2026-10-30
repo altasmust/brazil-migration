@@ -1,0 +1,60 @@
+{
+  "generator": "Built-in image_gen",
+  "assets": [
+    {
+      "key": "oturum",
+      "path": "public/images/marketing-v2/oturum.webp",
+      "prompt": "Use case: illustration-story. Asset type: premium migration consultancy website hero, landscape 3:2. Create a polished editorial illustration: A welcoming family of three with a small suitcase and home keys, surrounded by a tasteful miniature São Paulo skyline and lush tropical foliage. Theme: residence permit and settling into family life in São Paulo. Consistent visual language: sophisticated vector-like forms with subtle dimensional shading, refined human anatomy and faces, crisp edges, rich emerald green #1B5E20, teal #00695C, lively sunlit golden yellow and warm coral accents, natural skin colors. Confident luxury travel editorial quality, not childish or generic clip art. Harmonious uncluttered composition, complete subjects centered with breathing space, elegantly layered elements. True transparent alpha background; no opaque rectangular background, no checkerboard, no text, no captions, no watermarks. High resolution, beautifully detailed, lively optimistic mood."
+    },
+    {
+      "key": "evlilik",
+      "path": "public/images/marketing-v2/evlilik.webp",
+      "prompt": "Use case: illustration-story. Asset type: premium migration consultancy website hero, landscape 3:2. Create a polished editorial illustration: An affectionate adult couple standing together, a refined interlocking wedding ring motif and a small elegant document folder, with São Paulo architecture and tropical leaves. Theme: marriage and building a shared life. Consistent visual language: sophisticated vector-like forms with subtle dimensional shading, refined human anatomy and faces, crisp edges, rich emerald green #1B5E20, teal #00695C, lively sunlit golden yellow and warm coral accents, natural skin colors. Confident luxury travel editorial quality, not childish or generic clip art. Harmonious uncluttered composition, complete subjects centered with breathing space, elegantly layered elements. True transparent alpha background; no opaque rectangular background, no checkerboard, no text, no captions, no watermarks. High resolution, beautifully detailed, lively optimistic mood."
+    },
+    {
+      "key": "lgbt",
+      "path": "public/images/marketing-v2/lgbt.webp",
+      "prompt": "Use case: illustration-story. Asset type: premium migration consultancy website hero, landscape 3:2. Create a polished editorial illustration: Two adult women holding hands, confident and joyful, a subtle colorful rainbow ribbon woven through lush tropical foliage and a miniature São Paulo skyline. Theme: equality, belonging, and residence for LGBT couples. Consistent visual language: sophisticated vector-like forms with subtle dimensional shading, refined human anatomy and faces, crisp edges, rich emerald green #1B5E20, teal #00695C, lively sunlit golden yellow and warm coral accents, natural skin colors. Confident luxury travel editorial quality, not childish or generic clip art. Harmonious uncluttered composition, complete subjects centered with breathing space, elegantly layered elements. True transparent alpha background; no opaque rectangular background, no checkerboard, no text, no captions, no watermarks. High resolution, beautifully detailed, lively optimistic mood."
+    },
+    {
+      "key": "vatandaslik",
+      "path": "public/images/marketing-v2/vatandaslik.webp",
+      "prompt": "Use case: illustration-story. Asset type: premium migration consultancy website hero, landscape 3:2. Create a polished editorial illustration: A sophisticated composition of a dark blue generic passport with an abstract golden globe (no lettering or official seal), emerald document folder, a tasteful small Brazilian flag, tropical foliage and São Paulo skyline. Theme: Brazilian citizenship. Consistent visual language: sophisticated vector-like forms with subtle dimensional shading, refined human anatomy and faces, crisp edges, rich emerald green #1B5E20, teal #00695C, lively sunlit golden yellow and warm coral accents, natural skin colors. Confident luxury travel editorial quality, not childish or generic clip art. Harmonious uncluttered composition, complete subjects centered with breathing space, elegantly layered elements. True transparent alpha background; no opaque rectangular background, no checkerboard, no text, no captions, no watermarks. High resolution, beautifully detailed, lively optimistic mood."
+    },
+    {
+      "key": "sirket",
+      "path": "public/images/marketing-v2/sirket.webp",
+      "prompt": "Use case: illustration-story. Asset type: premium migration consultancy website hero, landscape 3:2. Create a polished editorial illustration: Two adult entrepreneurs discussing their new venture beside a contemporary glass São Paulo office tower miniature, a laptop and an elegant briefcase, tropical foliage. Theme: company formation and doing business in São Paulo. Consistent visual language: sophisticated vector-like forms with subtle dimensional shading, refined human anatomy and faces, crisp edges, rich emerald green #1B5E20, teal #00695C, lively sunlit golden yellow and warm coral accents, natural skin colors. Confident luxury travel editorial quality, not childish or generic clip art. Harmonious uncluttered composition, complete subjects centered with breathing space, elegantly layered elements. True transparent alpha background; no opaque rectangular background, no checkerboard, no text, no captions, no watermarks. High resolution, beautifully detailed, lively optimistic mood."
+    },
+    {
+      "key": "iletisim",
+      "path": "public/images/marketing-v2/iletisim.webp",
+      "prompt": "Use case: illustration-story. Asset type: premium migration consultancy website hero, landscape 3:2. Create a polished editorial illustration: A friendly professional female migration consultant wearing an emerald blazer, at an elegant laptop with a small video call tile showing a client, headset, a tropical plant and small São Paulo skyline elements. Theme: personal consultation and accessible communication. Consistent visual language: sophisticated vector-like forms with subtle dimensional shading, crisp edges, rich emerald green #1B5E20, teal #00695C, lively sunlit golden yellow and warm coral accents. Luxury editorial quality, not childish or generic clip art. Harmonious uncluttered composition, complete subjects centered with breathing space, elegantly layered elements. True transparent alpha background; no opaque rectangular background, no checkerboard, no text, no captions, no watermarks. High resolution, beautiful detail, lively optimistic mood."
+    },
+    {
+      "key": "degerlendirme",
+      "path": "public/images/marketing-v2/degerlendirme.webp",
+      "prompt": "Use case: illustration-story. Asset type: premium migration consultancy website hero, landscape 3:2. Create a polished editorial illustration: A large elegant compass, an open notebook with abstract check marks (no words), and a winding route leading to a miniature São Paulo skyline with a location pin, tropical foliage. Theme: discovering the right migration path and preparing a personal plan. Consistent visual language: sophisticated vector-like forms with subtle dimensional shading, crisp edges, rich emerald green #1B5E20, teal #00695C, lively sunlit golden yellow and warm coral accents. Luxury editorial quality, not childish or generic clip art. Harmonious uncluttered composition, complete subjects centered with breathing space, elegantly layered elements. True transparent alpha background; no opaque rectangular background, no checkerboard, no text, no captions, no watermarks. High resolution, beautiful detail, lively optimistic mood."
+    },
+    {
+      "key": "kaynaklar",
+      "path": "public/images/marketing-v2/kaynaklar.webp",
+      "prompt": "Use case: illustration-story. Asset type: premium migration consultancy website hero, landscape 3:2. Create a polished editorial illustration: A refined open reference book, a magnifying glass, carefully stacked cream and emerald legal document folders and a small São Paulo skyline accent, tropical leaf. Theme: reliable research and documented knowledge. Consistent visual language: sophisticated vector-like forms with subtle dimensional shading, crisp edges, rich emerald green #1B5E20, teal #00695C, lively sunlit golden yellow and warm coral accents. Luxury editorial quality, not childish or generic clip art. Harmonious uncluttered composition, complete subjects centered with breathing space, elegantly layered elements. True transparent alpha background; no opaque rectangular background, no checkerboard, no text, no captions, no watermarks. High resolution, beautiful detail, lively optimistic mood."
+    },
+    {
+      "key": "icerik",
+      "path": "public/images/marketing-v2/icerik.webp",
+      "prompt": "Use case: illustration-story. Asset type: premium migration consultancy website hero, landscape 3:2. Create a polished editorial illustration: A beautifully composed editorial desk still life: open planning notebook with abstract blocks (no words), teal pen, calendar-like cards without lettering, a miniature São Paulo skyline and tropical leaves. Theme: structured travel and migration guide. Consistent visual language: sophisticated vector-like forms with subtle dimensional shading, crisp edges, rich emerald green #1B5E20, teal #00695C, lively sunlit golden yellow and warm coral accents. Luxury editorial quality, not childish or generic clip art. Harmonious uncluttered composition, complete subjects centered with breathing space, elegantly layered elements. True transparent alpha background; no opaque rectangular background, no checkerboard, no text, no captions, no watermarks. High resolution, beautiful detail, lively optimistic mood."
+    },
+    {
+      "key": "giris",
+      "path": "public/images/marketing-v2/giris.webp",
+      "prompt": "Use case: illustration-story. Asset type: premium migration consultancy website hero, landscape 3:2. Create a polished editorial illustration: A welcoming open architectural doorway framing a small São Paulo skyline and sunshine, a tasteful emerald document portfolio and subtle golden key, tropical leaves. Theme: returning to your personal migration journey, elegant welcome. Consistent visual language: sophisticated vector-like forms with subtle dimensional shading, crisp edges, rich emerald green #1B5E20, teal #00695C, lively sunlit golden yellow and warm coral accents. Luxury editorial quality, not childish or generic clip art. Harmonious uncluttered composition, complete subjects centered with breathing space, elegantly layered elements. True transparent alpha background; no opaque rectangular background, no checkerboard, no text, no captions, no watermarks. High resolution, beautiful detail, lively optimistic mood."
+    },
+    {
+      "key": "parque",
+      "path": "public/images/marketing-v2/parque.webp",
+      "prompt": "Use case: photorealistic-natural. Asset type: wide 3:2 editorial photograph for premium Brazil Migration homepage. Beautiful clear late-afternoon view across the lake at Ibirapuera Park in São Paulo, Brazil, emerald tropical tree canopy framing distant sophisticated dense São Paulo skyline, vivid blue sky and warm sunlight, sparkling realistic water reflections, fine botanical and building details, natural rich colors, luxury travel magazine photography, full-frame DSLR quality, tack sharp landscape, no exaggerated HDR, no haze, no text or logos, no invented famous monuments, no people in foreground. Optimistic calm sophisticated urban quality of life."
+    }
+  ]
+}

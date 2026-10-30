@@ -1,0 +1,1 @@
+(()=>{const admin=location.pathname.startsWith('/admin/'),nav=document.querySelector(admin?'#navigation':'.topbar nav');if(!nav||nav.querySelector('[data-didit-link]'))return;const a=document.createElement('a');a.href='/kyc/';a.textContent='Kimlik Doğrulama';a.dataset.diditLink='true';nav.append(a)})();

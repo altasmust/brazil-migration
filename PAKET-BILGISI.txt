@@ -1,0 +1,22 @@
+BRAZIL MIGRATION — KAYNAK KOD PAKETİ
+Tarih: 29 Ekim 2026
+Kaynak sürümü: 6b97a64ba7d203218bed172e40560965f8456f6f
+Yayımlanan sürüm: 31
+
+KAPSAM
+Web sitesi, admin, müşteri, danışman ve avukat panelleri; KYC entegrasyon kodları; görseller; sunucu/API kodları; veritabanı şeması ve SQL migration dosyaları; testler; proje ayarları ve bağımlılık listeleri eksiksiz olarak kaynak deposundan alınmıştır.
+
+Bu bir kaynak kod paketidir. Canlı veritabanı kayıtları, kullanıcıların yüklediği özel evraklar, sunucudaki gizli anahtarlar, Git geçmişi, node_modules ve yeniden üretilebilir derleme çıktıları dahil değildir.
+
+ÇALIŞTIRMA
+Node.js >=22.13.0 gerekir. Proje klasöründe:
+  npm ci
+  npm run dev
+Derleme:
+  npm run build
+Mevcut README.md dosyasında yerel çalışma ve D1 migration adımları açıklanmıştır.
+
+Bu proje Vinext / Cloudflare Worker, D1 ve R2 altyapısı kullanır. Farklı bir sunucuya taşırken kimlik doğrulama, DB ve dosya depolama bağlantıları ayrıca yapılandırılmalıdır. Kaynakların açılması canlı müşteri verilerini otomatik taşımaz.
+
+KYC
+Didit entegrasyonu henüz etkinleştirilmemiştir. Kurulum adımları docs/didit-setup.md içindedir. API anahtarı pakette bulunmaz; sunucu tarafında gizli değişken olarak tanımlanmalıdır.

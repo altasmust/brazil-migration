@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://brasil-yeni-baslangic.fatih-altas.chatgpt.site/sitemap.xml

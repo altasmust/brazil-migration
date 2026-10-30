@@ -1,0 +1,10 @@
+/* Marketing imagery only. This stylesheet is not loaded by any panel. */
+.service-hero img.page-art{display:block;aspect-ratio:3/2;height:auto;object-fit:contain;object-position:center;border-radius:0;filter:none}
+.service-hero figure:has(.page-art){margin:0;min-width:0}
+.page-visual-intro{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);align-items:center;gap:clamp(24px,4vw,64px);margin-bottom:36px}
+.page-visual-copy{min-width:0}.page-visual-copy h1{margin-top:15px}.page-visual-copy .page-intro{max-width:650px}.page-visual-art{margin:0;min-width:0;background:transparent}.page-visual-art img{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:contain;object-position:center}
+.login-page.page-visual-login{max-width:1200px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:40px}.page-visual-login>.login-card{min-width:0}.page-visual-login>#demo-panel{grid-column:1/-1}
+.page-lifestyle-photo{object-fit:cover;object-position:center}
+[data-theme=dark] .service-hero img.page-art,[data-theme=dark] .page-visual-art img{filter:none}
+@media(max-width:760px){.page-visual-intro{grid-template-columns:1fr;gap:22px;margin-bottom:30px}.page-visual-art{max-width:560px;width:100%;justify-self:center}.login-page.page-visual-login{grid-template-columns:1fr;gap:26px}.page-visual-login>.page-visual-art{grid-row:1}.quiz-page .page-visual-art{max-width:420px}.page-visual-copy h1{font-size:clamp(30px,7vw,40px)}}
+@media(prefers-reduced-motion:reduce){.page-art,.page-lifestyle-photo{transition:none}}
