@@ -138,6 +138,25 @@ try {
   assert.equal((await call('admin', 'admin', 'leads')).data.leads[0].email, 'lead@test.com');
   assert.equal((await call('zey', 'admin', 'leads')).status, 401);
 
+  // Didit mode: partner uploads only tax plate + signature circular, identity goes through Didit
+  Object.assign(process.env, {DIDIT_ENABLED: 'true', DIDIT_API_KEY: 'k', DIDIT_WORKFLOW_ID: 'w'});
+  const realFetch = globalThis.fetch; let diditStatus = 'In Progress';
+  globalThis.fetch = async (u, o) => String(u).startsWith('https://verification.didit.me/') ? new Response(JSON.stringify(String(u).includes('/decision/') ? {session_id: 'sess-1', status: diditStatus} : {session_id: 'sess-1', url: 'https://verify.didit.me/session/abc'}), {status: 200}) : realFetch(u, o);
+  r = await call('d', 'auth', 'partner-register', {company: 'Didit Ltd', name: 'Deniz', email: 'deniz@test.com', password: 'Deniz2026x', country: 'Türkiye', city: 'İzmir', taxOffice: 'Konak', taxNumber: '1111111111', services: ['Vize'], consent: true});
+  await call('d', 'auth', 'verify', {token: tokenFrom(r.data.devLink)}); await call('d', 'auth', 'login', {email: 'deniz@test.com', password: 'Deniz2026x'});
+  let ps = (await call('d', 'member', 'partner')).data.partner;
+  assert.equal(ps.didit, true); assert.deepEqual(Object.keys(ps.required), ['vergi', 'sirku']);
+  const fdx = new FormData(); fdx.append('doc', 'kimlik_on'); fdx.append('file', new File([jpg], 'k.jpg', {type: 'image/jpeg'}));
+  assert.equal((await call('d', 'member', 'partner/upload', fdx)).status, 400);
+  r = await call('d', 'member', 'partner/kyc/start', {});
+  assert.equal(r.status, 200); assert.equal(r.data.url, 'https://verify.didit.me/session/abc');
+  assert.equal((await call('d', 'member', 'partner/kyc/refresh', {})).data.status, 'In Progress');
+  for (const doc of ['vergi', 'sirku']) { const fd = new FormData(); fd.append('doc', doc); fd.append('file', new File([jpg], doc + '.jpg', {type: 'image/jpeg'})); assert.equal((await call('d', 'member', 'partner/upload', fd)).status, 200); }
+  for (const t of tasks.splice(0)) await t();
+  assert.equal((await call('d', 'member', 'partner')).data.partner.status, 'review'); // no AI key -> admin review
+  assert.equal((await call('d', 'advisor', 'cases')).status, 403);
+  globalThis.fetch = realFetch; for (const k of ['DIDIT_ENABLED', 'DIDIT_API_KEY', 'DIDIT_WORKFLOW_ID']) delete process.env[k];
+
   // logout ends the session
   await call('zey', 'auth', 'logout', {});
   assert.equal((await call('zey', 'workspace', 'bootstrap')).status, 401);

@@ -39,9 +39,9 @@ export async function verifyPartner(profile, files) {
   const instruction = `Sen bir belge doğrulama asistanısın. Yukarıdaki belgeler bir danışmanlık şirketinin partnerlik başvurusu için yüklendi.
 Başvuru bilgileri: Firma unvanı: "${profile.company}"; Yetkili adı soyadı: "${profile.name}"; Vergi dairesi: "${profile.taxOffice || ''}"; Vergi no / VKN: "${profile.taxNumber || ''}".
 Her belge için kontrol et: (1) belge türü beklenenle uyuşuyor mu, (2) okunaklı ve bütün mü, (3) bilgiler başvuruyla tutarlı mı (vergi levhasında unvan ve VKN, imza sirküsünde firma ve yetkili adı, kimlikte yetkili adı soyadı), (4) açık bir sahtecilik/düzenleme belirtisi veya süresi geçmiş belge var mı.
-Yalnızca şu JSON ile yanıt ver: {"checks":{"vergi":{"ok":true|false,"notes":"..."},"sirku":{...},"kimlik_on":{...},"kimlik_arka":{...}},"confidence":0-1,"summary":"kısa Türkçe özet"}`;
+Yalnızca şu JSON ile yanıt ver (yalnızca yüklenen belgeler için: ${files.map(f => f.doc).join(', ')}): {"checks":{"<belge_kodu>":{"ok":true|false,"notes":"..."}},"confidence":0-1,"summary":"kısa Türkçe özet"}`;
   const out = await ask(list, instruction);
-  const all = Object.keys(PARTNER_DOCS).every(k => out.checks?.[k]?.ok === true);
+  const all = files.every(f => out.checks?.[f.doc]?.ok === true);
   const min = Number(process.env.AI_VERIFY_MIN_CONFIDENCE || 0.85);
   return {decision: all && Number(out.confidence) >= min ? 'approve' : 'review', checks: out.checks || {}, confidence: Number(out.confidence) || 0, summary: out.summary || ''};
 }

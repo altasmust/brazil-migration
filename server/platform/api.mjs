@@ -270,33 +270,59 @@ async function memberContext(db, req) {
 const sniff = bytes => String.fromCharCode(...bytes.slice(0, 5)) === '%PDF-' ? 'application/pdf' : bytes[0] === 255 && bytes[1] === 216 ? 'image/jpeg' : bytes.slice(0, 8).join(',') === '137,80,78,71,13,10,26,10' ? 'image/png' : null;
 const MAX_UPLOAD = () => Number(process.env.MAX_UPLOAD_MB || (process.env.VERCEL ? 4 : 10)) * 1024 * 1024;
 
+
+// ---- Didit identity verification (free plan: ~30 full checks / month) ----
+export const diditReady = env => env.DIDIT_ENABLED === 'true' && !!env.DIDIT_API_KEY && !!env.DIDIT_WORKFLOW_ID;
+const KYC_LIMIT = () => Number(process.env.DIDIT_MONTHLY_LIMIT || 30);
+const monthStart = () => { const d = new Date(); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1); };
+const KYC_FINAL = new Set(['Approved', 'Declined', 'Abandoned', 'Expired', 'Kyc Expired']);
+async function didit(env, path, body, fetchImpl = fetch) {
+  const r = await fetchImpl('https://verification.didit.me/v3/' + path, {method: body ? 'POST' : 'GET', headers: {'x-api-key': env.DIDIT_API_KEY, 'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined, redirect: 'error', signal: AbortSignal.timeout(15000)});
+  if (!r.ok) fail(502, 'Didit isteği tamamlanamadı. Hesap kredisi ve yapılandırmayı kontrol edin.');
+  return r.json();
+}
+export const partnerRequiredDocs = env => diditReady(env) ? ['vergi', 'sirku'] : Object.keys(PARTNER_DOCS);
+const docsComplete = (env, d) => partnerRequiredDocs(env).every(k => d.docs[k]);
+async function approvePartner(db, rec, personId, by, text) {
+  rec.data.status = 'approved'; rec.data.approvedBy = by; rec.data.history.push({at: now(), text});
+  await db.batch([putItem(db, rec.id, 'partner', personId, rec.data), notice(db, personId, 'Partner hesabınız onaylandı. Tüm modüller açıldı.', 'overview'), notice(db, 'owner', 'Partner otomatik onaylandı: ' + rec.data.company, 'partners')]);
+}
+
 export async function runPartnerVerification(env, personId) {
   const db = env.DB;
   const rec = await getItem(db, 'partner-' + personId); if (!rec) return;
-  const d = rec.data;
-  if (!Object.keys(PARTNER_DOCS).every(k => d.docs[k])) return;
-  d.status = 'checking'; d.history.push({at: now(), text: 'Otomatik doğrulama başladı'});
+  const d = rec.data, need = partnerRequiredDocs(env);
+  if (!docsComplete(env, d)) return;
+  d.status = 'checking'; d.history.push({at: now(), text: 'Otomatik belge kontrolü başladı'});
   await putItem(db, rec.id, 'partner', personId, d).run();
   let result;
   try {
     const files = [];
-    for (const k of Object.keys(PARTNER_DOCS)) {
+    for (const k of need) {
       const obj = await env.BUCKET.get(d.docs[k].key);
       if (!obj) throw new Error(PARTNER_DOCS[k].title + ' dosyası okunamadı.');
       files.push({doc: k, mime: d.docs[k].mime, bytes: new Uint8Array(await obj.arrayBuffer())});
     }
     result = await verifyPartner(d, files);
   } catch (e) { console.error('[partner-verify]', e.message); result = {decision: 'review', summary: 'Otomatik doğrulama tamamlanamadı: ' + e.message, checks: {}}; }
-  const fresh = (await getItem(db, rec.id)).data;
-  fresh.check = {...result, at: now()};
-  for (const k of Object.keys(PARTNER_DOCS)) if (fresh.docs[k]) fresh.docs[k].status = result.checks?.[k] ? (result.checks[k].ok ? 'Uygun' : 'Sorunlu') : 'İncelemede';
-  if (result.decision === 'approve') {
-    fresh.status = 'approved'; fresh.approvedBy = 'Otomatik doğrulama'; fresh.history.push({at: now(), text: 'Belgeler otomatik doğrulandı, hesap onaylandı'});
-    await db.batch([putItem(db, rec.id, 'partner', personId, fresh), notice(db, personId, 'Partner hesabınız onaylandı. Tüm modüller açıldı.', 'overview'), notice(db, 'owner', 'Partner otomatik onaylandı: ' + fresh.company, 'partners')]);
-  } else {
-    fresh.status = 'review'; fresh.history.push({at: now(), text: 'Admin incelemesine gönderildi'});
-    await db.batch([putItem(db, rec.id, 'partner', personId, fresh), notice(db, personId, 'Belgeleriniz incelemeye alındı.', 'overview'), notice(db, 'owner', 'Partner belgeleri incelemenizi bekliyor: ' + fresh.company, 'partners')]);
+  const fresh = await getItem(db, rec.id);
+  fresh.data.check = {...result, at: now()};
+  for (const k of need) if (fresh.data.docs[k]) fresh.data.docs[k].status = result.checks?.[k] ? (result.checks[k].ok ? 'Uygun' : 'Sorunlu') : 'İncelemede';
+  await settlePartner(env, fresh, personId);
+}
+
+// Decide the partner state from document check + Didit identity result.
+async function settlePartner(env, rec, personId) {
+  const db = env.DB, d = rec.data, kycNeeded = diditReady(env), kycOk = d.kyc?.status === 'Approved';
+  if (d.status === 'approved') return;
+  if (d.check?.decision === 'approve' && (!kycNeeded || kycOk)) return approvePartner(db, rec, personId, 'Otomatik doğrulama', kycNeeded ? 'Belgeler ve Didit kimlik doğrulaması tamamlandı, hesap onaylandı' : 'Belgeler otomatik doğrulandı, hesap onaylandı');
+  if (d.check?.decision === 'approve' && kycNeeded && !kycOk) {
+    d.status = d.kyc?.status === 'Declined' ? 'review' : 'kyc_pending'; d.history.push({at: now(), text: d.status === 'review' ? 'Kimlik doğrulaması reddedildi, admin incelemesine gönderildi' : 'Belgeler uygun; kimlik doğrulaması bekleniyor'});
+    await db.batch([putItem(db, rec.id, 'partner', personId, d), notice(db, personId, d.status === 'review' ? 'Başvurunuz incelemeye alındı.' : 'Belgeleriniz uygun. Şimdi kimliğinizi Didit ile doğrulayın.', 'overview')]);
+    return;
   }
+  d.status = 'review'; d.history.push({at: now(), text: 'Admin incelemesine gönderildi'});
+  await db.batch([putItem(db, rec.id, 'partner', personId, d), notice(db, personId, 'Belgeleriniz incelemeye alındı.', 'overview'), notice(db, 'owner', 'Partner belgeleri incelemenizi bekliyor: ' + d.company, 'partners')]);
 }
 
 // Customer documents are checked automatically only after a service purchase.
@@ -333,7 +359,7 @@ export async function handlePlatform(req, env, route, ctx = {}) {
     if (!person || person.role !== 'advisor') return json({partner: null});
     const p = await partnerState(db, person.id);
     if (!p) return json({partner: null});
-    return json({partner: {status: p.status, company: p.company, services: p.services, docs: Object.fromEntries(Object.entries(p.docs).map(([k, v]) => [k, {name: v.name, status: v.status, at: v.at}])), check: p.check ? {summary: p.check.summary, at: p.check.at} : null, reason: p.reason || '', required: Object.fromEntries(Object.entries(PARTNER_DOCS).map(([k, v]) => [k, v.title])), maxMb: MAX_UPLOAD() / 1048576}});
+    return json({partner: {status: p.status, company: p.company, services: p.services, docs: Object.fromEntries(Object.entries(p.docs).map(([k, v]) => [k, {name: v.name, status: v.status, at: v.at}])), check: p.check ? {summary: p.check.summary, at: p.check.at} : null, reason: p.reason || '', required: Object.fromEntries(partnerRequiredDocs(env).map(k => [k, PARTNER_DOCS[k].title])), didit: diditReady(env), kyc: p.kyc ? {status: p.kyc.status, url: KYC_FINAL.has(p.kyc.status) ? null : p.kyc.url} : null, maxMb: MAX_UPLOAD() / 1048576}});
   }
   if (route === 'partner/upload' && req.method === 'POST') {
     if (!person || person.role !== 'advisor') fail(403, 'Partner hesabı gerekli.');
@@ -341,7 +367,7 @@ export async function handlePlatform(req, env, route, ctx = {}) {
     if (['approved', 'checking'].includes(rec.data.status)) fail(409, rec.data.status === 'approved' ? 'Hesabınız zaten onaylı.' : 'Belgeleriniz şu anda kontrol ediliyor.');
     if (Number(req.headers.get('content-length') || 0) > MAX_UPLOAD() + 65536) fail(413, `Dosya en fazla ${MAX_UPLOAD() / 1048576} MB olabilir.`);
     const f = await req.formData(), file = f.get('file'), doc = clean(f.get('doc'), 20);
-    if (!PARTNER_DOCS[doc]) fail(400, 'Belge türü geçersiz.');
+    if (!PARTNER_DOCS[doc] || !partnerRequiredDocs(env).includes(doc)) fail(400, 'Belge türü geçersiz.');
     if (!file || typeof file === 'string' || !file.size || file.size > MAX_UPLOAD()) fail(400, `PDF, JPG veya PNG; en fazla ${MAX_UPLOAD() / 1048576} MB.`);
     const buf = await file.arrayBuffer(), mime = sniff(new Uint8Array(buf));
     if (!mime) fail(400, 'Geçerli bir PDF, JPG veya PNG dosyası seçin.');
@@ -350,13 +376,43 @@ export async function handlePlatform(req, env, route, ctx = {}) {
     const old = rec.data.docs[doc];
     rec.data.docs[doc] = {key, mime, name: clean(file.name, 200), size: file.size, at: now(), status: 'Yüklendi'};
     if (rec.data.status === 'rejected') rec.data.status = 'docs_required';
-    const complete = Object.keys(PARTNER_DOCS).every(k => rec.data.docs[k]);
+    const complete = docsComplete(env, rec.data);
     rec.data.history.push({at: now(), text: PARTNER_DOCS[doc].title + ' yüklendi'});
     if (complete) rec.data.status = 'queued';
     await putItem(db, rec.id, 'partner', person.id, rec.data).run();
     if (old?.key) await env.BUCKET.delete(old.key).catch(() => {});
     if (complete && ctx.after) ctx.after(() => runPartnerVerification(env, person.id));
     return json({ok: true, complete});
+  }
+  if ((route === 'partner/kyc/start' || route === 'partner/kyc/refresh') && req.method === 'POST') {
+    if (!person || person.role !== 'advisor') fail(403, 'Partner hesabı gerekli.');
+    if (!diditReady(env)) fail(503, 'Kimlik doğrulama (Didit) henüz yapılandırılmadı.');
+    const rec = await getItem(db, 'partner-' + person.id); if (!rec) fail(404, 'Partner başvurusu bulunamadı.');
+    const d = rec.data;
+    if (route === 'partner/kyc/start') {
+      if (d.kyc?.url && !KYC_FINAL.has(d.kyc.status)) return json({url: d.kyc.url, status: d.kyc.status});
+      if (d.kyc?.status === 'Approved') return json({status: 'Approved'});
+      const id = 'kyc-partner-' + person.id + '-' + now();
+      const reserved = await one(db, "INSERT INTO items(id,kind,owner,data,created,updated) SELECT ?,'kyc_session',?,?,?,? WHERE (SELECT COUNT(*) FROM items WHERE kind='kyc_session' AND created>=?)<? RETURNING id", id, 'partner:' + person.id, JSON.stringify({status: 'Initializing', initiator: person.name}), now(), now(), monthStart(), KYC_LIMIT());
+      if (!reserved) fail(409, 'Bu ay için ücretsiz kimlik doğrulama kotası doldu. Ekibimiz sizinle iletişime geçecek.');
+      const s2 = await didit(env, 'session/', {workflow_id: env.DIDIT_WORKFLOW_ID, vendor_data: id, callback: siteUrl(req) + '/partner/?kyc=done', language: 'tr'});
+      let link; try { const u = new URL(s2.url); if (u.protocol === 'https:' && u.hostname.endsWith('didit.me')) link = u.href; } catch {}
+      if (!link || !s2.session_id) fail(502, 'Didit yanıtı doğrulanamadı.');
+      d.kyc = {sessionId: s2.session_id, url: link, status: 'Not Started', ref: id, at: now()};
+      d.history.push({at: now(), text: 'Didit kimlik doğrulaması başlatıldı'});
+      await db.batch([putItem(db, rec.id, 'partner', person.id, d), q(db, 'UPDATE items SET data=?, updated=? WHERE id=?', JSON.stringify({status: 'Not Started', sessionId: s2.session_id}), now(), id)]);
+      return json({url: link, status: 'Not Started'});
+    }
+    if (!d.kyc?.sessionId) fail(409, 'Kimlik doğrulaması henüz başlatılmadı.');
+    if (KYC_FINAL.has(d.kyc.status) || (d.kyc.checkedAt && now() - d.kyc.checkedAt < 10000)) return json({status: d.kyc.status});
+    const r = await didit(env, 'session/' + encodeURIComponent(d.kyc.sessionId) + '/decision/');
+    if (r.session_id && r.session_id !== d.kyc.sessionId) fail(502, 'Doğrulama sonucu eşleştirilemedi.');
+    const prev = d.kyc.status;
+    d.kyc = {...d.kyc, status: String(r.status || d.kyc.status).slice(0, 40), checkedAt: now()};
+    if (prev !== d.kyc.status) d.history.push({at: now(), text: 'Didit sonucu: ' + d.kyc.status});
+    await putItem(db, rec.id, 'partner', person.id, d).run();
+    if (prev !== d.kyc.status && KYC_FINAL.has(d.kyc.status) && d.check) await settlePartner(env, await getItem(db, rec.id), person.id);
+    return json({status: d.kyc.status});
   }
   if (route.startsWith('partner/file/') && req.method === 'GET') {
     if (!person) fail(403, 'Erişim yok.');
@@ -478,7 +534,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
 
   if (route === 'partners' && req.method === 'GET') {
     const list = await rows(db, "SELECT * FROM items WHERE kind='partner' ORDER BY updated DESC");
-    return json({partners: list.map(r => { const d = parse(r.data); return {id: r.owner, company: d.company, name: d.name, email: d.email, taxOffice: d.taxOffice, taxNumber: d.taxNumber, services: d.services, status: d.status, reason: d.reason, check: d.check || null, docs: Object.fromEntries(Object.entries(d.docs).map(([k, v]) => [k, {name: v.name, status: v.status, at: v.at, mime: v.mime}])), history: d.history.slice(-12), updated: r.updated}; }), labels: Object.fromEntries(Object.entries(PARTNER_DOCS).map(([k, v]) => [k, v.title]))});
+    return json({partners: list.map(r => { const d = parse(r.data); return {id: r.owner, company: d.company, name: d.name, email: d.email, taxOffice: d.taxOffice, taxNumber: d.taxNumber, services: d.services, status: d.status, reason: d.reason, check: d.check || null, docs: Object.fromEntries(Object.entries(d.docs).map(([k, v]) => [k, {name: v.name, status: v.status, at: v.at, mime: v.mime}])), kyc: d.kyc ? {status: d.kyc.status} : null, history: d.history.slice(-12), updated: r.updated}; }), didit: diditReady(env), labels: Object.fromEntries(Object.entries(PARTNER_DOCS).map(([k, v]) => [k, v.title]))});
   }
   if (route === 'partners/review' && req.method === 'POST') {
     const id = clean(b.id, 80), rec = await getItem(db, 'partner-' + id); if (!rec) fail(404, 'Başvuru bulunamadı.');

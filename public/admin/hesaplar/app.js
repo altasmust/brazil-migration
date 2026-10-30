@@ -17,7 +17,7 @@
 
   let META, ACCOUNTS = [], tab = 'hesaplar', newType = 'customer', filter = 'all';
   const TYPE_DESC = {customer: 'Brezilya başvurusu yapacak kişi. Müşteri paneline girer.', advisor: 'Danışman / partner. Müşterilerini, belgeleri, finansı ve referansları yönetir.', lawyer: 'Avukat paneli: gelen/giden evrak ve finans.', accountant: 'Muhasebe personeli. Faturalar, ödemeler ve komisyonlar.', other: 'Diğer personel; yetkilerini siz belirlersiniz.'};
-  const STATUS = {docs_required: ['a', 'Belge bekleniyor'], queued: ['b', 'Kontrol sırasında'], checking: ['b', 'Kontrol ediliyor'], review: ['a', 'İnceleme bekliyor'], approved: ['g', 'Onaylı'], rejected: ['r', 'Düzeltme istendi']};
+  const STATUS = {docs_required: ['a', 'Belge bekleniyor'], queued: ['b', 'Kontrol sırasında'], checking: ['b', 'Kontrol ediliyor'], review: ['a', 'İnceleme bekliyor'], approved: ['g', 'Onaylı'], rejected: ['r', 'Düzeltme istendi'], kyc_pending: ['b', 'Kimlik doğrulaması bekleniyor']};
   const PERM_LEVEL = ['Yok', 'Görüntüle', 'Düzenle'];
 
   function permEditor(perms, prefix = 'perm') {
@@ -87,8 +87,9 @@
   }
 
   // ---------- Partner applications ----------
+  let D_PARTNERS = {};
   async function partners() {
-    const d = await api('partners');
+    const d = await api('partners'); D_PARTNERS = d;
     const pending = d.partners.filter(p => p.status === 'review').length;
     $('#pcount').hidden = !pending; $('#pcount').textContent = pending;
     $('#view').innerHTML = `${!META.verifier ? '<div class="bm-note info">Otomatik belge doğrulama henüz yapılandırılmadı (ANTHROPIC_API_KEY). Tüm belgeler yüklendiğinde başvurular “İnceleme bekliyor” durumuna düşer; buradan onaylayabilirsiniz.</div>' : ''}
@@ -98,6 +99,7 @@
   function partnerDetail(p, labels) {
     dlg(p.company, `<p class="muted" style="margin-top:0">${esc(p.name)} · ${esc(p.email)} · VKN ${esc(p.taxNumber)} (${esc(p.taxOffice)})</p>
       <b style="font-size:13px">Belgeler</b><div class="bm-docrow">${Object.entries(labels).map(([k, l]) => p.docs[k] ? `<a href="/api/platform/admin/partners/file/${esc(p.id)}/${k}" target="_blank" rel="noopener"><b>${esc(l)}</b><span class="muted">${esc(p.docs[k].name)}</span><span class="tag ${p.docs[k].status === 'Uygun' ? 'g' : p.docs[k].status === 'Sorunlu' ? 'r' : ''}">${esc(p.docs[k].status || 'Yüklendi')}</span></a>` : `<a aria-disabled="true"><b>${esc(l)}</b><span class="muted">Yüklenmedi</span></a>`).join('')}</div>
+      <p style="font-size:13px"><b>Didit kimlik doğrulaması:</b> ${p.kyc ? esc(p.kyc.status) : (D_PARTNERS.didit ? 'Başlatılmadı' : 'Didit yapılandırılmadı — kimlik ön/arka yüklemesi kullanılıyor')}</p>
       ${p.check ? `<div class="bm-note ${p.check.decision === 'approve' ? 'ok' : 'info'}"><b>Otomatik kontrol (${date(p.check.at)})${p.check.confidence ? ' · güven ' + Math.round(p.check.confidence * 100) + '%' : ''}:</b> ${esc(p.check.summary)}${p.check.checks ? '<br>' + Object.entries(p.check.checks).map(([k, v]) => `${esc(labels[k] || k)}: ${v.ok ? '✓' : '✗'} ${esc(v.notes || '')}`).join('<br>') : ''}</div>` : ''}
       <b style="font-size:13px">Geçmiş</b><ul style="font-size:12.5px;color:#58685d;padding-left:18px">${p.history.map(h => `<li>${date(h.at)} — ${esc(h.text)}</li>`).join('')}</ul>
       <form id="rv" class="bm-f"><label class="full">Ret / düzeltme gerekçesi (reddederken zorunlu)<textarea name="reason" style="min-height:70px">${esc(p.reason || '')}</textarea></label><div class="full bm-flex"><button class="b p" data-d="approve">Onayla</button><button class="b r" data-d="reject">Düzeltme iste / reddet</button>${META.verifier && Object.keys(labels).every(k => p.docs[k]) ? '<button class="b" data-d="recheck">Yeniden otomatik kontrol</button>' : ''}</div><div class="full bm-note" id="rvn"></div></form>`);
