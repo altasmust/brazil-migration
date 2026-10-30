@@ -3,7 +3,7 @@
 (() => {
   const open = label => {
     if (typeof window.book !== 'function') { location.href = '/iletisim/'; return; }
-    window.book(location.pathname.includes('sirket') ? 'sirket' : 'oturum');
+    window.book(location.pathname.includes('sirket') ? 'sirket' : location.pathname.includes('vatandas') ? 'vatandaslik' : 'oturum');
     if (!label) return;
     setTimeout(() => {
       const body = document.getElementById('booking-body'); if (!body) return;
@@ -13,7 +13,12 @@
       const note = body.querySelector('textarea'); if (note && !note.value) note.value = 'İlgilendiğim kapsam: ' + label;
     }, 0);
   };
-  document.addEventListener('click', e => { const b = e.target.closest('[data-oi-book]'); if (b) open(b.dataset.oiBook); });
+  const dlg = document.getElementById('vt-dlg');
+  document.addEventListener('click', e => {
+    if (e.target.closest('[data-vt-compare]')) { dlg?.showModal(); return; }
+    if (e.target.closest('[data-vt-close]') || e.target === dlg) { dlg?.close(); return; }
+    const b = e.target.closest('[data-oi-book]'); if (b) { dlg?.open && dlg.close(); open(b.dataset.oiBook); }
+  });
   const btn = document.getElementById('oi-custom-btn'), pick = document.getElementById('oi-pick');
   document.addEventListener('change', e => {
     if (e.target.name !== 'oi-topic') return;

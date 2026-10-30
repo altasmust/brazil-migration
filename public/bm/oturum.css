@@ -90,3 +90,32 @@
 @media (max-width:640px){.oi-cards.four{grid-template-columns:1fr}}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) :is(.sk-pack,.sk-taxc,.sk-ideal){background:#13201b}:root:not([data-theme=light]) .sk-pack.t2{background:#162a20}:root:not([data-theme=light]) .sk-pack.t3{background:#1f1d17}}
 :root[data-theme=dark] :is(.sk-pack,.sk-taxc,.sk-ideal){background:#13201b}:root[data-theme=dark] .sk-pack.t2{background:#162a20}:root[data-theme=dark] .sk-pack.t3{background:#1f1d17}
+/* Vatandaşlık — karşılaştırma, belge tablosu, güncelleme bandı */
+.vt-compare-btn{display:block;width:100%;margin-top:12px;background:transparent;border:1.5px solid var(--forest);color:var(--forest);border-radius:8px;padding:12px;font:inherit;font-weight:700;font-size:13.5px;cursor:pointer}
+.vt-compare-btn:hover{background:#eef5e9}
+dialog.vt-d{border:0;border-radius:18px;padding:0;width:min(920px,94vw);box-shadow:0 30px 80px #0003;color:var(--ink);background:#fff}
+dialog.vt-d::backdrop{background:#0b1f1566}
+.vt-d .hd{display:flex;align-items:center;padding:18px 24px;border-bottom:1px solid var(--line)}.vt-d .hd h3{margin:0;font-size:18px;flex:1}
+.vt-d .x{border:0;background:none;font-size:24px;cursor:pointer;color:inherit}
+.vt-d .bd{padding:22px 24px;max-height:76vh;overflow:auto}
+.vt-cmp{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.vt-col{border:1px solid var(--line);border-radius:14px;padding:20px}
+.vt-col.feat{border-color:var(--forest);background:#f7faf4}
+.vt-col h4{margin:0 0 4px;font-size:17px}.vt-col .s{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+.vt-score{display:flex;align-items:baseline;gap:8px;margin:6px 0}.vt-score b{font-size:30px;color:var(--forest)}.vt-score span{font-size:12px;color:var(--muted)}
+.vt-row{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;font-size:13px;padding:8px 0;border-bottom:1px solid var(--line)}
+.vt-row:last-child{border:0}.vt-yes{color:var(--forest);font-weight:800}.vt-no{color:#a1543b;font-weight:800}
+.vt-table{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.vt-th,.vt-tr{display:grid;grid-template-columns:28px 1fr 64px 64px;gap:12px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line)}
+.vt-th{font-size:12px;font-weight:700;color:var(--muted);background:var(--cream)}.vt-tr:last-child{border:0}
+.vt-tr strong{font-size:14px;font-weight:500;color:var(--ink)}.vt-tr small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.vt-tr .ic{color:var(--forest)}
+.vt-dot{justify-self:center;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:#eef0ea;color:#b8bfb4}
+.vt-dot.a{background:#e3eef7;color:#1d4f7a}.vt-dot.t{background:#fbefd5;color:#9a6a14}
+.vt-th .lg{justify-self:center;font-size:11px}
+.vt-news{display:grid;grid-template-columns:1fr 1fr;gap:12px 32px;margin-top:8px}
+.vt-news p{margin:0;font-size:13.5px;line-height:1.7;color:#3d5046;display:grid;grid-template-columns:22px 1fr}
+.vt-news b{color:var(--ink)}
+@media (max-width:760px){.vt-cmp,.vt-news{grid-template-columns:1fr}.vt-th,.vt-tr{grid-template-columns:22px 1fr 40px 40px;padding:12px 14px}}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) :is(dialog.vt-d,.vt-table){background:#13201b}:root:not([data-theme=light]) .vt-col.feat{background:#162a20}}
+:root[data-theme=dark] :is(dialog.vt-d,.vt-table){background:#13201b}:root[data-theme=dark] .vt-col.feat{background:#162a20}
