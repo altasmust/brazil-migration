@@ -46,10 +46,19 @@ async function migrate(client) {
 }
 
 let shared;
+// Vercel's Turso integration names variables after the chosen prefix (TURSO_DATABASE_URL, STORAGE_URL, …),
+// so look for the libsql:// URL under any name and the matching *_AUTH_TOKEN.
+export function findTurso(env) {
+  const named = ['TURSO_DATABASE_URL', 'LIBSQL_URL', 'DATABASE_URL'].find(k => env[k]);
+  let key = named || Object.keys(env).find(k => /^(libsql|https?):\/\/.+turso\.io/.test(String(env[k])) || String(env[k]).startsWith('libsql://'));
+  if (!key) return {};
+  const base = key.replace(/(_DATABASE)?_URL$/, '');
+  const tokenKey = [base + '_AUTH_TOKEN', base + '_DATABASE_AUTH_TOKEN', base + '_TOKEN', 'TURSO_AUTH_TOKEN', 'LIBSQL_AUTH_TOKEN'].find(k => env[k]) || Object.keys(env).find(k => k.endsWith('AUTH_TOKEN') && k.startsWith(base));
+  return {url: env[key], authToken: tokenKey ? env[tokenKey] : undefined};
+}
 export function getDatabase() {
   if (shared) return shared;
-  const url = process.env.TURSO_DATABASE_URL || process.env.LIBSQL_URL || process.env.DATABASE_URL;
-  const authToken = process.env.TURSO_AUTH_TOKEN || process.env.LIBSQL_AUTH_TOKEN;
+  const {url, authToken} = findTurso(process.env);
   let client;
   if (url) client = createClient({url, authToken});
   else {

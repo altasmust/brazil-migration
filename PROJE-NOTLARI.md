@@ -81,3 +81,4 @@
 - Vercel'de müşteri belge yükleme sınırı pratikte ~4 MB (panel 10 MB diyor)
 - Admin host'ta /kyc/ açılmaz (KYC sayfası ana sitede)
 - Kullanıcı Vercel'de: proje import, Blob (private), Turso, env değişkenleri kuracak
+- 2026-10-31: Turso entegrasyonu özel önek soruyor (varsayılan STORAGE). db.mjs artık libsql:// URL'sini hangi adla gelirse gelsin bulur (findTurso). Kullanıcıya önek TURSO önerildi.
