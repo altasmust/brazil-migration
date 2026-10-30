@@ -3,7 +3,7 @@
 (() => {
   const open = label => {
     if (typeof window.book !== 'function') { location.href = '/iletisim/'; return; }
-    window.book('oturum');
+    window.book(location.pathname.includes('sirket') ? 'sirket' : 'oturum');
     if (!label) return;
     setTimeout(() => {
       const body = document.getElementById('booking-body'); if (!body) return;
