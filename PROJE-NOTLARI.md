@@ -87,3 +87,4 @@
   - Ana site: https://brazil-migration.vercel.app · Yönetim: https://brazil-migration-yonetim.vercel.app (domain eklendi)
   - Env: TURSO_DATABASE_URL, TURSO_AUTH_TOKEN, BLOB_STORE_ID (entegrasyonlar) + ADMIN_SETUP_KEY (sensitive), SITE_URL, ADMIN_HOST, ADMIN_URL (production+preview)
   - Vercel API'den yeni deploy "Challenge required" verdi → deploy GitHub push ile tetikleniyor
+- 2026-10-31: Kullanıcı "ilk kurulumu atla, admin ve partner için demo kullanıcı adı/şifre ver" dedi → server/platform/seed.mjs: ilk açılışta yönetici (OWNER_EMAIL) ve onaylı demo partner (partner@demo.bm, İstanbul) oluşturur; repoda yalnızca şifre hash'leri var. DEMO_SEED=off ile kapanır. Şifreler sohbette kullanıcıya verildi (değiştirmesi önerildi).

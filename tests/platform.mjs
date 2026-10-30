@@ -9,6 +9,7 @@ const dir = mkdtempSync(join(tmpdir(), 'bm-platform-'));
 process.env.LOCAL_DB_FILE = join(dir, 'db.sqlite');
 process.env.LOCAL_BLOB_DIR = join(dir, 'blobs');
 process.env.ADMIN_SETUP_KEY = 'setup-key-123';
+process.env.DEMO_SEED = 'off';
 delete process.env.ANTHROPIC_API_KEY; delete process.env.RESEND_API_KEY; delete process.env.ADMIN_HOST;
 
 const {legacy, platform} = await import('../server/platform/http.mjs');
