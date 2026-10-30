@@ -101,5 +101,9 @@ export async function withIdentity(db, req) {
   if (u) { h.set('oai-authenticated-user-id', u.id); h.set('oai-authenticated-user-email', u.email); }
   const init = {method: req.method, headers: h};
   if (!['GET', 'HEAD'].includes(req.method)) { init.body = req.body; init.duplex = 'half'; }
-  return {req: new Request(req.url, init), user: u};
+  // Rebuild the URL from the public host so the legacy same-origin checks match the browser's Origin.
+  const url = new URL(req.url);
+  const host = (req.headers.get('x-forwarded-host') || req.headers.get('host') || url.host).split(',')[0].trim();
+  const proto = (req.headers.get('x-forwarded-proto') || url.protocol.replace(':', '')).split(',')[0].trim();
+  return {req: new Request(`${proto}://${host}${url.pathname}${url.search}`, init), user: u};
 }

@@ -1,0 +1,26 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Yönetici Girişi · Brazil Migration</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/admin/bm-admin.css?v=1"></head>
+<body class="bm-admin"><main class="bm-login"><div class="bm-box">
+<img src="/brazil-migration-logo.png" alt="Brazil Migration">
+<h1 class="bm-h" id="t">Yönetici girişi</h1><p class="bm-sub" id="s">Yönetim paneline yalnızca site yöneticisi erişebilir.</p>
+<div id="m" class="bm-note" role="status"></div>
+<form id="login"><label>E-posta<input class="bm-in" name="email" type="email" autocomplete="username" required></label><label>Şifre<input class="bm-in" name="password" type="password" autocomplete="current-password" required></label><button class="b p">Giriş yap</button><button class="b" type="button" id="forgotBtn">Şifremi unuttum</button></form>
+<form id="setup" hidden><label>Kurulum anahtarı (ADMIN_SETUP_KEY)<input class="bm-in" name="setupKey" type="password" required></label><label>Yeni yönetici şifresi (en az 12 karakter)<input class="bm-in" name="password" type="password" minlength="12" autocomplete="new-password" required></label><label>Şifre (tekrar)<input class="bm-in" name="password2" type="password" minlength="12" autocomplete="new-password" required></label><button class="b p">Şifreyi belirle ve giriş yap</button></form>
+<form id="forgot" hidden><label>Yönetici e-postası<input class="bm-in" name="email" type="email" required></label><button class="b p">Sıfırlama bağlantısı gönder</button><button class="b" type="button" id="backBtn">Girişe dön</button></form>
+<form id="reset" hidden><label>Yeni şifre<input class="bm-in" name="password" type="password" minlength="12" required></label><label>Yeni şifre (tekrar)<input class="bm-in" name="password2" type="password" minlength="12" required></label><button class="b p">Kaydet</button></form>
+</div></main>
+<script>
+(()=>{const $=s=>document.querySelector(s),p=new URLSearchParams(location.search),m=$('#m');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const say=(t,h)=>{m.className='bm-note '+t;m.innerHTML=h};
+const api=async(path,b)=>{const r=await fetch('/api/auth/admin/'+path,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'İşlem tamamlanamadı.');return d};
+const show=id=>['login','setup','forgot','reset'].forEach(x=>$('#'+x).hidden=x!==id);
+const go=()=>{const n=p.get('next');location.href=n&&n.startsWith('/admin/')?n:'/admin/'};
+$('#login').onsubmit=async e=>{e.preventDefault();try{await api('login',{email:e.target.email.value,password:e.target.password.value});go()}catch(err){say('err',esc(err.message))}};
+$('#setup').onsubmit=async e=>{e.preventDefault();const f=e.target;if(f.password.value!==f.password2.value)return say('err','Şifreler eşleşmiyor.');try{await api('setup',{setupKey:f.setupKey.value,password:f.password.value});go()}catch(err){say('err',esc(err.message))}};
+$('#forgotBtn').onclick=()=>{show('forgot');m.className='bm-note'};$('#backBtn').onclick=()=>show('login');
+$('#forgot').onsubmit=async e=>{e.preventDefault();try{const d=await api('forgot',{email:e.target.email.value});say('ok','Bağlantı gönderildi (adres kayıtlıysa).'+(d.devLink?`<br><b>Test modu:</b> <a href="${esc(d.devLink)}">${esc(d.devLink)}</a>`:''))}catch(err){say('err',esc(err.message))}};
+$('#reset').onsubmit=async e=>{e.preventDefault();const f=e.target;if(f.password.value!==f.password2.value)return say('err','Şifreler eşleşmiyor.');try{await api('reset',{token:p.get('sifre'),password:f.password.value});history.replaceState(null,'','/admin/giris/');show('login');say('ok','Şifre kaydedildi, giriş yapabilirsiniz.')}catch(err){say('err',esc(err.message))}};
+(async()=>{if(p.get('sifre'))return show('reset');const me=await api('me').catch(()=>({}));if(me.user)return go();const st=await api('status').catch(()=>null);if(st?.setupNeeded){show('setup');$('#t').textContent='İlk kurulum';$('#s').textContent='Yönetici şifresini belirleyin. Vercel ortam değişkenlerine girdiğiniz ADMIN_SETUP_KEY değerini kullanın.';if(!st.setupKeyConfigured)say('info','ADMIN_SETUP_KEY ortam değişkeni tanımlı değil. Vercel → Settings → Environment Variables bölümüne ekleyip yeniden dağıtın.')}})();
+})();
+</script></body></html>

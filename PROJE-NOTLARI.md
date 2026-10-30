@@ -65,3 +65,19 @@
 - Sahip e-postası OWNER_EMAIL (varsayılan fatih.altas@elevandos.com); yönetici yalnızca admin host'tan girer. İlk şifre ADMIN_SETUP_KEY ile /admin/giris/ üzerinden.
 - Merkez ofis personeli (employee + manager='owner', ör. muhasebeci) tüm müşterileri görebilir (workspace.mjs + advisor.mjs küçük yama)
 - Vercel'de yükleme sınırı 4 MB (Vercel fonksiyon gövde limiti 4.5 MB) — MAX_UPLOAD_MB ile değişir
+
+## 2026-10-31 — Teslim edilenler (2. commit)
+- Sayfalar: /giris/ (tek giriş + müşteri kaydı + şifremi unuttum/hesap etkinleştir + doğrulama), /partner-ol/ (partner başvurusu), /admin/giris/ (yönetici girişi + ilk kurulum), /admin/hesaplar/ (Hesaplar · Yeni oluştur · Partner başvuruları · Panel modülleri)
+- Admin menüsü: Müşteriler → Yeni Oluştur, Hesaplar ve İzinler, Partner Başvuruları (+ eski "Müşteri Kayıtları (yönetim)"); Ayarlar → Panel Modülleri
+- public/bm/session.js tüm üye panellerinde: oturum yoksa /giris/'e yönlendirir, Çıkış butonu, partner kısıtlı modu (4 belge + profil), admin modülleri/gizlenen sekmeler, demo isim yerine gerçek ad
+- Sayfa üreticisi: `python3 scripts/make-auth-pages.py scripts/src/site-shell.html` (giriş/partner sayfalarını site şablonundan üretir)
+- ChatGPT giriş/çıkış linkleri ve metinleri kaldırıldı; partner referans linki artık site adresini kullanıyor
+- Testler: `npm test` → 9 paket PASS (yeni tests/platform.mjs dahil)
+- Uçtan uca tarayıcı testi yerelde geçti (admin kurulum, hesap oluşturma, müşteri kaydı→doğrulama→panel, en yakın danışman ~185 km, partner kısıtlı mod→belge→admin onay→tam erişim, modül ekleme/gizleme, avukat ve muhasebeci girişi, admin host ayrımı)
+
+## Açık konular / sonraki adımlar
+- Müşteri paneli "Genel Bakış" ve partner paneli genel bakış hâlâ ÖRNEK veriler gösteriyor (sayılar, kart, grafikler); yalnızca isim gerçek. Gerçek veriye bağlanması gerekiyor.
+- Statik sayfaların canonical/og meta etiketleri eski chatgpt.site adresini gösteriyor → kalıcı alan adı belli olunca değiştirilecek
+- Vercel'de müşteri belge yükleme sınırı pratikte ~4 MB (panel 10 MB diyor)
+- Admin host'ta /kyc/ açılmaz (KYC sayfası ana sitede)
+- Kullanıcı Vercel'de: proje import, Blob (private), Turso, env değişkenleri kuracak

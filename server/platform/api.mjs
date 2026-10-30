@@ -173,7 +173,9 @@ export async function handleAuth(req, env, route) {
   }
   if (route === 'forgot' && req.method === 'POST') {
     const email = clean(b.email, 254).toLowerCase();
-    const u = await one(db, 'SELECT * FROM auth_users WHERE email=?', email);
+    let u = await one(db, 'SELECT * FROM auth_users WHERE email=?', email);
+    // Accounts opened by an advisor / lawyer workspace have no login yet: activate them here.
+    if (!u && validEmail(email) && email !== OWNER_EMAIL() && (await one(db, "SELECT id FROM people WHERE email=? AND status IN ('active','invited')", email) || await one(db, "SELECT id FROM law_accounts WHERE email=? AND status='active'", email))) u = await newAuthUser(db, email, null, true);
     let devLink;
     if (u && (email !== OWNER_EMAIL() || isAdminRequest(req))) {
       const token = await createToken(db, u.id, 'reset', 2);
@@ -206,6 +208,10 @@ export async function handleAuth(req, env, route) {
     }
     if (!u.verified) fail(403, 'E-posta adresiniz henüz doğrulanmadı. Gelen kutunuzu kontrol edin.', {unverified: true});
     await q(db, 'UPDATE auth_users SET failed=0, locked_until=0 WHERE id=?', u.id).run();
+    if (!admin) { // bind invitations created by advisors/staff to this login
+      await q(db, "UPDATE people SET uid=?, status='active' WHERE email=? AND uid IS NULL AND status='invited' AND created>?", u.id, email, now() - 30 * 864e5).run();
+      await q(db, "UPDATE law_accounts SET uid=? WHERE email=? AND uid IS NULL AND status='active'", u.id, email).run();
+    }
     let accounts;
     if (admin) accounts = [{panel: 'admin', home: '/admin/', label: 'Yönetim paneli'}];
     else {
