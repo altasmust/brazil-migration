@@ -52,3 +52,5 @@ dialog.bm-d::backdrop{background:#0b1f1566}
 .bm-login img{height:52px;margin-bottom:10px}
 .bm-login form{display:grid;gap:14px}.bm-login label{display:grid;gap:6px;font-size:12.5px;font-weight:600}
 @media(max-width:720px){.bm-f{grid-template-columns:1fr}.bm-top{padding:12px 16px}.bm-wrap{padding:20px 14px 60px}.bm-t{display:block;overflow-x:auto}}
+
+.bm-f [hidden],.bm-f label[hidden]{display:none!important}

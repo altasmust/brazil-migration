@@ -26,7 +26,7 @@
   const trust = $('.trust');
   if (trust) { trust.classList.add('bm-live'); [...trust.children].forEach(x => { if (x.textContent.includes('USD')) x.textContent = 'Şeffaf kapsam ve teklif'; }); [['globe', ''], ['shield', ''], ['clock', 'gold'], ['pin', '']].forEach(([k, c], i) => trust.children[i]?.insertAdjacentHTML('afterbegin', ico(k, c))); }
 
-  const CARDS = {'/brezilya-oturum-izni/': ['family', 'oturum'], '/lgbt-brezilya-oturum-izni/': ['heart', 'lgbt'], '/brezilya-evlilik-oturum-izni/': ['ring', 'evlilik'], '/brezilya-vatandasligi/': ['flag', 'vatandaslik'], '/brezilyada-sirket-kurma/': ['building', 'sirket']};
+  const CARDS = {'/brezilya-oturum-izni/': ['family', 'oturum'], '/brezilya-vatandasligi/': ['flag', 'vatandaslik'], '/brezilyada-sirket-kurma/': ['building', 'sirket']};
   $$('.service-card').forEach(c => {
     const m = CARDS[c.getAttribute('href')]; if (!m) return;
     c.classList.add('bm-live');
@@ -52,12 +52,12 @@
     const h = qt.querySelector('h2'); if (h) h.textContent = 'Hangi hizmet size uygun?';
     const p = qt.querySelector('p'); if (p) p.textContent = 'Üç kısa soruyu yanıtlayın; hedefinize göre puanlanmış en uygun 3 seçeneği ve kişisel yol haritanızı görün.';
     const sm = qt.querySelector('small'); if (sm) sm.textContent = 'Yönlendirme skorudur; resmî uygunluk kararı değildir.';
-    qt.querySelector('div')?.insertAdjacentHTML('beforeend', `<div class="bm-qicons">${ico('home')}${ico('flag')}${ico('building')}${ico('ring')}</div>`);
+    qt.querySelector('div')?.insertAdjacentHTML('beforeend', `<div class="bm-qicons">${ico('home')}${ico('flag')}${ico('building')}</div>`);
   }
 
   const services = $('#hizmetler .section-head');
   if (services && !$('.bm-ribbon')) services.insertAdjacentHTML('afterend', `<div class="bm-ribbon">
-    <div>${ico('route')}<span><b>5 hizmet yolu</b><small>Oturum, aile, evlilik, vatandaşlık, şirket</small></span></div>
+    <div>${ico('route')}<span><b>3 ana hizmet</b><small>Oturum, vatandaşlık ve şirket kurulumu</small></span></div>
     <div>${ico('chat', 'gold')}<span><b>Türkçe destek</b><small>Baştan sona tek muhatap</small></span></div>
     <div>${ico('scale')}<span><b>Avukat koordinasyonu</b><small>Dosyanıza özel hukuki kontrol</small></span></div>
     <div>${ico('shield')}<span><b>Güvenli panel</b><small>Belgeler, süreç ve bildirimler</small></span></div></div>`);

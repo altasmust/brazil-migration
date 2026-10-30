@@ -1,0 +1,59 @@
+.pt-wrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,560px);gap:48px;align-items:start}
+.pt-intro .pt-kicker{font-size:11px;letter-spacing:.18em;font-weight:700;color:var(--forest);text-transform:uppercase;margin:0 0 12px}
+.pt-intro h1{font-size:clamp(34px,4.4vw,52px);line-height:1.05;margin:0 0 14px;color:var(--ink)}
+.pt-intro p{font-size:15.5px;line-height:1.75;color:var(--muted);margin:0 0 18px}
+.pt-intro ul{list-style:none;padding:0;margin:0 0 24px;display:grid;gap:10px}
+.pt-intro li{display:flex;gap:10px;font-size:14px;color:var(--ink)}
+.pt-intro li span{flex:none;width:28px;height:28px;border-radius:9px;background:#e7f0df;display:grid;place-items:center;font-size:14px}
+.pt-intro img{width:100%;border-radius:20px;display:block}
+#pt-app{background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 20px 60px rgba(24,59,44,.08);min-height:520px}
+.pt-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.pt-stats div{background:var(--cream);border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center}
+.pt-stats b{display:block;font-size:18px;color:var(--ink)}.pt-stats span{font-size:11.5px;color:var(--muted)}
+.pt-day{background:linear-gradient(135deg,var(--forest),#2e7d32);color:#fff;border-radius:16px;padding:16px 18px;margin-bottom:18px}
+.pt-day .pt-tag{background:rgba(255,255,255,.18);color:#fff}
+.pt-day-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px}
+.pt-day-row b{display:block;font-size:22px}.pt-day-row span{display:block;opacity:.9;font-size:14px}.pt-day-row small{opacity:.75;font-size:12px}
+.pt-tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:4px 10px;background:#eef5e9;color:var(--forest)}
+.pt-say{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:#fff;font-size:20px;cursor:pointer}
+.pt-say.sm{width:36px;height:36px;font-size:16px;background:#eef5e9;vertical-align:middle;margin-left:6px}
+.pt-path{display:grid;gap:10px}
+.pt-unit{display:flex;align-items:center;gap:14px;text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:16px;padding:12px 14px;font:inherit;cursor:pointer;transition:.15s;color:var(--ink)}
+.pt-unit:hover:not(:disabled){border-color:var(--forest);transform:translateX(3px)}
+.pt-unit.done{border-color:#bcd9aa;background:#f6faf3}
+.pt-unit.locked{opacity:.55;cursor:not-allowed}
+.pt-bubble{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:22px;background:#eef5e9;box-shadow:inset 0 -3px 0 rgba(0,0,0,.08)}
+.pt-unit.done .pt-bubble{background:var(--forest);color:#fff;font-size:18px;font-weight:800}
+.pt-ut b{display:block;font-size:15px}.pt-ut small{display:block;font-size:12.5px;color:var(--muted)}.pt-ut em{font-style:normal;font-size:11.5px;color:#8a6510;font-weight:700}
+.pt-fine{font-size:11.5px;color:var(--muted);margin:16px 0 0;line-height:1.6}
+.pt-top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.pt-x{border:0;background:none;font-size:20px;cursor:pointer;color:var(--muted)}
+.pt-bar{flex:1;height:12px;border-radius:12px;background:#eceee8;overflow:hidden}.pt-bar i{display:block;height:100%;background:linear-gradient(90deg,#5aa63f,var(--forest));border-radius:12px;transition:width .3s}
+.pt-hearts{font-weight:800;font-size:14px;white-space:nowrap}
+.pt-h{font-size:22px;margin:0 0 4px;color:var(--ink)}.pt-sub{font-size:13.5px;color:var(--muted);margin:0 0 16px}
+.pt-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.pt-card{display:grid;gap:3px;text-align:left;border:1.5px solid var(--line);border-bottom-width:4px;background:#fff;border-radius:14px;padding:12px 14px;font:inherit;cursor:pointer;color:var(--ink)}
+.pt-card:hover,.pt-card.heard{border-color:#9fc78a}
+.pt-card b{font-size:15.5px}.pt-card span{font-size:13px;color:#3d5046}.pt-card small{font-size:11.5px;color:var(--muted)}
+.pt-go{display:block;width:100%;border:0;border-bottom:4px solid #0f3d1c;background:var(--forest);color:#fff;border-radius:14px;padding:15px;font:inherit;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px}
+.pt-go:active{transform:translateY(2px);border-bottom-width:2px}
+.pt-link{display:block;margin:12px auto 0;background:none;border:0;color:var(--forest);font:inherit;font-weight:700;cursor:pointer;text-decoration:underline}
+.pt-ask{font-size:17px;font-weight:800;color:var(--ink);margin:14px 0 10px}
+.pt-word{font-size:28px;font-weight:800;color:var(--forest);margin:0 0 18px}
+.pt-word.tr{color:var(--ink);font-size:22px}
+.pt-listen{border:0;border-bottom:4px solid #0f3d1c;background:#2e7d32;color:#fff;border-radius:16px;padding:18px 26px;font:inherit;font-size:18px;font-weight:800;cursor:pointer;margin-bottom:18px}
+.pt-opts{display:grid;gap:10px}
+.pt-opt{text-align:left;border:1.5px solid var(--line);border-bottom-width:4px;background:#fff;border-radius:14px;padding:14px 16px;font:inherit;font-size:15px;cursor:pointer;color:var(--ink)}
+.pt-opt:hover:not(:disabled){border-color:#9fc78a;background:#f6faf3}
+.pt-opt.right{border-color:#5aa63f;background:#e8f5df;color:#1b5e20;font-weight:700}
+.pt-opt.wrong{border-color:#d9776a;background:#fdecea;color:#8a1c12}
+.pt-feedback{margin-top:14px;border-radius:14px;padding:0;display:grid;gap:8px}
+.pt-feedback.ok{background:#e8f5df;padding:14px;color:#1b5e20}.pt-feedback.bad{background:#fdecea;padding:14px;color:#8a1c12}
+.pt-feedback small{display:block;font-size:12px;opacity:.8;margin-top:2px}
+.pt-done{text-align:center;padding:10px 0}
+.pt-trophy{font-size:64px}
+.pt-done h2{margin:6px 0;font-size:26px;color:var(--ink)}.pt-done p{color:var(--muted);margin:0 0 16px}
+@media (max-width:960px){.pt-wrap{grid-template-columns:1fr;gap:26px}.pt-intro img{display:none}}
+@media (max-width:520px){.pt-wrap{padding:24px 14px 60px}#pt-app{padding:16px}.pt-cards{grid-template-columns:1fr}}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) :is(#pt-app,.pt-unit,.pt-card,.pt-opt){background:#13201b}}
+:root[data-theme=dark] :is(#pt-app,.pt-unit,.pt-card,.pt-opt){background:#13201b}

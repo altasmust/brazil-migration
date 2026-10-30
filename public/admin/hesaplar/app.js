@@ -153,6 +153,41 @@
     $('#csv').onclick = csv;
   }
 
+  // ---------- Google Meet integration + bookings ----------
+  async function meetView() {
+    const d = await api('meet'), m = d.meet || {};
+    $('#view').innerHTML = `<div class="bm-box"><div class="bm-flex"><span class="bm-ico" style="width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:#e8f0fe;font-size:22px">🎥</span><div><h2 style="margin:0">Google Meet eklentisi</h2><p class="muted" style="margin:4px 0 0;font-size:12.5px">“15 dakikalık ücretsiz görüşme” formunu dolduran kişiye toplantı bağlantısı otomatik olarak e-postayla gönderilir.</p></div><span class="sp"></span><span class="tag ${m.active !== false && (m.link || m.webhook) ? 'g' : 'a'}">${m.active !== false && (m.link || m.webhook) ? 'Aktif' : 'Kurulum bekliyor'}</span></div></div>
+    ${d.mail ? '' : '<div class="bm-note info">E-posta servisi (Resend) henüz bağlı değil: talepler kaydedilir ve Meet linki ziyaretçiye ekranda gösterilir, ancak e-posta gitmez. RESEND_API_KEY ve EMAIL_FROM tanımlanınca otomatik gönderim başlar.</div>'}
+    <div class="bm-box"><form class="bm-f" id="mt">
+      <label class="full">Bağlantı yöntemi<select name="mode"><option value="fixed" ${m.mode !== 'webhook' ? 'selected' : ''}>Sabit Google Meet linki (en basit)</option><option value="webhook" ${m.mode === 'webhook' ? 'selected' : ''}>API / webhook — her görüşmeye ayrı link (gelişmiş)</option></select></label>
+      <label class="full" data-m="fixed">Sabit Meet linki<input name="link" placeholder="https://meet.google.com/abc-defg-hij" value="${esc(m.link || '')}"><small class="muted" style="font-weight:400">Google Takvim’de tekrarlayan bir “Ön görüşme” etkinliği oluşturup Meet linkini buraya yapıştırın.</small></label>
+      <label class="full" data-m="webhook">API / webhook adresi<input name="webhook" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(m.webhook || '')}"><small class="muted" style="font-weight:400">Her talepte bu adrese görüşme bilgileri (ad, e-posta, startISO, endISO) POST edilir; yanıtta <code>{"meetLink":"https://meet.google.com/…"}</code> beklenir. Yanıt gelmezse sabit link kullanılır.</small></label>
+      <label data-m="webhook">Gizli anahtar (X-BM-Secret, isteğe bağlı)<input name="secret" value="${esc(m.secret || '')}"></label>
+      <label>Yeni talep bildirimi e-postası<input name="notifyEmail" type="email" placeholder="ornek@sirket.com" value="${esc(m.notifyEmail || '')}"></label>
+      <label>Durum<select name="active"><option value="1">Aktif</option><option value="0" ${m.active === false ? 'selected' : ''}>Kapalı</option></select></label>
+      <div class="full bm-flex"><button class="b p">Kaydet</button><span class="muted" style="font-size:12px">${m.updated ? 'Son güncelleme: ' + date(m.updated) : ''}</span></div></form></div>
+    <div class="bm-box"><h2>Webhook için Google Apps Script örneği</h2><p class="muted" style="font-size:12.5px;margin-top:-6px">script.google.com → Yeni proje → kodu yapıştırın → Hizmetler’den “Google Calendar API” ekleyin → Dağıt → Web uygulaması (Herkes) → çıkan adresi yukarıya girin.</p><pre style="background:#f6f7f2;border:1px solid var(--line);border-radius:10px;padding:14px;font-size:12px;overflow:auto">function doPost(e) {
+  var b = JSON.parse(e.postData.contents);
+  var ev = Calendar.Events.insert({
+    summary: b.title, description: b.email + ' ' + (b.phone || '') + '\\n' + (b.note || ''),
+    start: {dateTime: b.startISO}, end: {dateTime: b.endISO},
+    attendees: [{email: b.email}],
+    conferenceData: {createRequest: {requestId: b.id, conferenceSolutionKey: {type: 'hangoutsMeet'}}}
+  }, 'primary', {conferenceDataVersion: 1, sendUpdates: 'all'});
+  return ContentService.createTextOutput(JSON.stringify({meetLink: ev.hangoutLink}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre></div>`;
+    const f = $('#mt'); const sync = () => f.querySelectorAll('[data-m]').forEach(x => x.hidden = x.dataset.m === 'webhook' && f.mode.value !== 'webhook'); f.mode.onchange = sync; sync();
+    f.onsubmit = async e => { e.preventDefault(); try { await api('meet', 'POST', {mode: f.mode.value, link: f.link.value.trim(), webhook: f.webhook.value.trim(), secret: f.secret.value, notifyEmail: f.notifyEmail.value.trim(), active: f.active.value === '1'}); note('ok', 'Google Meet ayarları kaydedildi.'); meetView(); } catch (err) { note('err', esc(err.message)); } };
+  }
+  async function bookingsView() {
+    const d = await api('bookings');
+    const ST = {'Planlandı': 'b', 'Tamamlandı': 'g', 'İptal': 'r', 'Gelmedi': 'a'};
+    $('#view').innerHTML = `<div class="bm-box"><h2 style="margin:0">Ön görüşme talepleri (${d.bookings.length})</h2><p class="muted" style="margin:4px 0 0;font-size:12.5px">Sitedeki “15 dakikalık ücretsiz görüşme” formundan gelen talepler.</p></div>
+    <div class="bm-box" style="padding:8px"><table class="bm-t"><thead><tr><th>Tarih / saat</th><th>Kişi</th><th>Hizmet / not</th><th>Meet</th><th>Durum</th></tr></thead><tbody>${d.bookings.map(x => `<tr><td><b>${esc(new Date(x.start).toLocaleString('tr-TR', {timeZone: x.timezone, dateStyle: 'medium', timeStyle: 'short'}))}</b><br><small class="muted">${esc(x.timezone === 'America/Sao_Paulo' ? 'São Paulo saati' : 'Türkiye saati')}</small></td><td>${esc(x.name)}<br><small class="muted">${esc(x.email)}${x.phone ? ' · ' + esc(x.phone) : ''}</small></td><td><small>${esc(x.service || '')}${x.package ? '<br>' + esc(x.package) : ''}${x.note ? '<br><i>' + esc(x.note) + '</i>' : ''}</small></td><td>${x.meet ? `<a class="b s" href="${esc(x.meet)}" target="_blank" rel="noopener">Katıl</a>` : '<small class="muted">Link yok</small>'}<br><small class="muted">${x.mailSent ? 'E-posta gitti' : 'E-posta gitmedi'}</small></td><td><select class="bm-in" data-bk="${esc(x.id)}" style="width:auto">${Object.keys(ST).map(s => `<option ${x.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></td></tr>`).join('') || '<tr><td colspan="5" class="muted">Henüz görüşme talebi yok.</td></tr>'}</tbody></table></div>`;
+    $$('[data-bk]').forEach(sel => sel.onchange = async () => { try { await api('bookings', 'PATCH', {id: sel.dataset.bk, status: sel.value}); note('ok', 'Durum güncellendi.'); } catch (err) { note('err', esc(err.message)); } });
+  }
+
   async function route() {
     tab = (location.hash || '#hesaplar').slice(1) || 'hesaplar';
     $$('#tabs a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + tab));
@@ -162,6 +197,8 @@
       else if (tab === 'partnerler') await partners();
       else if (tab === 'moduller') await modulesView();
       else if (tab === 'degerlendirmeler') await leads();
+      else if (tab === 'meet') await meetView();
+      else if (tab === 'gorusmeler') await bookingsView();
       else await accounts();
     } catch (err) { if (err.message !== 'Giriş gerekli') note('err', esc(err.message)); }
   }

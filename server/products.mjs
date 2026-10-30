@@ -1,4 +1,4 @@
-const types=['Oturum İzni','Evlilik','LGBT','Vatandaşlık','Şirket Kurulumu','Diğer'];
+const types=['Oturum İzni','Vatandaşlık','Şirket Kurulumu','Diğer'];
 const currencies=['USD','BRL','EUR','TRY'],cycles=['Tek Sefer','Aylık','3 Aylık','6 Aylık','Yıllık'];
 const fail=message=>{throw Object.assign(new Error(message),{status:400})};
 const num=(n,max=1e8)=>{const v=Number(n);if(!Number.isFinite(v)||v<0||v>max)fail('Fiyat veya sayısal değer geçersiz.');return v};

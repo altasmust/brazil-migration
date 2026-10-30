@@ -160,6 +160,38 @@ export async function handleAuth(req, env, route) {
     return json({ok: true, verifyRequired: true, mailSent: mail.sent, devLink: mail.devLink});
   }
 
+  if (route === 'booking' && req.method === 'POST') { // 15-min free call → Google Meet link by e-mail
+    const email = clean(b.email, 254).toLowerCase(), name = clean(b.name, 70);
+    if (name.length < 2 || !validEmail(email)) fail(400, 'Ad ve geçerli bir e-posta girin.');
+    if (!b.consent) fail(400, 'Devam etmek için onay kutusunu işaretleyin.');
+    const date = clean(b.date, 10), time = clean(b.time, 5), tz = String(b.timezone || '').includes('Sao_Paulo') ? 'America/Sao_Paulo' : 'Europe/Istanbul';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) fail(400, 'Gün ve saat seçin.');
+    const offset = tz === 'America/Sao_Paulo' ? -3 : 3;
+    const start = Date.parse(`${date}T${time}:00Z`) - offset * 36e5;
+    if (!Number.isFinite(start) || start < now() - 36e5 || start > now() + 366 * 864e5) fail(400, 'Gelecek bir tarih seçin.');
+    const recent = await one(db, "SELECT COUNT(*) AS n FROM items WHERE kind='booking' AND json_extract(data,'$.email')=? AND created>?", email, now() - 864e5);
+    if ((recent?.n || 0) >= 3) fail(429, 'Bugün için yeterli talep aldık; ekibimiz sizinle iletişime geçecek.');
+    const cfg = (await getItem(db, 'integration-meet'))?.data || {};
+    let meet = cfg.active !== false && /^https:\/\/meet\.google\.com\/[a-z0-9-]+$/i.test(cfg.link || '') ? cfg.link : '';
+    const id = uuid(), booking = {name, email, phone: clean(b.phone, 40), service: clean(b.service, 120), package: clean(b.package, 160), note: clean(b.note, 1000), date, time, timezone: tz, start, status: 'Planlandı'};
+    if (cfg.mode === 'webhook' && /^https:\/\//.test(cfg.webhook || '')) {
+      try {
+        const r = await fetch(cfg.webhook, {method: 'POST', headers: {'Content-Type': 'application/json', ...(cfg.secret ? {'X-BM-Secret': cfg.secret} : {})}, body: JSON.stringify({id, ...booking, startISO: new Date(start).toISOString(), endISO: new Date(start + 15 * 6e4).toISOString(), title: '15 dk ön görüşme · ' + name}), signal: AbortSignal.timeout(10000)});
+        const d = await r.json().catch(() => ({}));
+        const link = String(d.meetLink || d.hangoutLink || d.link || '');
+        if (r.ok && /^https:\/\/meet\.google\.com\//.test(link)) meet = link;
+      } catch (e) { console.error('[meet-webhook]', e.message); }
+    }
+    booking.meet = meet;
+    const fmt = new Date(start).toLocaleString('tr-TR', {timeZone: tz, dateStyle: 'long', timeStyle: 'short'});
+    const gstamp = t => new Date(t).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const cal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Brazil Migration · 15 dk ön görüşme')}&dates=${gstamp(start)}/${gstamp(start + 15 * 6e4)}&details=${encodeURIComponent(meet ? 'Google Meet: ' + meet : 'Toplantı linki e-postayla iletilecek.')}`;
+    const text = meet ? `Ön görüşmeniz ${fmt} (${tz === 'America/Sao_Paulo' ? 'São Paulo' : 'Türkiye'} saati) için planlandı. Aşağıdaki Google Meet bağlantısıyla katılabilirsiniz: ${meet}` : `Ön görüşme talebiniz ${fmt} için alındı. Toplantı bağlantınız kısa süre içinde e-postanıza iletilecek.`;
+    const mail = await sendMail({to: email, subject: 'Ön görüşmeniz: ' + fmt, title: 'Merhaba ' + name.split(' ')[0] + ',', text: text + ' Takviminize eklemek için: ' + cal, link: meet || undefined, button: 'Google Meet’e katıl'});
+    if (cfg.notifyEmail && validEmail(cfg.notifyEmail)) await sendMail({to: cfg.notifyEmail, subject: 'Yeni ön görüşme: ' + name, text: `${name} (${email}) · ${fmt} · ${booking.service || ''} ${meet ? '· ' + meet : ''}`});
+    await db.batch([putItem(db, id, 'booking', 'owner', {...booking, mailSent: mail.sent}), notice(db, 'owner', 'Yeni ön görüşme: ' + name + ' · ' + fmt, 'bookings')]);
+    return json({ok: true, meet: meet || null, when: fmt, calendar: cal, mailSent: mail.sent});
+  }
   if (route === 'lead' && req.method === 'POST') { // pre-assessment result gate (public)
     const email = clean(b.email, 254).toLowerCase();
     if (!validEmail(email)) fail(400, 'Geçerli bir e-posta adresi girin.');
@@ -552,6 +584,28 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     return streamFile(env, p.docs[doc]);
   }
 
+  if (route === 'meet' && req.method === 'GET') { const m0 = (await getItem(db, 'integration-meet'))?.data || {mode: 'fixed', active: true}; return json({meet: {...m0, secret: m0.secret ? '••••••' : ''}, mail: mailConfigured()}); }
+  if (route === 'meet' && req.method === 'POST') {
+    const mode = b.mode === 'webhook' ? 'webhook' : 'fixed';
+    const link = clean(b.link, 200), webhook = clean(b.webhook, 500);
+    if (link && !/^https:\/\/meet\.google\.com\/[a-z0-9-]+$/i.test(link)) fail(400, 'Meet linki https://meet.google.com/abc-defg-hij biçiminde olmalı.');
+    if (mode === 'webhook' && !/^https:\/\//.test(webhook)) fail(400, 'API / webhook adresi https:// ile başlamalı.');
+    if (b.notifyEmail && !validEmail(clean(b.notifyEmail, 254))) fail(400, 'Bildirim e-postası geçersiz.');
+    const old = (await getItem(db, 'integration-meet'))?.data || {};
+    const data = {mode, link, webhook, secret: b.secret === undefined || b.secret === '••••••' ? old.secret || '' : clean(b.secret, 200), notifyEmail: clean(b.notifyEmail, 254), active: b.active !== false, updated: now()};
+    await db.batch([putItem(db, 'integration-meet', 'integration', 'site', data), audit(db, actor, 'integration.meet', mode)]);
+    return json({ok: true});
+  }
+  if (route === 'bookings' && req.method === 'GET') {
+    const list = await rows(db, "SELECT * FROM items WHERE kind='booking' ORDER BY json_extract(data,'$.start') DESC LIMIT 500");
+    return json({bookings: list.map(r => ({id: r.id, ...parse(r.data), created: r.created}))});
+  }
+  if (route === 'bookings' && req.method === 'PATCH') {
+    const r0 = await getItem(db, clean(b.id, 80)); if (!r0 || r0.kind !== 'booking') fail(404, 'Görüşme bulunamadı.');
+    const status = ['Planlandı', 'Tamamlandı', 'İptal', 'Gelmedi'].includes(b.status) ? b.status : r0.data.status;
+    await putItem(db, r0.id, 'booking', 'owner', {...r0.data, status, adminNote: clean(b.adminNote ?? r0.data.adminNote, 1000)}).run();
+    return json({ok: true});
+  }
   if (route === 'leads' && req.method === 'GET') {
     const list = await rows(db, "SELECT * FROM items WHERE kind='lead' ORDER BY updated DESC LIMIT 500");
     return json({leads: list.map(r => ({id: r.id, ...parse(r.data), updated: r.updated}))});

@@ -157,6 +157,16 @@ try {
   assert.equal((await call('d', 'advisor', 'cases')).status, 403);
   globalThis.fetch = realFetch; for (const k of ['DIDIT_ENABLED', 'DIDIT_API_KEY', 'DIDIT_WORKFLOW_ID']) delete process.env[k];
 
+  // 15-min booking → Google Meet link
+  const day = new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10);
+  assert.equal((await call('b', 'auth', 'booking', {name: 'Ali', email: 'ali.b@test.com', date: day, time: '14:00', timezone: 'Europe/Istanbul'})).status, 400); // consent
+  assert.equal((await call('admin', 'admin', 'meet', {mode: 'fixed', link: 'https://example.com/x'})).status, 400);
+  assert.equal((await call('admin', 'admin', 'meet', {mode: 'fixed', link: 'https://meet.google.com/abc-defg-hij', active: true})).status, 200);
+  r = await call('b', 'auth', 'booking', {name: 'Ali', email: 'ali.b@test.com', date: day, time: '14:00', timezone: 'Europe/Istanbul', consent: true});
+  assert.equal(r.status, 200); assert.equal(r.data.meet, 'https://meet.google.com/abc-defg-hij'); assert.ok(r.data.calendar.includes('calendar.google.com'));
+  assert.equal((await call('b', 'auth', 'booking', {name: 'Ali', email: 'ali.b@test.com', date: '2020-01-01', time: '14:00', consent: true})).status, 400);
+  assert.equal((await call('admin', 'admin', 'bookings')).data.bookings[0].email, 'ali.b@test.com');
+
   // logout ends the session
   await call('zey', 'auth', 'logout', {});
   assert.equal((await call('zey', 'workspace', 'bootstrap')).status, 401);

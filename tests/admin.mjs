@@ -61,7 +61,7 @@ assert.equal((await call('record',{id:c2.data.id},{method:'DELETE'})).status,409
 vm.runInContext(readFileSync('public/admin/products.js','utf8'),context);
 context.location.hash='#products';vm.runInContext('render()',context);assert.ok(elements.get('#main').innerHTML.includes('Yeni Ürün Oluştur'));
 context.location.hash='#products/new';vm.runInContext('render()',context);
-for(const t of ['Oturum İzni','Evlilik','LGBT','Vatandaşlık','Şirket Kurulumu','Diğer'])assert.ok(elements.get('#main').innerHTML.includes(t));
+for(const t of ['Oturum İzni','Vatandaşlık','Şirket Kurulumu','Diğer'])assert.ok(elements.get('#main').innerHTML.includes(t));
 const generated=vm.runInContext("generatedProductPrices({base:100,setup:20,'rate-USD':1,'rate-BRL':5,'cycle-2':true,'discount-2':10})",context);
 assert.equal(generated.length,2);assert.equal(generated[0].amount,300);assert.equal(generated[1].amount,1500);assert.equal(vm.runInContext("netProductPrice({amount:300,setup:20,discount:10})",context),290);
 const productData={type:'product',name:'Şirket Kurulumu Paketi',productType:'Şirket Kurulumu',status:'Aktif',allowQuantity:true,stock:3,limit:2,currency:'USD',amount:290,addons:JSON.stringify([{id:'web',name:'Web Sitesi',amount:50,currency:'USD',enabled:true}]),requirements:JSON.stringify([{id:'passport',name:'Pasaport',input:'Dosya',required:true,enabled:true,position:1},{id:'reason',name:'Açıklama',input:'Metin Alanı',required:true,enabled:true,position:2}]),prices:JSON.stringify([{cycle:'3 Aylık',currency:'USD',amount:300,setup:20,discount:10,enabled:true}])};
