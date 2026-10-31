@@ -1,5 +1,5 @@
 const DAY=86400000,ACTIVE=300000;
-const paths=new Set(['/','/index.html','/brezilyada-sirket-kurma/','/brezilya-oturum-izni/','/iletisim/','/giris/','/icerik-plani/','/brezilya-vatandasligi/','/degerlendirme/','/kaynaklar/','/portekizce/','/partner-ol/']);
+const paths=new Set(['/','/index.html','/brezilyada-sirket-kurma/','/brezilya-oturum-izni/','/iletisim/','/giris/','/icerik-plani/','/brezilya-vatandasligi/','/degerlendirme/','/kaynaklar/','/portekizce/','/turkiye-brezilya/','/partner-ol/']);
 const response=(data,status=200,headers={})=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}});
 export async function heartbeat(req,env){
  try{

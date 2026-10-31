@@ -107,3 +107,10 @@
   - Görüşme: app.js book()/prepareBooking → POST /api/auth/booking (items kind='booking'); Meet ayarı items id='integration-meet' {mode fixed|webhook, link, webhook, secret, notifyEmail, active}. Webhook modunda Apps Script ile her görüşmeye ayrı Calendar+Meet (örnek kod admin sayfasında). E-posta Resend yokken gitmez; link ekranda gösterilir + Google Takvim'e ekle linki. Admin: /admin/hesaplar/#meet ve #gorusmeler; admin menü: Ayarlar → Google Meet Entegrasyonu, Destek → Ön Görüşme Talepleri.
   - Demo müşteri: musteri@demo.bm (seed.mjs, danışmanı demo partner). Şifre sohbette verildi.
   - Admin yeşil menü çubuğundaki ızgara (Başlangıç) ikonu kaldırıldı.
+
+## 2026-10-31 — Türkiye–Brezilya karşılaştırma sayfası
+- Kullanıcı: "Türkiye ve Brezilya karşılaştırması sayfası yap: ev, araba, elektronik, gıda, faturalar; sağlık; eğitim; vergi yükü; dijital yaşam; genel skor; hava durumu ve para birimi."
+- Yeni: public/turkiye-brezilya/index.html (degerlendirme kabuğundan, body data-page="compare"), public/bm/karsilastirma.css, public/bm/karsilastirma.js.
+- İçerik: sekmeli maliyet tablosu (Ev, Araba, Elektronik, Gıda, Faturalar, Genel yaşam; USD + ₺/R$, fark rozeti), Sağlık/Eğitim/Vergi/Dijital kartları, canlı hava (Open-Meteo), canlı kur + çevirici (api.frankfurter.dev, yedek kur USD/TRY 49,77, USD/BRL 5,30), ağırlığı ayarlanabilir genel skor (TR 5,4 / BR 6,9 varsayılan), kaynaklar.
+- Veri: livingcost.org (Haz 2026), Toyota TR Corolla 2.545.500 ₺, FIPE R$158.991, Canaltech iPhone 17, GVK 2026 dilimleri, IRPF 2026 + Lei 15.270/2025.
+- Menü (mega-nav + full-menu Rehber & araçlar), footer Keşfedin, sitemap.xml, visitors.mjs yollarına eklendi.
