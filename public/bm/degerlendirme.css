@@ -6,7 +6,7 @@
 .uq-art{margin:10px 0 0;border-radius:22px;overflow:hidden}
 .uq-art img{width:100%;height:auto;display:block}
 .uq-trust{display:flex;flex-wrap:wrap;gap:10px 22px;margin:0;padding:0;list-style:none;font-size:13px;color:var(--ink)}
-.uq-trust li:before{content:'✓';color:var(--forest);font-weight:800;margin-right:7px}
+.uq-trust li:before{content:'';display:inline-block;width:.95em;height:.95em;vertical-align:-.12em;background-color:currentColor;-webkit-mask:var(--ic-check) center/contain no-repeat;mask:var(--ic-check) center/contain no-repeat;color:var(--forest);font-weight:800;margin-right:7px}
 .uq-card{background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(24,59,44,.09)}
 .uq-head{background:linear-gradient(135deg,var(--forest),#2e7d32);color:#fff;padding:22px 24px 20px}
 .uq-head h2{margin:0 0 4px;font-size:21px;color:#fff}

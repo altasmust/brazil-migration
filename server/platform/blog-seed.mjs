@@ -95,3 +95,25 @@ export async function seedBlog(client, cleanPost) {
   }
   await client.execute({sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('migration-blog-v1','migration','owner','{}',?,?)", args: [now, now]});
 }
+
+// One-time: Vatandaşlık moves under "Oturum & yaşam"; "İş & vatandaşlık" becomes "İş & yatırım" (menu saved in the admin).
+export async function migrateMenuV2(client) {
+  const done = await client.execute({sql: "SELECT id FROM items WHERE id='migration-menu-v2'", args: []});
+  if (done.rows.length) return;
+  const now = Date.now();
+  const m = (await client.execute({sql: "SELECT data FROM items WHERE id='site-menu'", args: []})).rows[0];
+  if (m) {
+    try {
+      const menu = JSON.parse(m[0] ?? m.data), G = menu.groups || [];
+      const res = G.find(g => (g.links || []).some(l => /brezilya-oturum-izni/.test(l.href)));
+      const biz = G.find(g => g !== res && (g.links || []).some(l => /brezilya-vatandasligi/.test(l.href)));
+      if (res && biz) {
+        const i = biz.links.findIndex(l => /brezilya-vatandasligi/.test(l.href));
+        const [v] = biz.links.splice(i, 1); res.links.push(v);
+        if (/vatanda/i.test(biz.title)) { biz.title = 'İş & yatırım'; if (biz.intro && /vatanda/i.test(biz.intro.heading || '')) biz.intro.heading = 'İş & yatırım'; }
+        await client.execute({sql: "UPDATE items SET data=?, updated=? WHERE id='site-menu'", args: [JSON.stringify(menu), now]});
+      }
+    } catch {}
+  }
+  await client.execute({sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('migration-menu-v2','migration','owner','{}',?,?)", args: [now, now]});
+}

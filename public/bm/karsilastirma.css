@@ -10,7 +10,7 @@
 .tb-val{position:relative;padding-bottom:9px}.tb-val b{display:block;font-size:16px;color:var(--ink)}.tb-val small{color:var(--muted);font-size:12px}
 .tb-val i{position:absolute;left:0;bottom:0;height:5px;border-radius:5px;opacity:.35}
 .tb-val.tr i{background:var(--tr)}.tb-val.br i{background:var(--br)}
-.tb-val.win i{opacity:1}.tb-val.win b:after{content:' ✓';color:var(--br);font-size:13px}
+.tb-val.win i{opacity:1}.tb-val.win b:after{content:'';display:inline-block;width:.95em;height:.95em;vertical-align:-.12em;background-color:currentColor;-webkit-mask:var(--ic-check) center/contain no-repeat;mask:var(--ic-check) center/contain no-repeat;margin-left:5px;color:var(--br);font-size:13px}
 .tb-val.tr.win b:after{color:var(--tr)}
 .tb-diff span{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px;white-space:nowrap}
 .tb-diff .br{background:#e3f4e7;color:#14632b}.tb-diff .tr{background:#fde5e8;color:#9b0f24}

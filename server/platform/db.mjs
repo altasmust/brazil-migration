@@ -6,7 +6,7 @@ import {mkdirSync} from 'node:fs';
 import {dirname} from 'node:path';
 import {MIGRATIONS} from './migrations.mjs';
 import {seedDemo, migrateOwner} from './seed.mjs';
-import {seedBlog} from './blog-seed.mjs';
+import {seedBlog, migrateMenuV2} from './blog-seed.mjs';
 import {cleanPost} from './blog.mjs';
 import {loadConfig} from './config.mjs';
 
@@ -36,7 +36,7 @@ class Database {
     return rs.map(r => ({success: true, meta: {changes: r.rowsAffected}, results: r.rows.map(row => toObject(r, row))}));
   }
   async exec(sql) { await this.ready(); return this.client.executeMultiple(sql); }
-  ready() { return this._ready ??= migrate(this.client).then(() => migrateOwner(this.client)).then(() => seedBlog(this.client, cleanPost)).then(() => loadConfig(this.client)).then(() => seedDemo(this.client)).catch(e => { this._ready = null; throw e; }); }
+  ready() { return this._ready ??= migrate(this.client).then(() => migrateOwner(this.client)).then(() => seedBlog(this.client, cleanPost)).then(() => migrateMenuV2(this.client)).then(() => loadConfig(this.client)).then(() => seedDemo(this.client)).catch(e => { this._ready = null; throw e; }); }
 }
 
 async function migrate(client) {

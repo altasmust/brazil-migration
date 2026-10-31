@@ -160,9 +160,25 @@
     draw(); preview();
   }
 
+  // ---------- İKON KÜTÜPHANESİ ----------
+  function iconsPage() {
+    setTimeout(() => {
+      const root = $('#bmi-root'); const B = window.BMIcons;
+      if (!B) { root.innerHTML = heading('İkon Kütüphanesi') + '<div class="bmc-err">İkon kütüphanesi yüklenemedi. Sayfayı yenileyin.</div>'; return; }
+      const glyph = Object.fromEntries(Object.entries(B.glyphs).map(([g, n]) => [n, g]));
+      root.innerHTML = heading('İkon Kütüphanesi') + `<div class="bmc-callout"><bm-i class="ic ic-star"></bm-i><div><b>Sitenin tüm ikonları tek bir kütüphanede</b><span>İkonlar <code>/bm/icons.css</code> dosyasından gelir (tek dosya, tarayıcıda önbelleğe alınır; ek görsel isteği yoktur). Yazı rengini ve koyu modu otomatik izler. Metinlerde ↗ ✓ ⌄ × ☰ gibi işaretler yazdığınızda otomatik olarak bu ikonlara dönüşür. Bir ikonun koduna tıklayıp kopyalayabilirsiniz.</span></div></div>
+        <input class="bmc-in" id="bmi-q" placeholder="İkon ara… (ör. arrow, check, home)" style="max-width:360px;margin-bottom:14px">
+        <div class="bmi-grid">${B.names.map(n => `<button class="bmi-card" data-n="${n}" title="Kodu kopyala"><bm-i class="ic ic-${n}"></bm-i><b>${n}</b>${glyph[n] ? `<small>Metinde: ${esc(glyph[n])}</small>` : '<small>&nbsp;</small>'}</button>`).join('')}</div>`;
+      root.querySelectorAll('.bmi-card small').forEach(x => x.setAttribute('data-no-icons', ''));
+      $('#bmi-q').oninput = e => { const q = e.target.value.trim().toLowerCase(); root.querySelectorAll('.bmi-card').forEach(c => c.style.display = !q || c.dataset.n.includes(q) ? '' : 'none'); };
+      root.querySelector('.bmi-grid').onclick = async e => { const c = e.target.closest('.bmi-card'); if (!c) return; const code = `<bm-i class="ic ic-${c.dataset.n}" aria-hidden="true"></bm-i>`; try { await navigator.clipboard.writeText(code); say('Kopyalandı: ' + code); } catch { prompt('Kodu kopyalayın', code); } };
+    }, 0);
+    return `<div class="bmc bms" id="bmi-root">${heading('İkon Kütüphanesi')}<div class="loading">Yükleniyor…</div></div>`;
+  }
+
   window.BMBlog = {editor};
-  Object.assign(names, {blog: 'Blog'});
+  Object.assign(names, {blog: 'Blog', ikonlar: 'İkon Kütüphanesi'});
   const _overview = overview;
-  overview = function () { return route() === 'blog' ? page() : _overview(); };
-  if (route() === 'blog') setTimeout(() => { if (!document.querySelector('#bmb-root')) render(); }, 700);
+  overview = function () { const r = route(); return r === 'blog' ? page() : r === 'ikonlar' ? iconsPage() : _overview(); };
+  if (['blog', 'ikonlar'].includes(route())) setTimeout(() => { if (!document.querySelector('#bmb-root,#bmi-root')) render(); }, 700);
 })();

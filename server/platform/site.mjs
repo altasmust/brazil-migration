@@ -5,6 +5,7 @@ import {readFile, readdir, stat} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {parse} from 'node-html-parser';
+import {iconizeHTML} from './icons.mjs';
 import {BLOG_POST, blogIndexHTML, blogPostHTML, blogJsonLd} from './blog.mjs';
 
 const PUBLIC = () => join(/* turbopackIgnore: true */ process.cwd(), 'public');
@@ -237,7 +238,7 @@ async function renderCustom(page, path) {
   const main = root.querySelector('main#main'); main.set_content(`<div class="bp-page">${blocksHTML(page.blocks)}</div>`);
   root.querySelector('body')?.setAttribute('data-page', 'custom');
   const head = root.querySelector('head');
-  head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/oturum.css?v=3"><link rel="stylesheet" href="/bm/sayfa.css?v=1">');
+  head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/oturum.css?v=4"><link rel="stylesheet" href="/bm/sayfa.css?v=1">');
   root.querySelectorAll('head link[rel="stylesheet"]').filter(l => /kaynak/.test(l.getAttribute('href') || '')).forEach(l => l.remove());
   root.querySelectorAll('body script').filter(s => /\/bm\/(?!session)/.test(s.getAttribute('src') || '')).forEach(s => s.remove());
   applySeo(root, path, {title: (page.seo?.title || page.title + ' | Brazil Migration'), description: page.seo?.description || page.description || '', image: page.seo?.image, noindex: page.seo?.noindex});
@@ -266,12 +267,12 @@ async function renderBlog(path, st, preview) {
   return root;
 }
 
-// ---------- arrows: "↗"/"↔" render as emoji on some phones → inline SVG-mask icon (see /bm/arrows.js) ----------
-const ARR_SVG = d => `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='${d}'/%3E%3C/svg%3E")`;
-const ARR_CSS = `<style id="bm-arr-css">.bm-arr{display:inline-block;width:.8em;height:.8em;vertical-align:-.06em;background-color:currentColor;-webkit-mask:${ARR_SVG('M7 17 17 7M8.5 7H17v8.5')} center/contain no-repeat;mask:${ARR_SVG('M7 17 17 7M8.5 7H17v8.5')} center/contain no-repeat;flex:none}.bm-arr.lr{width:1em;-webkit-mask-image:${ARR_SVG('M7 8 3 12l4 4M17 8l4 4-4 4M3 12h18')};mask-image:${ARR_SVG('M7 8 3 12l4 4M17 8l4 4-4 4M3 12h18')}}</style>`;
+// ---------- icons: text glyphs (↗ ✓ ⌄ × …) → icon library (/bm/icons.css, see server/platform/icons.mjs) ----------
 export function arrowize(html) {
-  return html.split(/(<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<textarea[\s\S]*?<\/textarea>|<[^>]+>)/i).map((seg, i) => i % 2 ? seg : seg.replace(/↗\uFE0F?/g, '<bm-arr class="bm-arr" aria-hidden="true"></bm-arr>').replace(/↔\uFE0F?/g, '<bm-arr class="bm-arr lr" aria-hidden="true"></bm-arr>')).join('')
-    .replace('</head>', ARR_CSS + '</head>').replace(/<\/body>(?![\s\S]*<\/body>)/, '<script src="/bm/arrows.js?v=1" defer></script></body>');
+  html = iconizeHTML(html);
+  if (!html.includes('/bm/icons.css')) html = html.replace('</head>', '<link rel="stylesheet" href="/bm/icons.css?v=1"></head>');
+  if (!html.includes('/bm/icons.js')) html = html.replace(/<\/body>(?![\s\S]*<\/body>)/, '<script src="/bm/icons.js?v=1" defer></script></body>');
+  return html;
 }
 
 // ---------- render ----------

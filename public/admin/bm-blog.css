@@ -27,3 +27,6 @@
 @media (max-width:900px){.bmb-ed .bms-side.left{width:100%;max-height:55vh}}
 #bmb-root code{word-break:break-all;white-space:normal}
 .bmb-acts{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;min-width:250px}.bmb-acts .btn{margin:0;float:none;height:34px;font-size:12.5px;padding:0 12px;display:inline-flex;align-items:center;gap:6px}
+.bmi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.bmi-card{display:grid;justify-items:center;gap:6px;padding:18px 10px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;font:inherit;color:#183b2c}
+.bmi-card:hover{border-color:#1b5e20;background:#f6faf3}.bmi-card bm-i{font-size:28px;color:#1b5e20}.bmi-card b{font-size:12px;font-weight:600}.bmi-card small{font-size:11px;color:#68776b}
