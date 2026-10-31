@@ -1,0 +1,22 @@
+# Her push'ta kodu GitLab'daki kopyaya aynalar (Hostinger GitLab'dan dağıtır).
+# Gerekli GitHub secret'ları: GITLAB_TOKEN (write_repository yetkili proje erişim anahtarı),
+# GITLAB_REPO (ör. kullaniciadi/brazil-migration). Tanımlı değillerse adım atlanır.
+name: GitLab aynası
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: GitLab'a gönder
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          GITLAB_REPO: ${{ secrets.GITLAB_REPO }}
+        run: |
+          if [ -z "$GITLAB_TOKEN" ] || [ -z "$GITLAB_REPO" ]; then echo "GitLab secret'ları tanımlı değil, atlanıyor."; exit 0; fi
+          git push --force "https://oauth2:${GITLAB_TOKEN}@gitlab.com/${GITLAB_REPO}.git" HEAD:main
