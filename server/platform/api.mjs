@@ -6,6 +6,7 @@ import {
 } from './auth.mjs';
 import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
 import {applyConfig} from './config.mjs';
+import {creditState, creditRecord, saveCredit, monthKey, monthStart as creditMonthStart, DEFAULT_MONTHLY} from './credits.mjs';
 import {CITIES, locate, fromRequest, distanceKm} from './geo.mjs';
 import {PARTNER_DOCS, verifyPartner, verifyCustomerDocument, verifierConfigured} from './verify.mjs';
 
@@ -399,6 +400,26 @@ export async function handlePlatform(req, env, route, ctx = {}) {
     return json({modules: list.map(m => ({id: m.id, title: m.title, icon: m.icon, type: m.type, content: m.content, url: m.url, order: m.order})), hidden: builtins.hidden || []});
   }
   const {u, person} = await memberContext(db, req);
+  if (route.startsWith('partner/kyc-credit')) {
+    const pid = person?.role === 'advisor' ? person.id : person?.role === 'employee' && person.manager && person.manager !== 'owner' ? person.manager : null;
+    if (!pid) fail(403, 'Partner hesabı gerekli.');
+    if (route === 'partner/kyc-credit' && req.method === 'GET') {
+      const st = await creditState(db, pid);
+      const reqs = (await rows(db, "SELECT id,data,created FROM items WHERE kind='kyc_credit_req' AND owner=? ORDER BY created DESC LIMIT 20", pid)).map(r => ({id: r.id, ...parse(r.data), at: r.created}));
+      return json({credit: st, requests: reqs});
+    }
+    if (route === 'partner/kyc-credit/request' && req.method === 'POST') {
+      const b = await body(req), amount = Math.round(Number(b.amount));
+      if (!Number.isFinite(amount) || amount < 1 || amount > 500) fail(400, '1 ile 500 arasında bir kredi miktarı yazın.');
+      if (await one(db, "SELECT id FROM items WHERE kind='kyc_credit_req' AND owner=? AND json_extract(data,'$.status')='pending'", pid)) fail(409, 'Bekleyen bir kredi talebiniz var. Yönetici yanıtladıktan sonra yeni talep oluşturabilirsiniz.');
+      const partner = await one(db, 'SELECT name, email FROM people WHERE id=?', pid);
+      const note = clean(b.note, 500), id = uuid();
+      await db.batch([q(db, 'INSERT INTO items(id,kind,owner,data,created,updated) VALUES(?,?,?,?,?,?)', id, 'kyc_credit_req', pid, JSON.stringify({partner: pid, name: partner?.name || '', email: partner?.email || '', by: person.name, amount, note, status: 'pending'}), now(), now()), notice(db, 'owner', `KYC kredi talebi: ${partner?.name || 'Partner'} ${amount} kredi istiyor`, 'krediler'), audit(db, person.name, 'kyc_credit.request', pid)]);
+      if (mailConfigured()) sendMail({to: OWNER_EMAIL(), subject: `KYC kredi talebi: ${partner?.name || 'Partner'} (${amount} kredi)`, title: 'Yeni KYC kredi talebi', text: `${partner?.name || 'Bir partner'} bu ay için ${amount} ek kimlik doğrulama kredisi istiyor.${note ? ' Not: ' + note : ''} Onaylamak için yönetim panelinde Müşteriler → KYC Kredileri bölümüne gidin.`, link: adminUrl(req) + '/admin/#krediler', button: 'Talebi incele'}).catch(() => {});
+      return json({ok: true});
+    }
+    fail(404, 'İşlem bulunamadı.');
+  }
   if (route === 'partner' && req.method === 'GET') {
     if (!person || person.role !== 'advisor') return json({partner: null});
     const p = await partnerState(db, person.id);
@@ -508,6 +529,15 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   }
 
   const MASK = '••••••••';
+  if (route === 'kyc-credits' && req.method === 'GET') {
+    const advisors = await rows(db, "SELECT id, name, email, status FROM people WHERE role='advisor' ORDER BY name");
+    const partners = Object.fromEntries((await rows(db, "SELECT owner, data FROM items WHERE kind='partner'")).map(r => [r.owner, parse(r.data).status]));
+    const list = [];
+    for (const a of advisors) list.push({id: a.id, name: a.name, email: a.email, status: a.status, partner: partners[a.id] || null, ...(await creditState(db, a.id))});
+    const reqs = (await rows(db, "SELECT id, owner, data, created, updated FROM items WHERE kind='kyc_credit_req' ORDER BY created DESC LIMIT 200")).map(r => ({id: r.id, owner: r.owner, ...parse(r.data), at: r.created, updated: r.updated}));
+    const poolUsed = (await one(db, "SELECT COUNT(*) AS n FROM items WHERE kind='kyc_session' AND created>=?", creditMonthStart()))?.n || 0;
+    return json({partners: list, requests: reqs, pool: {limit: Number(process.env.DIDIT_MONTHLY_LIMIT || 30), used: Number(poolUsed), distributed: list.reduce((n, x) => n + x.allowance, 0)}, defaultMonthly: DEFAULT_MONTHLY});
+  }
   if (['settings/mail', 'settings/didit', 'settings/ai', 'profile'].includes(route) && req.method === 'GET') {
     if (route === 'settings/ai') { const d = (await getItem(db, 'config-ai'))?.data || {}; return json({ai: {apiKey: (d.apiKey || process.env.ANTHROPIC_API_KEY) ? MASK : '', minConfidence: d.minConfidence || Number(process.env.AI_VERIFY_MIN_CONFIDENCE || 0.85), updated: d.updated || null}, ready: verifierConfigured()}); }
     if (route === 'settings/mail') { const d = (await getItem(db, 'config-mail'))?.data || {}; return json({mail: {active: d.active !== false, host: d.host || 'smtp.hostinger.com', port: d.port || 465, secure: d.secure !== false, user: d.user || '', pass: d.pass ? MASK : '', fromName: d.fromName || 'Brazil Migration', fromEmail: d.fromEmail || '', replyTo: d.replyTo || '', saved: !!d.host, updated: d.updated || null}, provider: mailProvider(), configured: mailConfigured(), envResend: !!process.env.RESEND_API_KEY}); }
@@ -655,6 +685,28 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const name = clean(b.name, 100) || p.name;
     await db.batch([putItem(db, 'meta-' + id, 'account_meta', id, meta), putItem(db, 'profile-' + id, 'profile', id, {...prof, name, phone: meta.phone, company: meta.company}), q(db, 'UPDATE people SET name=? WHERE id=?', name, id), audit(db, actor, 'account.profile', id)]);
     return json({ok: true});
+  }
+  if (route.startsWith('kyc-credits/') && req.method === 'POST') {
+    const pid = clean(b.partner, 80);
+    if (route === 'kyc-credits/request') {
+      const r = await getItem(db, clean(b.id, 80)); if (!r || r.kind !== 'kyc_credit_req') fail(404, 'Talep bulunamadı.');
+      if (r.data.status !== 'pending') fail(409, 'Bu talep zaten yanıtlandı.');
+      const approve = b.decision === 'approve', amount = Math.round(Number(b.amount ?? r.data.amount));
+      if (approve && (!Number.isFinite(amount) || amount < 1 || amount > 1000)) fail(400, 'Onaylanacak kredi miktarı geçersiz.');
+      const ops = [];
+      if (approve) { const rec = await creditRecord(db, r.owner); rec.adj.push({month: monthKey(), n: amount, type: 'extra', note: clean(b.note, 300) || 'Kredi talebi onaylandı', by: actor, at: now()}); ops.push(saveCredit(db, r.owner, rec)); }
+      ops.push(putItem(db, r.id, 'kyc_credit_req', r.owner, {...r.data, status: approve ? 'approved' : 'rejected', approved: approve ? amount : 0, reply: clean(b.note, 300), decidedAt: now()}));
+      ops.push(notice(db, r.owner, approve ? `KYC kredi talebiniz onaylandı: bu ay için +${amount} kredi tanımlandı.` : `KYC kredi talebiniz reddedildi${b.note ? ': ' + clean(b.note, 200) : '.'}`, 'overview'), audit(db, actor, 'kyc_credit.' + (approve ? 'approve' : 'reject'), r.owner));
+      await db.batch(ops);
+      return json({ok: true});
+    }
+    if (!await one(db, "SELECT id FROM people WHERE id=? AND role='advisor'", pid)) fail(404, 'Partner bulunamadı.');
+    const rec = await creditRecord(db, pid);
+    if (route === 'kyc-credits/set') { const m = Math.round(Number(b.monthly)); if (!Number.isFinite(m) || m < 0 || m > 10000) fail(400, 'Aylık kredi 0 ile 10000 arasında olmalı.'); rec.monthly = m; }
+    else if (route === 'kyc-credits/adjust') { const n = Math.round(Number(b.n)); if (!Number.isFinite(n) || n === 0 || Math.abs(n) > 1000) fail(400, 'Düzeltme miktarı geçersiz (ör. 5 veya -2).'); rec.adj.push({month: monthKey(), n, type: 'manual', note: clean(b.note, 300) || (n > 0 ? 'Manuel ekleme' : 'Manuel düşüm'), by: actor, at: now()}); }
+    else fail(404, 'İşlem bulunamadı.');
+    await db.batch([saveCredit(db, pid, rec), audit(db, actor, route.replace('/', '.'), pid)]);
+    return json({ok: true, credit: await creditState(db, pid)});
   }
   if (route === 'settings/mail' && req.method === 'POST') {
     const old = (await getItem(db, 'config-mail'))?.data || {};

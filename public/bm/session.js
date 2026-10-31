@@ -163,6 +163,41 @@
     new MutationObserver(paint).observe(document.body, {childList: true, subtree: true});
   }
 
+  // ---------- partner: aylık KYC kredisi + kredi talebi ----------
+  async function creditBar() {
+    let d; try { d = await get('/api/platform/partner/kyc-credit'); } catch { return; }
+    const c = d.credit, pend = (d.requests || []).find(r => r.status === 'pending');
+    const reset = new Date(c.resetAt).toLocaleDateString('tr-TR', {day: 'numeric', month: 'long'});
+    let bar = document.getElementById('bm-credit');
+    if (!bar) { bar = document.createElement('div'); bar.id = 'bm-credit'; const h = document.querySelector('header'); (h && h.parentNode ? h : document.body.firstChild).insertAdjacentElement(h ? 'afterend' : 'beforebegin', bar); }
+    const empty = c.remaining <= 0;
+    bar.style.cssText = `display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:9px 16px;font:500 13px/1.4 Poppins,system-ui,sans-serif;border-bottom:1px solid ${empty ? '#f3c9c4' : '#dfe9dd'};background:${empty ? '#fdeeec' : '#f2f7ef'};color:${empty ? '#8a1c12' : '#1d4a2f'}`;
+    const btn = (t, primary) => `<button type="button" data-credit-ask style="border:1px solid ${primary ? '#1b5e20' : '#c9d8c4'};background:${primary ? '#1b5e20' : '#fff'};color:${primary ? '#fff' : '#1b5e20'};border-radius:999px;padding:5px 14px;font:600 12.5px Poppins,system-ui,sans-serif;cursor:pointer">${t}</button>`;
+    bar.innerHTML = `<span>🛡️ KYC kredisi: <b>${c.remaining}</b> / ${c.allowance} kaldı · yenilenme: ${reset}</span>` +
+      (pend ? `<span style="opacity:.85">⏳ ${pend.amount} kredilik talebiniz yönetici onayı bekliyor</span>` : empty ? `<span>Krediniz bitti; yeni kimlik doğrulaması başlatılamaz. Ek kredi almak ister misiniz?</span>${btn('Kredi iste', true)}` : btn('Kredi iste'));
+    const ask = bar.querySelector('[data-credit-ask]'); if (ask) ask.onclick = () => creditModal();
+  }
+  function creditModal() {
+    document.getElementById('bm-credit-modal')?.remove();
+    const m = document.createElement('div'); m.id = 'bm-credit-modal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:10000;background:#0b1f1566;display:grid;place-items:center;padding:16px;font-family:Poppins,system-ui,sans-serif';
+    m.innerHTML = `<form style="background:#fff;border-radius:16px;padding:24px;width:min(420px,100%);box-shadow:0 30px 80px #0003;display:grid;gap:14px;color:#1d3a2c">
+      <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:17px">Ek KYC kredisi iste</b><button type="button" data-x style="border:0;background:none;font-size:22px;cursor:pointer">×</button></div>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#5b6b60">Kaç kimlik doğrulaması daha yapmanız gerekiyor? Talebiniz yöneticiye iletilir; onaylandığında kredi bu ay için hesabınıza tanımlanır.</p>
+      <label style="display:grid;gap:6px;font-size:12.5px;font-weight:600">Kredi miktarı<input name="amount" type="number" min="1" max="500" value="10" required style="height:44px;border:1px solid #dfe6df;border-radius:10px;padding:0 12px;font:inherit;font-size:15px"></label>
+      <label style="display:grid;gap:6px;font-size:12.5px;font-weight:600">Not (isteğe bağlı)<textarea name="note" rows="3" maxlength="500" placeholder="ör. Bu ay 8 yeni müşteri başvurusu bekliyoruz" style="border:1px solid #dfe6df;border-radius:10px;padding:10px 12px;font:inherit;font-size:13.5px;resize:vertical"></textarea></label>
+      <div data-msg style="font-size:13px;color:#8a1c12"></div>
+      <button data-submit style="height:46px;border:0;border-radius:12px;background:#1b5e20;color:#fff;font:600 14px Poppins,system-ui,sans-serif;cursor:pointer">Talep gönder</button></form>`;
+    document.body.appendChild(m);
+    m.querySelector('[data-x]').onclick = () => m.remove(); m.onclick = e => { if (e.target === m) m.remove(); };
+    const f = m.querySelector('form');
+    f.onsubmit = async e => { e.preventDefault(); const b = f.querySelector('[data-submit]'); b.disabled = true;
+      try { const r = await fetch('/api/platform/partner/kyc-credit/request', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({amount: f.amount.value, note: f.note.value})}); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'Talep gönderilemedi.');
+        f.innerHTML = '<b style="font-size:17px">Talebiniz iletildi ✓</b><p style="margin:0;font-size:13.5px;line-height:1.6;color:#5b6b60">Yönetici onayladığında kredi hesabınıza tanımlanacak ve size bildirim gelecek.</p><button type="button" style="height:44px;border:0;border-radius:12px;background:#1b5e20;color:#fff;font:600 14px Poppins,system-ui,sans-serif;cursor:pointer">Tamam</button>';
+        f.querySelector('button').onclick = () => m.remove(); creditBar();
+      } catch (err) { f.querySelector('[data-msg]').textContent = err.message; b.disabled = false; } };
+  }
+
   async function start(refresh) {
     let me;
     try { me = await get('/api/auth/me'); } catch { me = {}; }
@@ -187,6 +222,7 @@
       if (refresh && document.getElementById('bm-onb')) return location.reload();
     }
     if (area !== 'kyc') modules(area === 'partner' ? (here.panel === 'staff' ? 'staff' : 'partner') : area);
+    if (area === 'partner' || (area === 'kyc' && accounts.some(a => ['partner', 'staff'].includes(a.panel)))) creditBar();
     if (area === 'customer' || area === 'partner') {
       const b = await get('/api/workspace/bootstrap').catch(() => null);
       if (b?.member?.name) personalize(b.member.name);
