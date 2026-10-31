@@ -1,26 +1,91 @@
-<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Yönetici Girişi · Brazil Migration</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/admin/bm-admin.css?v=2"></head>
-<body class="bm-admin"><main class="bm-login"><div class="bm-box">
-<img src="/brazil-migration-logo.png" alt="Brazil Migration">
-<h1 class="bm-h" id="t">Yönetici girişi</h1><p class="bm-sub" id="s">Yönetim paneline yalnızca site yöneticisi erişebilir.</p>
-<div id="m" class="bm-note" role="status"></div>
-<form id="login"><label>E-posta<input class="bm-in" name="email" type="email" autocomplete="username" required></label><label>Şifre<input class="bm-in" name="password" type="password" autocomplete="current-password" required></label><button class="b p">Giriş yap</button><button class="b" type="button" id="forgotBtn">Şifremi unuttum</button></form>
-<form id="setup" hidden><label>Kurulum anahtarı (ADMIN_SETUP_KEY)<input class="bm-in" name="setupKey" type="password" required></label><label>Yeni yönetici şifresi (en az 12 karakter)<input class="bm-in" name="password" type="password" minlength="12" autocomplete="new-password" required></label><label>Şifre (tekrar)<input class="bm-in" name="password2" type="password" minlength="12" autocomplete="new-password" required></label><button class="b p">Şifreyi belirle ve giriş yap</button></form>
-<form id="forgot" hidden><label>Yönetici e-postası<input class="bm-in" name="email" type="email" required></label><button class="b p">Sıfırlama bağlantısı gönder</button><button class="b" type="button" id="backBtn">Girişe dön</button></form>
-<form id="reset" hidden><label>Yeni şifre<input class="bm-in" name="password" type="password" minlength="12" required></label><label>Yeni şifre (tekrar)<input class="bm-in" name="password2" type="password" minlength="12" required></label><button class="b p">Kaydet</button></form>
-</div></main>
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#123d27"><title>Yönetici Girişi · Brazil Migration</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#123d27;--green:#1b5e20;--teal:#00695c;--lime:#d7eca4;--gold:#e0b23f;--ink:#1d3a2c;--muted:#6f7d73;--line:#e1e8e0;--wash:#f6f7f2;--red:#b23b48}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;font-family:Poppins,system-ui,sans-serif;background:var(--wash);color:var(--ink);font-size:14px}
+.wrap{min-height:100%;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(420px,.95fr)}
+.side{position:relative;overflow:hidden;color:#fff;padding:44px 56px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(160deg,#0d2f1e 0%,#123d27 45%,#0b4a3f 100%)}
+.side:before{content:'';position:absolute;inset:0;background:url('/sao-paulo-night.png') center 70%/cover;opacity:.28;mix-blend-mode:luminosity}
+.side:after{content:'';position:absolute;inset:0;background:radial-gradient(900px 500px at 15% 0%,rgba(215,236,164,.18),transparent 60%),linear-gradient(180deg,rgba(13,47,30,.2),rgba(13,47,30,.85))}
+.side>*{position:relative;z-index:1}
+.side .logo{display:inline-flex;background:#fff;border-radius:14px;padding:10px 16px;width:max-content}.side .logo img{height:40px;display:block}
+.side h2{font-size:clamp(30px,3.2vw,44px);line-height:1.12;margin:0 0 16px;font-weight:700;letter-spacing:-.01em}.side h2 em{font-style:normal;color:var(--lime)}
+.side p{margin:0;max-width:460px;line-height:1.75;opacity:.88;font-size:15px}
+.feats{display:grid;gap:12px;margin:30px 0 0;padding:0;list-style:none;max-width:460px}
+.feats li{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 14px;font-size:13.5px;backdrop-filter:blur(4px)}
+.feats svg{width:20px;height:20px;flex:none;color:var(--lime)}
+.side small{opacity:.6;font-size:12px;letter-spacing:.08em}
+.main{display:grid;place-items:center;padding:40px 24px}
+.card{width:min(420px,100%)}
+.card .mlogo{display:none;height:46px;margin-bottom:24px}
+.kicker{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.16em;font-weight:700;color:var(--teal);text-transform:uppercase;background:#e6f2ee;border-radius:999px;padding:6px 12px;margin-bottom:18px}
+.kicker svg{width:14px;height:14px}
+h1{font-size:30px;margin:0 0 8px;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 28px;line-height:1.6}
+form{display:grid;gap:16px}
+label{display:grid;gap:7px;font-size:12.5px;font-weight:600;color:#40564a}
+.field{position:relative}
+.field svg.l{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:#93a198;pointer-events:none}
+.in{width:100%;height:52px;padding:0 46px 0 44px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:14.5px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+.in::placeholder{color:#a9b4ad;font-weight:400}.in:focus{outline:0;border-color:var(--teal);box-shadow:0 0 0 4px rgba(0,105,92,.12)}
+.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:0;background:none;border-radius:9px;color:#7d8b82;cursor:pointer;display:grid;place-items:center}.eye:hover{background:#f0f4ee}.eye svg{width:19px;height:19px}
+.row{display:flex;justify-content:flex-end;margin-top:-4px}
+.link{border:0;background:none;padding:0;font:inherit;font-size:13px;color:var(--teal);font-weight:600;cursor:pointer}.link:hover{text-decoration:underline}
+.btn{height:52px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--green),var(--teal));color:#fff;font:inherit;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 24px rgba(0,105,92,.25);transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(0,105,92,.3)}.btn[disabled]{opacity:.7;cursor:wait;transform:none}
+.btn svg{width:18px;height:18px}
+.ghost{height:46px;border:1.5px solid var(--line);border-radius:12px;background:#fff;font:inherit;font-weight:600;color:var(--ink);cursor:pointer}
+.note{border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.6;margin:0 0 18px}.note:empty{display:none}
+.note.ok{background:#eaf4e4;color:#1b5e20}.note.err{background:#fdecea;color:#8a1c12}.note.info{background:#fff8e6;color:#6b4d00}.note a{color:inherit;font-weight:700;word-break:break-all}
+.secure{display:flex;align-items:center;gap:10px;margin-top:28px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;line-height:1.5}.secure svg{width:20px;height:20px;flex:none;color:var(--teal)}
+.foot{margin-top:22px;font-size:12px;color:#9aa69e;display:flex;justify-content:space-between;gap:10px}.foot a{color:inherit}
+[hidden]{display:none!important}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}.side{display:none}.card .mlogo{display:block}.main{padding:36px 20px}}
+</style></head>
+<body><div class="wrap">
+<aside class="side">
+  <a class="logo" href="/" aria-label="Brazil Migration ana sayfa"><img src="/brazil-migration-logo.png" alt="Brazil Migration"></a>
+  <div><h2>Brazil Migration<br><em>Yönetim Paneli</em></h2><p>Müşterileri, partnerleri, başvuruları ve tüm operasyonu tek yerden yönetin.</p>
+    <ul class="feats">
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></svg>Müşteri, partner, avukat ve muhasebe hesapları</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13l2 2 4-4"/></svg>Belge doğrulama ve partner başvuruları</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Siparişler, faturalar ve raporlar</li>
+    </ul></div>
+  <small>SÃO PAULO · BRASIL</small>
+</aside>
+<main class="main"><div class="card">
+  <img class="mlogo" src="/brazil-migration-logo.png" alt="Brazil Migration">
+  <span class="kicker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Güvenli yönetici alanı</span>
+  <h1 id="t">Tekrar hoş geldiniz</h1><p class="sub" id="s">Yönetim paneline erişmek için yönetici bilgilerinizle giriş yapın.</p>
+  <div id="m" class="note" role="status"></div>
+  <form id="login" novalidate>
+    <label>E-posta<span class="field"><svg class="l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><input class="in" name="email" type="email" autocomplete="username" placeholder="ornek@brazilmigration.com" required></span></label>
+    <label>Şifre<span class="field"><svg class="l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><input class="in" name="password" type="password" autocomplete="current-password" placeholder="••••••••••••" required><button type="button" class="eye" data-eye aria-label="Şifreyi göster"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></span></label>
+    <div class="row"><button class="link" type="button" id="forgotBtn">Şifremi unuttum</button></div>
+    <button class="btn">Giriş yap <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+  </form>
+  <form id="setup" hidden><label>Kurulum anahtarı (ADMIN_SETUP_KEY)<span class="field"><input class="in" name="setupKey" type="password" required style="padding-left:16px"></span></label><label>Yeni yönetici şifresi (en az 12 karakter)<span class="field"><input class="in" name="password" type="password" minlength="12" autocomplete="new-password" required style="padding-left:16px"></span></label><label>Şifre (tekrar)<span class="field"><input class="in" name="password2" type="password" minlength="12" autocomplete="new-password" required style="padding-left:16px"></span></label><button class="btn">Şifreyi belirle ve giriş yap</button></form>
+  <form id="forgot" hidden><label>Yönetici e-postası<span class="field"><svg class="l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><input class="in" name="email" type="email" required></span></label><button class="btn">Sıfırlama bağlantısı gönder</button><button class="ghost" type="button" id="backBtn">Girişe dön</button></form>
+  <form id="reset" hidden><label>Yeni şifre (en az 12 karakter)<span class="field"><input class="in" name="password" type="password" minlength="12" required style="padding-left:16px"></span></label><label>Yeni şifre (tekrar)<span class="field"><input class="in" name="password2" type="password" minlength="12" required style="padding-left:16px"></span></label><button class="btn">Kaydet</button></form>
+  <div class="secure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg><span>Bu alan yalnızca yetkili yöneticilere açıktır. Oturumunuz şifreli bağlantı üzerinden korunur.</span></div>
+  <div class="foot"><span>© 2026 Brazil Migration</span><a href="/">Siteye dön ↗</a></div>
+</div></main></div>
 <script>
 (()=>{const $=s=>document.querySelector(s),p=new URLSearchParams(location.search),m=$('#m');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const say=(t,h)=>{m.className='bm-note '+t;m.innerHTML=h};
+const say=(t,h)=>{m.className='note '+t;m.innerHTML=h};
 const api=async(path,b)=>{const r=await fetch('/api/auth/admin/'+path,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'İşlem tamamlanamadı.');return d};
 const show=id=>['login','setup','forgot','reset'].forEach(x=>$('#'+x).hidden=x!==id);
 const go=()=>{const n=p.get('next');location.href=n&&n.startsWith('/admin/')?n:'/admin/'};
-$('#login').onsubmit=async e=>{e.preventDefault();try{await api('login',{email:e.target.email.value,password:e.target.password.value});go()}catch(err){say('err',esc(err.message))}};
-$('#setup').onsubmit=async e=>{e.preventDefault();const f=e.target;if(f.password.value!==f.password2.value)return say('err','Şifreler eşleşmiyor.');try{await api('setup',{setupKey:f.setupKey.value,password:f.password.value});go()}catch(err){say('err',esc(err.message))}};
-$('#forgotBtn').onclick=()=>{show('forgot');m.className='bm-note'};$('#backBtn').onclick=()=>show('login');
-$('#forgot').onsubmit=async e=>{e.preventDefault();try{const d=await api('forgot',{email:e.target.email.value});say('ok','Bağlantı gönderildi (adres kayıtlıysa).'+(d.devLink?`<br><b>Test modu:</b> <a href="${esc(d.devLink)}">${esc(d.devLink)}</a>`:''))}catch(err){say('err',esc(err.message))}};
-$('#reset').onsubmit=async e=>{e.preventDefault();const f=e.target;if(f.password.value!==f.password2.value)return say('err','Şifreler eşleşmiyor.');try{await api('reset',{token:p.get('sifre'),password:f.password.value});history.replaceState(null,'','/admin/giris/');show('login');say('ok','Şifre kaydedildi, giriş yapabilirsiniz.')}catch(err){say('err',esc(err.message))}};
-(async()=>{if(p.get('sifre'))return show('reset');const me=await api('me').catch(()=>({}));if(me.user)return go();const st=await api('status').catch(()=>null);if(st?.setupNeeded){show('setup');$('#t').textContent='İlk kurulum';$('#s').textContent='Yönetici şifresini belirleyin. Vercel ortam değişkenlerine girdiğiniz ADMIN_SETUP_KEY değerini kullanın.';if(!st.setupKeyConfigured)say('info','ADMIN_SETUP_KEY ortam değişkeni tanımlı değil. Vercel → Settings → Environment Variables bölümüne ekleyip yeniden dağıtın.')}})();
+const busy=(f,on)=>{const b=f.querySelector('.btn');if(b)b.disabled=on};
+document.querySelectorAll('[data-eye]').forEach(b=>b.onclick=()=>{const i=b.parentElement.querySelector('input');i.type=i.type==='password'?'text':'password';b.setAttribute('aria-label',i.type==='password'?'Şifreyi göster':'Şifreyi gizle')});
+$('#login').onsubmit=async e=>{e.preventDefault();const f=e.target;if(!f.email.value||!f.password.value)return say('err','E-posta ve şifrenizi girin.');busy(f,true);try{await api('login',{email:f.email.value,password:f.password.value});go()}catch(err){say('err',esc(err.message));busy(f,false)}};
+$('#setup').onsubmit=async e=>{e.preventDefault();const f=e.target;if(f.password.value!==f.password2.value)return say('err','Şifreler eşleşmiyor.');busy(f,true);try{await api('setup',{setupKey:f.setupKey.value,password:f.password.value});go()}catch(err){say('err',esc(err.message));busy(f,false)}};
+$('#forgotBtn').onclick=()=>{show('forgot');m.className='note';m.innerHTML='';$('#t').textContent='Şifre sıfırlama';$('#s').textContent='Yönetici e-postanızı yazın, sıfırlama bağlantısı gönderelim.'};
+$('#backBtn').onclick=()=>{show('login');$('#t').textContent='Tekrar hoş geldiniz';$('#s').textContent='Yönetim paneline erişmek için yönetici bilgilerinizle giriş yapın.'};
+$('#forgot').onsubmit=async e=>{e.preventDefault();try{const d=await api('forgot',{email:e.target.email.value});say('ok','Adres kayıtlıysa sıfırlama bağlantısı gönderildi.'+(d.devLink?`<br><b>Test modu:</b> <a href="${esc(d.devLink)}">${esc(d.devLink)}</a>`:''))}catch(err){say('err',esc(err.message))}};
+$('#reset').onsubmit=async e=>{e.preventDefault();const f=e.target;if(f.password.value!==f.password2.value)return say('err','Şifreler eşleşmiyor.');try{await api('reset',{token:p.get('sifre'),password:f.password.value});history.replaceState(null,'','/admin/giris/');show('login');$('#t').textContent='Tekrar hoş geldiniz';say('ok','Şifre kaydedildi, giriş yapabilirsiniz.')}catch(err){say('err',esc(err.message))}};
+(async()=>{if(p.get('sifre')){show('reset');$('#t').textContent='Yeni şifre belirleyin';$('#s').textContent='Yönetici hesabınız için yeni bir şifre oluşturun.';return}const me=await api('me').catch(()=>({}));if(me.user)return go();const st=await api('status').catch(()=>null);if(st?.setupNeeded){show('setup');$('#t').textContent='İlk kurulum';$('#s').textContent='Yönetici şifresini belirleyin. Sunucu ortam değişkenlerine girdiğiniz ADMIN_SETUP_KEY değerini kullanın.';if(!st.setupKeyConfigured)say('info','ADMIN_SETUP_KEY ortam değişkeni tanımlı değil. Barındırma panelinde ortam değişkenlerine ekleyip yeniden dağıtın.')}})();
 })();
 </script></body></html>

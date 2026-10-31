@@ -488,10 +488,20 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     });
     const law = await rows(db, "SELECT * FROM law_accounts WHERE role!='owner' ORDER BY created DESC");
     for (const a of law) { const d = parse(a.data); const au = a.uid ? authed[a.uid] : null; list.push({id: 'law:' + a.id, name: d.profile?.name || a.email, email: a.email, type: 'lawyer', role: a.role, status: a.status === 'active' ? 'active' : 'disabled', permissions: {}, login: au ? (au.hash ? 'Aktif' : 'Şifre bekleniyor') : 'Giriş yok', created: a.created}); }
+    const G = (await getItem(db, 'account-groups'))?.data || {groups: [], assign: {}};
+    for (const a of list) a.group = G.assign?.[a.id] || '';
     list.sort((x, y) => y.created - x.created);
-    return json({accounts: list});
+    return json({accounts: list, groups: G.groups || []});
   }
 
+  if ((route === 'groups' || route === 'accounts/notes' || route === 'accounts/activity') && req.method === 'GET') {
+    if (route === 'groups') { const G = (await getItem(db, 'account-groups'))?.data || {groups: [], assign: {}}; return json({groups: G.groups || [], assign: G.assign || {}}); }
+    const id = clean(new URL(req.url).searchParams.get('id'), 80); if (!id) fail(400, 'Hesap gerekli.');
+    if (route === 'accounts/notes') return json({notes: (await getItem(db, 'acnotes-' + id))?.data?.notes || []});
+    const email = id.startsWith('law:') ? (await one(db, 'SELECT email FROM law_accounts WHERE id=?', id.slice(4)))?.email : (await one(db, 'SELECT email FROM people WHERE id=?', id))?.email;
+    const acts = await rows(db, "SELECT data, created FROM items WHERE kind='audit' AND (instr(json_extract(data,'$.target'), ?) > 0 OR json_extract(data,'$.target') = ?) ORDER BY created DESC LIMIT 100", id, email || '\u0000');
+    return json({activity: acts.map(r => ({...parse(r.data), at: r.created}))});
+  }
   const b = req.method === 'GET' ? {} : route.startsWith('modules/') && req.method === 'DELETE' ? {} : await body(req);
 
   if (route === 'accounts' && req.method === 'POST') {
@@ -562,6 +572,61 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const link = `${siteUrl(req)}/giris/?sifre=${token}`;
     const m = await sendMail({to: row.email, subject: 'Brazil Migration giriş bağlantınız', text: 'Şifrenizi belirlemek / yenilemek için bağlantıyı kullanın. 7 gün geçerlidir.', link, button: 'Şifremi belirle'});
     return json({ok: true, mailSent: m.sent, devLink: m.devLink});
+  }
+
+  // ---- CRM: gruplar, profil alanları, notlar, etkinlik ----
+  const GROUP_ICONS = ['person', 'users', 'briefcase', 'award', 'scale', 'calculator', 'star', 'shield', 'heart', 'globe', 'building', 'flag'];
+  if (route === 'groups' && req.method === 'POST') {
+    const cur = (await getItem(db, 'account-groups'))?.data || {groups: [], assign: {}};
+    if (!Array.isArray(b.groups) || b.groups.length > 50) fail(400, 'Grup listesi geçersiz.');
+    const groups = b.groups.map(g => ({
+      id: /^[a-z0-9-]{4,40}$/.test(g.id || '') ? g.id : uuid().slice(0, 12),
+      name: clean(g.name, 40), icon: GROUP_ICONS.includes(g.icon) ? g.icon : 'person',
+      color: /^#[0-9a-f]{6}$/i.test(g.color || '') ? g.color : '#1b5e20',
+      discount: Math.max(0, Math.min(100, Number(g.discount) || 0)),
+      products: Array.isArray(g.products) ? g.products.slice(0, 100).map(x => clean(x, 80)) : [],
+      combine: !!g.combine, protect: !!g.protect, priority: !!g.priority, separateInvoice: !!g.separateInvoice,
+    })).filter(g => g.name);
+    const ids = new Set(groups.map(g => g.id));
+    const assign = Object.fromEntries(Object.entries(cur.assign || {}).filter(([, v]) => ids.has(v)));
+    await db.batch([putItem(db, 'account-groups', 'config', 'owner', {groups, assign}), audit(db, actor, 'groups.update', String(groups.length))]);
+    return json({ok: true, groups});
+  }
+  if (route === 'accounts/group' && req.method === 'POST') {
+    const cur = (await getItem(db, 'account-groups'))?.data || {groups: [], assign: {}};
+    const ids = (Array.isArray(b.ids) ? b.ids : [b.id]).map(x => clean(x, 80)).filter(Boolean).slice(0, 500);
+    const g = clean(b.group, 40);
+    if (g && !(cur.groups || []).some(x => x.id === g)) fail(400, 'Grup bulunamadı.');
+    cur.assign = cur.assign || {};
+    for (const id of ids) { if (g) cur.assign[id] = g; else delete cur.assign[id]; }
+    await db.batch([putItem(db, 'account-groups', 'config', 'owner', cur), audit(db, actor, 'account.group', ids.join(','))]);
+    return json({ok: true});
+  }
+  if (route === 'accounts/meta' && req.method === 'POST') {
+    const id = clean(b.id, 80);
+    if (id.startsWith('law:')) {
+      const row = await one(db, 'SELECT data FROM law_accounts WHERE id=?', id.slice(4)); if (!row) fail(404, 'Hesap bulunamadı.');
+      const d = parse(row.data); d.profile = {...(d.profile || {}), name: clean(b.name, 100) || d.profile?.name, phone: clean(b.phone, 40)};
+      await db.batch([q(db, 'UPDATE law_accounts SET data=? WHERE id=?', JSON.stringify(d), id.slice(4)), audit(db, actor, 'account.profile', id)]);
+      return json({ok: true});
+    }
+    const p = await one(db, "SELECT * FROM people WHERE id=? AND role!='owner'", id); if (!p) fail(404, 'Hesap bulunamadı.');
+    const meta = (await getItem(db, 'meta-' + id))?.data || {type: p.role === 'customer' ? 'customer' : 'other'};
+    const loc = b.country ? locate(clean(b.country, 60), clean(b.city, 80)) : null;
+    Object.assign(meta, {phone: clean(b.phone, 40), company: clean(b.company, 200), title: clean(b.title, 100)});
+    if (loc) Object.assign(meta, {country: loc.country, city: loc.city, lat: loc.lat ?? null, lng: loc.lng ?? null});
+    const prof = (await getItem(db, 'profile-' + id))?.data || {};
+    const name = clean(b.name, 100) || p.name;
+    await db.batch([putItem(db, 'meta-' + id, 'account_meta', id, meta), putItem(db, 'profile-' + id, 'profile', id, {...prof, name, phone: meta.phone, company: meta.company}), q(db, 'UPDATE people SET name=? WHERE id=?', name, id), audit(db, actor, 'account.profile', id)]);
+    return json({ok: true});
+  }
+  if (route === 'accounts/notes' && req.method === 'POST') {
+    const id = clean(b.id, 80); if (!id) fail(400, 'Hesap gerekli.');
+    const rec = (await getItem(db, 'acnotes-' + id))?.data || {notes: []};
+    if (b.remove) rec.notes = rec.notes.filter(n => n.id !== b.remove);
+    else { const text = clean(b.text, 2000); if (!text) fail(400, 'Not boş olamaz.'); rec.notes.unshift({id: uuid().slice(0, 12), text, at: now(), by: actor}); rec.notes = rec.notes.slice(0, 200); }
+    await putItem(db, 'acnotes-' + id, 'account_notes', id, rec).run();
+    return json({ok: true, notes: rec.notes});
   }
 
   if (route === 'partners' && req.method === 'GET') {

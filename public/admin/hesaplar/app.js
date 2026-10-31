@@ -10,7 +10,7 @@
     if (!r.ok) throw new Error(d.error || 'İşlem tamamlanamadı.');
     return d;
   }
-  const note = (type, html) => { const n = $('#note'); n.className = 'bm-note ' + type; n.innerHTML = html; if (html) n.scrollIntoView({block: 'nearest', behavior: 'smooth'}); };
+  const note = (type, html) => { const n = $('#note'); if (!n) return; n.className = 'bm-note ' + type; n.innerHTML = html; if (html) n.scrollIntoView({block: 'nearest', behavior: 'smooth'}); };
   const devLink = d => d.devLink ? `<br><b>Test modu (e-posta servisi bağlı değil):</b> bu bağlantıyı kişiye iletin → <a href="${esc(d.devLink)}" target="_blank">${esc(d.devLink)}</a>` : (d.mailSent ? '<br>Giriş bağlantısı e-postayla gönderildi.' : '');
   const dlg = (title, html) => { $('#dlg-t').textContent = title; $('#dlg-b').innerHTML = html; $('#dlg').showModal(); };
   document.addEventListener('click', e => { if (e.target.closest('[data-close]')) $('#dlg').close(); });
@@ -55,7 +55,7 @@
       if (!a.id.startsWith('law:')) b.name = f.name.value;
       if (f.elements.advisor) b.advisor = f.advisor.value;
       if (staff) b.permissions = readPerms(f);
-      try { await api('accounts', 'PATCH', b); $('#dlg').close(); note('ok', 'Hesap güncellendi.'); accounts(); } catch (err) { $('#ednote').className = 'full bm-note err'; $('#ednote').textContent = err.message; }
+      try { await api('accounts', 'PATCH', b); $('#dlg').close(); document.dispatchEvent(new CustomEvent('bm-acc-saved', {detail: a.id})); } catch (err) { $('#ednote').className = 'full bm-note err'; $('#ednote').textContent = err.message; }
     };
     $('#inv').onclick = async () => { try { const d = await api('accounts/invite', 'POST', {id: a.id}); $('#ednote').className = 'full bm-note ok'; $('#ednote').innerHTML = 'Bağlantı hazırlandı.' + devLink(d); } catch (err) { $('#ednote').className = 'full bm-note err'; $('#ednote').textContent = err.message; } };
   }
@@ -91,7 +91,7 @@
   async function partners() {
     const d = await api('partners'); D_PARTNERS = d;
     const pending = d.partners.filter(p => p.status === 'review').length;
-    $('#pcount').hidden = !pending; $('#pcount').textContent = pending;
+    const pc = $('#pcount'); if (pc) { pc.hidden = !pending; pc.textContent = pending; }
     $('#view').innerHTML = `${!META.verifier ? '<div class="bm-note info">Otomatik belge doğrulama henüz yapılandırılmadı (ANTHROPIC_API_KEY). Tüm belgeler yüklendiğinde başvurular “İnceleme bekliyor” durumuna düşer; buradan onaylayabilirsiniz.</div>' : ''}
     <div class="bm-box" style="padding:8px"><table class="bm-t"><thead><tr><th>Firma</th><th>Yetkili</th><th>Vergi</th><th>Belgeler</th><th>Durum</th><th></th></tr></thead><tbody>${d.partners.map(p => `<tr><td><b>${esc(p.company)}</b><br><small class="muted">${esc((p.services || []).join(', '))}</small></td><td>${esc(p.name)}<br><small class="muted">${esc(p.email)}</small></td><td><small>${esc(p.taxOffice)}<br>${esc(p.taxNumber)}</small></td><td>${Object.keys(d.labels).map(k => `<span class="tag ${p.docs[k] ? (p.docs[k].status === 'Uygun' ? 'g' : p.docs[k].status === 'Sorunlu' ? 'r' : 'b') : ''}" title="${esc(d.labels[k])}">${esc(d.labels[k].split(' ')[0])}${k.endsWith('arka') ? ' (A)' : k.endsWith('on') ? ' (Ö)' : ''}</span>`).join(' ')}</td><td><span class="tag ${STATUS[p.status]?.[0] || ''}">${esc(STATUS[p.status]?.[1] || p.status)}</span><br><small class="muted">${date(p.updated)}</small></td><td style="text-align:right"><button class="b s" data-partner="${esc(p.id)}">İncele</button></td></tr>`).join('') || '<tr><td colspan="6" class="muted">Henüz partner başvurusu yok. Başvuru sayfası: <a href="/partner-ol/" target="_blank">/partner-ol/</a></td></tr>'}</tbody></table></div>`;
     $$('[data-partner]').forEach(b => b.onclick = () => partnerDetail(d.partners.find(p => p.id === b.dataset.partner), d.labels));
@@ -203,14 +203,11 @@
     } catch (err) { if (err.message !== 'Giriş gerekli') note('err', esc(err.message)); }
   }
   document.addEventListener('click', e => { const b = e.target.closest('[data-edit]'); if (b) editAccount(b.dataset.edit); });
-  $('#logout').onclick = async () => { await fetch('/api/auth/admin/logout', {method: 'POST'}); location.href = '/admin/giris/'; };
-  window.addEventListener('hashchange', route);
-  (async () => {
-    const me = await fetch('/api/auth/admin/me').then(r => r.json()).catch(() => ({}));
-    if (!me.user) { location.href = '/admin/giris/?next=' + encodeURIComponent(location.pathname + location.hash); return; }
-    $('#who').textContent = me.user.email;
-    try { META = await api('meta'); } catch (err) { note('err', esc(err.message)); return; }
-    api('partners').then(d => { const n = d.partners.filter(p => p.status === 'review').length; $('#pcount').hidden = !n; $('#pcount').textContent = n; }).catch(() => {});
-    route();
-  })();
+  // Yönetim paneline gömülü çalışır (/admin/#partnerler vb.). Ayrı sayfa artık /admin/'e yönlendirir.
+  async function ensureMeta() { if (!META) META = await api('meta'); }
+  window.BMAcc = {
+    async route() { await ensureMeta(); await route(); },
+    async edit(id) { await ensureMeta(); ACCOUNTS = (await api('accounts')).accounts; editAccount(id); },
+    async pendingPartners() { const d = await api('partners'); return d.partners.filter(p => p.status === 'review').length; },
+  };
 })();
