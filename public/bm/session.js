@@ -138,6 +138,14 @@
     fix(); new MutationObserver(fix).observe(document.body, {childList: true, subtree: true, characterData: false});
   }
 
+  // ---------- para birimi: müşterinin ülkesine göre (örnek tutarlardaki MKD yerine) ----------
+  const CUR = {'Brezilya': 'BRL', 'Türkiye': 'TRY', 'Azerbaycan': 'AZN', 'Kuzey Makedonya': 'MKD', 'Rusya': 'RUB', 'İspanya': 'EUR', 'İran': 'IRR', 'Suudi Arabistan': 'SAR', 'Türkmenistan': 'TMT', 'Özbekistan': 'UZS', 'Kırgızistan': 'KGS', 'Endonezya': 'IDR'};
+  function currency(country) {
+    const code = CUR[country] || 'TRY'; if (code === 'MKD') return;
+    const fix = () => { const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); for (let n; (n = w.nextNode());) if (/\bMKD\b/.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(/\bMKD\b/g, code); };
+    fix(); new MutationObserver(fix).observe(document.body, {childList: true, subtree: true});
+  }
+
   async function start(refresh) {
     let me;
     try { me = await get('/api/auth/me'); } catch { me = {}; }
@@ -146,6 +154,7 @@
     const here = accounts.find(a => area === 'customer' ? a.panel === 'customer' : area === 'partner' ? ['partner', 'staff'].includes(a.panel) : area === 'lawyer' ? a.panel === 'lawyer' : true);
     if (!here && area !== 'kyc') { location.href = accounts[0]?.home || '/giris/'; return; }
     addLogout(me.user.email);
+    if (area === 'customer' || area === 'partner') currency(me.user.country);
     if (area === 'partner') {
       const p = (await get('/api/platform/partner').catch(() => ({}))).partner;
       if (p && p.status !== 'approved') { const member = (await get('/api/workspace/bootstrap').catch(() => ({}))).member; personalize(member?.name); return onboarding(p, member); }

@@ -106,7 +106,8 @@ export async function handleAuth(req, env, route) {
   if (route === 'me' && req.method === 'GET') {
     const u = await currentUser(db, req); if (!u) return json({user: null});
     const accounts = isAdminRequest(req) ? [{panel: 'admin', home: '/admin/', label: 'Yönetim paneli'}] : await accountsFor(db, u);
-    return json({user: {email: u.email}, accounts});
+    const pm = isAdminRequest(req) ? null : await one(db, "SELECT i.data FROM items i JOIN people p ON i.owner=p.id WHERE p.uid=? AND i.kind='account_meta' LIMIT 1", u.id);
+    return json({user: {email: u.email, country: pm ? parse(pm.data).country || '' : ''}, accounts});
   }
   if (route === 'logout' && req.method === 'POST') return json({ok: true}, 200, {'Set-Cookie': await destroySession(db, req)});
 
@@ -480,11 +481,12 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const metas = Object.fromEntries((await rows(db, "SELECT owner,data FROM items WHERE kind='account_meta'")).map(r => [r.owner, parse(r.data)]));
     const partners = Object.fromEntries((await rows(db, "SELECT owner,data FROM items WHERE kind='partner'")).map(r => [r.owner, parse(r.data)]));
     const authed = Object.fromEntries((await rows(db, 'SELECT id,verified,hash FROM auth_users')).map(r => [r.id, r]));
+    const lastIn = Object.fromEntries((await rows(db, "SELECT user, MAX(created) AS t FROM auth_sessions WHERE scope='site' GROUP BY user")).map(r => [r.user, r.t]));
     const names = Object.fromEntries(people.map(p => [p.id, p.name]));
     const list = people.map(p => {
       const meta = metas[p.id] || {}, a = authed[p.uid];
       const type = p.role === 'customer' ? 'customer' : meta.type || (p.role === 'advisor' ? 'advisor' : 'other');
-      return {id: p.id, name: p.name, email: p.email, type, role: p.role, status: p.status, permissions: parse(p.permissions), scope: parse(p.scope), advisor: p.advisor, advisorName: p.advisor === 'owner' ? 'Merkez ofis' : names[p.advisor] || '', city: meta.city, country: meta.country, company: meta.company, phone: meta.phone, assignedBy: meta.assignedBy, title: meta.title, partner: partners[p.id] ? {status: partners[p.id].status} : null, login: a ? (a.hash ? (a.verified ? 'Aktif' : 'Doğrulama bekliyor') : 'Şifre bekleniyor') : 'Giriş yok', created: p.created};
+      return {id: p.id, name: p.name, email: p.email, type, role: p.role, status: p.status, permissions: parse(p.permissions), scope: parse(p.scope), advisor: p.advisor, advisorName: p.advisor === 'owner' ? 'Merkez ofis' : names[p.advisor] || '', city: meta.city, country: meta.country, company: meta.company, phone: meta.phone, assignedBy: meta.assignedBy, title: meta.title, partner: partners[p.id] ? {status: partners[p.id].status} : null, manager: p.manager, extra: meta.extra || {}, lastLogin: lastIn[p.uid] || null, login: a ? (a.hash ? (a.verified ? 'Aktif' : 'Doğrulama bekliyor') : 'Şifre bekleniyor') : 'Giriş yok', created: p.created};
     });
     const law = await rows(db, "SELECT * FROM law_accounts WHERE role!='owner' ORDER BY created DESC");
     for (const a of law) { const d = parse(a.data); const au = a.uid ? authed[a.uid] : null; list.push({id: 'law:' + a.id, name: d.profile?.name || a.email, email: a.email, type: 'lawyer', role: a.role, status: a.status === 'active' ? 'active' : 'disabled', permissions: {}, login: au ? (au.hash ? 'Aktif' : 'Şifre bekleniyor') : 'Giriş yok', created: a.created}); }
@@ -494,10 +496,18 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     return json({accounts: list, groups: G.groups || []});
   }
 
-  if ((route === 'groups' || route === 'accounts/notes' || route === 'accounts/activity') && req.method === 'GET') {
+  if (['groups', 'accounts/notes', 'accounts/activity', 'accounts/files', 'accounts/file'].includes(route) && req.method === 'GET') {
     if (route === 'groups') { const G = (await getItem(db, 'account-groups'))?.data || {groups: [], assign: {}}; return json({groups: G.groups || [], assign: G.assign || {}}); }
     const id = clean(new URL(req.url).searchParams.get('id'), 80); if (!id) fail(400, 'Hesap gerekli.');
     if (route === 'accounts/notes') return json({notes: (await getItem(db, 'acnotes-' + id))?.data?.notes || []});
+    if (route === 'accounts/files') {
+      const own = await rows(db, "SELECT i.id, i.owner, i.data, i.created, p.name AS pname FROM items i LEFT JOIN people p ON p.id=i.owner WHERE i.kind IN ('document','invoice') AND (i.owner=? OR i.owner IN (SELECT id FROM people WHERE role='customer' AND advisor=?)) ORDER BY i.created DESC LIMIT 300", id, id);
+      return json({files: own.map(r => { const d = parse(r.data); return {id: r.id, owner: r.owner, ownerName: r.pname || '', name: d.name, title: d.title, mime: d.mime, size: d.size, status: d.status, direction: d.direction, sender: d.sender, at: r.created, invoice: d.amount !== undefined}; })});
+    }
+    if (route === 'accounts/file') {
+      const r = await one(db, "SELECT data FROM items WHERE id=? AND kind IN ('document','invoice')", id); if (!r) fail(404, 'Dosya bulunamadı.');
+      const d = parse(r.data); if (!d.key) fail(404, 'Dosya bulunamadı.'); return streamFile(env, d);
+    }
     const email = id.startsWith('law:') ? (await one(db, 'SELECT email FROM law_accounts WHERE id=?', id.slice(4)))?.email : (await one(db, 'SELECT email FROM people WHERE id=?', id))?.email;
     const acts = await rows(db, "SELECT data, created FROM items WHERE kind='audit' AND (instr(json_extract(data,'$.target'), ?) > 0 OR json_extract(data,'$.target') = ?) ORDER BY created DESC LIMIT 100", id, email || '\u0000');
     return json({activity: acts.map(r => ({...parse(r.data), at: r.created}))});
@@ -525,7 +535,9 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     } else {
       const perms = validPerms(b.permissions || DEFAULT_PERMS[type]);
       const scope = b.scope === 'all' || !Array.isArray(b.scope) ? 'all' : b.scope.slice(0, 200).map(x => clean(x, 60));
-      ops.push(insertPerson(db, {id: pid, uid: user.id, email, name, role: type === 'advisor' ? 'advisor' : 'employee', manager: type === 'advisor' ? pid : 'owner', permissions: perms, scope}));
+      let mgr = 'owner';
+      if (b.manager && type !== 'advisor') { mgr = clean(b.manager, 60); if (!await one(db, "SELECT id FROM people WHERE id=? AND role='advisor'", mgr)) fail(400, 'Partner bulunamadı.'); }
+      ops.push(insertPerson(db, {id: pid, uid: user.id, email, name, role: type === 'advisor' ? 'advisor' : 'employee', manager: type === 'advisor' ? pid : mgr, permissions: perms, scope}));
     }
     if (type !== 'lawyer') {
       ops.push(putItem(db, 'meta-' + pid, 'account_meta', pid, {type, phone: clean(b.phone, 40), company: clean(b.company, 200), title: clean(b.title, 100), country: loc?.country || '', city: loc?.city || '', lat: loc?.lat ?? null, lng: loc?.lng ?? null, createdBy: 'admin'}));
@@ -614,6 +626,11 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const meta = (await getItem(db, 'meta-' + id))?.data || {type: p.role === 'customer' ? 'customer' : 'other'};
     const loc = b.country ? locate(clean(b.country, 60), clean(b.city, 80)) : null;
     Object.assign(meta, {phone: clean(b.phone, 40), company: clean(b.company, 200), title: clean(b.title, 100)});
+    if (b.extra && typeof b.extra === 'object') {
+      const e = b.extra, bool = k => !!e[k], str = (k, n) => clean(e[k], n);
+      meta.extra = {kind: e.kind === 'kurumsal' ? 'kurumsal' : 'bireysel', birthDate: /^\d{4}-\d{2}-\d{2}$/.test(e.birthDate || '') ? e.birthDate : '', idNumber: str('idNumber', 40), taxNumber: str('taxNumber', 40), taxOffice: str('taxOffice', 100), landline: str('landline', 40), language: ['tr', 'pt', 'en'].includes(e.language) ? e.language : 'tr', currency: /^[A-Z]{3}$/.test(e.currency || '') ? e.currency : '', taxExempt: bool('taxExempt'), noSuspend: bool('noSuspend'), noCancel: bool('noCancel'), separateInvoice: bool('separateInvoice'), noLateFee: bool('noLateFee'), blocked: bool('blocked'), notifyMail: Array.isArray(e.notifyMail) ? e.notifyMail.slice(0, 10).map(x => clean(x, 20)) : [], notifySms: Array.isArray(e.notifySms) ? e.notifySms.slice(0, 10).map(x => clean(x, 20)) : []};
+    }
+    if (b.status && p.status !== (b.status === 'active' ? 'active' : 'disabled')) await q(db, 'UPDATE people SET status=? WHERE id=?', b.status === 'active' ? 'active' : 'disabled', id).run();
     if (loc) Object.assign(meta, {country: loc.country, city: loc.city, lat: loc.lat ?? null, lng: loc.lng ?? null});
     const prof = (await getItem(db, 'profile-' + id))?.data || {};
     const name = clean(b.name, 100) || p.name;
