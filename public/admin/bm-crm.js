@@ -371,7 +371,8 @@
     }),
     hesaplar: () => { setTimeout(() => location.replace('#customers'), 0); return ''; },
   };
-  for (const [k, t] of Object.entries(EMBED)) routes[k] = () => mount(`<div class="bm-embed">${heading(t)}<div id="note" class="bm-note"></div><section id="view"><div class="loading">Yükleniyor…</div></section></div>`, () => window.BMAcc.route());
+  for (const [k, t] of Object.entries(EMBED)) routes[k] = () => mount(`<div class="bm-embed">${heading(t)}<div id="note" class="bm-note"></div><section id="view"><div class="loading">Yükleniyor…</div></section></div>`, () => window.BMAcc.route(k));
+  window.BMRoutes = routes;
 
   // ---------- E-POSTA (SMTP) AYARLARI ----------
   const field = (l, inp, hint = '', cls = '') => `<label class="${cls}">${l}${inp}${hint ? `<small class="muted">${hint}</small>` : ''}</label>`;
@@ -518,8 +519,6 @@
     };
   }, true);
 
-  // Genel Ayarlar sayfasında e-posta ayarlarına kısayol
-  if (typeof general === 'function') { const _general = general; general = function () { const h = _general(); const i = h.indexOf('</div>'); const card = `<div class="bmc-callout">${I('mail')}<div><b>E-posta gönderimi</b><span>Bildirim, doğrulama ve şifre e-postalarının hangi adresten gideceğini SMTP ayarlarından belirleyin.</span></div><a class="btn primary" href="#eposta">E-posta (SMTP) Ayarları</a></div>`; return i > 0 ? h.slice(0, i + 6) + card + h.slice(i + 6) : card + h; }; }
 
   const _listPage = listPage;
   listPage = function (type) {

@@ -158,7 +158,7 @@
   async function meetView() {
     const d = await api('meet'), m = d.meet || {};
     $('#view').innerHTML = `<div class="bm-box"><div class="bm-flex"><span class="bm-ico" style="width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:#e8f0fe;font-size:22px">🎥</span><div><h2 style="margin:0">Google Meet eklentisi</h2><p class="muted" style="margin:4px 0 0;font-size:12.5px">“15 dakikalık ücretsiz görüşme” formunu dolduran kişiye toplantı bağlantısı otomatik olarak e-postayla gönderilir.</p></div><span class="sp"></span><span class="tag ${m.active !== false && (m.link || m.webhook) ? 'g' : 'a'}">${m.active !== false && (m.link || m.webhook) ? 'Aktif' : 'Kurulum bekliyor'}</span></div></div>
-    ${d.mail ? '' : '<div class="bm-note info">E-posta servisi (Resend) henüz bağlı değil: talepler kaydedilir ve Meet linki ziyaretçiye ekranda gösterilir, ancak e-posta gitmez. RESEND_API_KEY ve EMAIL_FROM tanımlanınca otomatik gönderim başlar.</div>'}
+    ${d.mail ? '' : '<div class="bm-note info">E-posta gönderimi henüz açık değil: talepler kaydedilir ve Meet linki ziyaretçiye ekranda gösterilir, ancak e-posta gitmez. <b>E-posta (SMTP)</b> sekmesinden gönderimi açınca otomatik gönderim başlar.</div>'}
     <div class="bm-box"><form class="bm-f" id="mt">
       <label class="full">Bağlantı yöntemi<select name="mode"><option value="fixed" ${m.mode !== 'webhook' ? 'selected' : ''}>Sabit Google Meet linki (en basit)</option><option value="webhook" ${m.mode === 'webhook' ? 'selected' : ''}>API / webhook — her görüşmeye ayrı link (gelişmiş)</option></select></label>
       <label class="full" data-m="fixed">Sabit Meet linki<input name="link" placeholder="https://meet.google.com/abc-defg-hij" value="${esc(m.link || '')}"><small class="muted" style="font-weight:400">Google Takvim’de tekrarlayan bir “Ön görüşme” etkinliği oluşturup Meet linkini buraya yapıştırın.</small></label>
@@ -189,8 +189,8 @@
     $$('[data-bk]').forEach(sel => sel.onchange = async () => { try { await api('bookings', 'PATCH', {id: sel.dataset.bk, status: sel.value}); note('ok', 'Durum güncellendi.'); } catch (err) { note('err', esc(err.message)); } });
   }
 
-  async function route() {
-    tab = (location.hash || '#hesaplar').slice(1) || 'hesaplar';
+  async function route(force) {
+    tab = force || (location.hash || '#hesaplar').slice(1) || 'hesaplar';
     $$('#tabs a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + tab));
     note('', '');
     try {
@@ -207,7 +207,7 @@
   // Yönetim paneline gömülü çalışır (/admin/#partnerler vb.). Ayrı sayfa artık /admin/'e yönlendirir.
   async function ensureMeta() { if (!META) META = await api('meta'); }
   window.BMAcc = {
-    async route() { await ensureMeta(); await route(); },
+    async route(name) { await ensureMeta(); await route(name); },
     async edit(id) { await ensureMeta(); ACCOUNTS = (await api('accounts')).accounts; editAccount(id); },
     async pendingPartners() { const d = await api('partners'); return d.partners.filter(p => p.status === 'review').length; },
   };

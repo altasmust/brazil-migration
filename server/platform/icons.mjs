@@ -64,6 +64,12 @@ export const ICONS = {
   passport: '<rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10.5" r="3"/><path d="M9 17h6"/>',
   wallet: '<path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1V6a2 2 0 0 1 2-2h11"/><path d="M15.5 13.5h.1"/>',
   chat: '<path d="M4 5h16v11H9l-5 4z"/>',
+  bank: '<path d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>',
+  'credit-card': '<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 10h19M6.5 15h4"/>',
+  'shopping-bag': '<path d="M5 8h14l-1 12H6z"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/>',
+  transfer: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/>',
+  power: '<path d="M12 3v8M6.4 6.6a8 8 0 1 0 11.2 0"/>',
   play: {fill: true, d: '<path d="M8 5v14l11-7z"/>'},
   pause: {fill: true, d: '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>'},
 };

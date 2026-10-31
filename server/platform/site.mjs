@@ -272,8 +272,8 @@ async function renderBlog(path, st, preview) {
 // ---------- icons: text glyphs (↗ ✓ ⌄ × …) → icon library (/bm/icons.css, see server/platform/icons.mjs) ----------
 export function arrowize(html) {
   html = iconizeHTML(html);
-  if (!html.includes('/bm/icons.css')) html = html.replace('</head>', '<link rel="stylesheet" href="/bm/icons.css?v=1"></head>');
-  if (!html.includes('/bm/icons.js')) html = html.replace(/<\/body>(?![\s\S]*<\/body>)/, '<script src="/bm/icons.js?v=1" defer></script></body>');
+  if (!html.includes('/bm/icons.css')) html = html.replace('</head>', '<link rel="stylesheet" href="/bm/icons.css?v=2"></head>');
+  if (!html.includes('/bm/icons.js')) html = html.replace(/<\/body>(?![\s\S]*<\/body>)/, '<script src="/bm/icons.js?v=2" defer></script></body>');
   return html;
 }
 

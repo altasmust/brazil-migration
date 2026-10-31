@@ -7,6 +7,7 @@ import {
 import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
 import {applyConfig} from './config.mjs';
 import {cleanPost, readMinutes} from './blog.mjs';
+import {loadPayments, publicView as paymentsView, savePayment} from './payments.mjs';
 import {staticPages, siteState, invalidateSite, editorHTML, readStatic, buildOverrides, extractMenu, renderPage, hash as shash, PANEL} from './site.mjs';
 import {creditState, creditRecord, saveCredit, monthKey, monthStart as creditMonthStart, DEFAULT_MONTHLY} from './credits.mjs';
 import {CITIES, locate, fromRequest, distanceKm} from './geo.mjs';
@@ -546,6 +547,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const custom = Object.values(st.custom).map(c => ({id: c.id, path: c.path, title: c.title, type: 'custom', published: !!c.published, seo: c.seo || {}, blocks: c.blocks || [], updated: c.updated || null}));
     return json({pages, custom, menuSaved: !!st.menu});
   }
+  if (route === 'payments' && req.method === 'GET') return json({modules: paymentsView(await loadPayments(db))});
   if (route === 'blog' && req.method === 'GET') {
     const st = await siteState(db);
     const posts = Object.values(st.blog).map(p => ({...p, readMin: readMinutes(p)})).sort((a, b) => String(b.date).localeCompare(String(a.date)));
@@ -787,6 +789,11 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     if (route === 'site/custom/delete') { const id = clean(b.id, 80); if (!/^sitecustom-/.test(id)) fail(400, 'Geçersiz sayfa.'); await db.batch([q(db, "DELETE FROM items WHERE id=? AND kind='site_custom'", id), audit(db, actor, 'site.custom.delete', id)]); invalidateSite(); return json({ok: true}); }
     if (route === 'site/preview') { const r = await renderPage(db, '/onizleme/', {preview: {title: clean(b.title, 120) || 'Önizleme', blocks: Array.isArray(b.blocks) ? b.blocks.slice(0, 40) : [], seo: {}}}); return json({html: r.html}); }
     fail(404, 'İşlem bulunamadı.');
+  }
+  if (route === 'payments/save' && req.method === 'POST') {
+    const next = savePayment(await loadPayments(db), clean(b.id, 30), b);
+    await db.batch([putItem(db, 'config-payments', 'config', 'owner', next), audit(db, actor, 'payments.save', clean(b.id, 30) + ':' + (next[clean(b.id, 30)].enabled ? 'on' : 'off'))]);
+    return json({ok: true, modules: paymentsView(next)});
   }
   if (route.startsWith('blog/') && req.method === 'POST') {
     if (route === 'blog/save') {
