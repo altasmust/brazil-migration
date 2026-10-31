@@ -64,21 +64,6 @@
   const ICON = {ev: '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>', araba: '<path d="M5 16h14l-1.5-5.5A2 2 0 0 0 15.6 9H8.4a2 2 0 0 0-1.9 1.5z"/><circle cx="8" cy="17" r="1.8"/><circle cx="16" cy="17" r="1.8"/>', elektronik: '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>', gida: '<path d="M4 9h16l-2 10H6z"/><path d="M8 9l3-5M16 9l-3-5"/>', fatura: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>', yasam: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'};
   const ico = k => `<span class="tb-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg></span>`;
 
-  const SYSTEMS = [
-    {id: 'saglik', icon: '🩺', title: 'Sağlık sistemi', tr: ['SGK / Genel Sağlık Sigortası ile kamu hastaneleri ve şehir hastaneleri', 'İkamet izinli yabancılar için sağlık sigortası zorunlu', 'Özel hastane ağı geniş, sağlık turizmi güçlü'], br: ['SUS: herkese ücretsiz, evrensel kamu sağlık sistemi — yabancılar dahil', 'Aşı, acil ve birinci basamak hizmetler ücretsiz', 'Büyük şehirlerde özel sağlık planları (plano de saúde) yaygın'], verdict: 'Brezilya’nın SUS sistemi sigorta şartı olmadan herkese açıktır; özel hizmet kalitesi iki ülkede de yüksektir.'},
-    {id: 'egitim', icon: '🎓', title: 'Eğitim sistemi', tr: ['Devlet okulları ücretsiz, 12 yıl zorunlu eğitim', 'Devlet üniversiteleri düşük harçlı; yabancılara farklı ücret uygulanabilir', 'Uluslararası okul seçeneği İstanbul’da geniş'], br: ['Devlet okulları ücretsiz; 4–17 yaş arası eğitim zorunlu', 'Federal ve eyalet üniversiteleri ücretsiz (ENEM / vestibular ile giriş)', 'São Paulo’da USP ve Unicamp gibi Latin Amerika’nın önde gelen üniversiteleri'], verdict: 'Brezilya’da kamu üniversiteleri tamamen ücretsizdir; okul öncesi ve uluslararası okul maliyeti São Paulo’da daha düşüktür.'},
-    {id: 'vergi', icon: '🧾', title: 'Vergi yükü', tr: ['Gelir vergisi %15–%40 (2026: 190.000 ₺’ye kadar %15, 5,3 milyon ₺ üzeri %40)', 'KDV genel oran %20', 'SGK işçi payı yaklaşık %14 + işsizlik %1'], br: ['Gelir vergisi %0–%27,5; 2026’dan itibaren aylık R$ 5.000’a kadar gelir fiilen muaf (Lei 15.270/2025)', 'Tüketim vergileri (ICMS, PIS/COFINS, IPI) fiyata gömülü ve yüksek; 2026’da CBS/IBS reformuna geçiş başladı', 'INSS çalışan payı %7,5–%14'], verdict: 'Brezilya’da gelir vergisi orta gelirde daha düşüktür; buna karşılık ürün fiyatlarındaki tüketim vergisi yükü yüksektir.'},
-    {id: 'dijital', icon: '📲', title: 'Dijital yaşam ve teknoloji', tr: ['e-Devlet ile çoğu kamu işlemi çevrim içi', 'Mobil bankacılık ve FAST anlık ödeme yaygın', 'Fiber internet büyük şehirlerde yaygın, fiyatlar düşük'], br: ['Pix: ücretsiz, 7/24 anlık ödeme — nüfusun büyük çoğunluğu kullanıyor', 'gov.br ile dijital kimlik ve kamu hizmetleri', 'Nubank gibi dijital bankalar ve geniş fiber altyapı'], verdict: 'İki ülke de dijital hizmetlerde güçlü; Brezilya’nın Pix sistemi günlük ödemelerde nakit ve kartın yerini almış durumda.'},
-  ];
-
-  const CLIMATE = {
-    tr: {city: 'İstanbul', lat: 41.01, lon: 28.98, avg: '≈ 15 °C', summer: '24–29 °C', winter: '3–9 °C, ara sıra kar', note: 'Dört mevsim; nemli yazlar ve soğuk, yağışlı kışlar.'},
-    br: {city: 'São Paulo', lat: -23.55, lon: -46.63, avg: '≈ 20 °C', summer: '19–28 °C, yağışlı', winter: '12–23 °C, kuru', note: 'Ilıman subtropikal; kış yumuşak, yaz yağmurlu. Mevsimler Türkiye’nin tersidir.'},
-  };
-
-  // [kategori, TR puan, BR puan, varsayılan ağırlık]
-  const SCORE = [['Ev ve kira', 5, 7, 3], ['Araba ve ulaşım', 4, 7, 2], ['Elektronik', 4, 5, 1], ['Gıda', 6, 7, 2], ['Faturalar', 7, 6, 1], ['Genel yaşam', 6, 7, 2], ['Sağlık', 7, 8, 3], ['Eğitim', 6, 7, 2], ['Vergi yükü', 5, 6, 2], ['Dijital yaşam', 7, 8, 1], ['İklim', 6, 8, 1], ['Para birimi istikrarı', 3, 6, 2]];
-
   function costTable(key) {
     const c = COST[key];
     return `<div class="tb-head"><span>Kalem</span><span>🇹🇷 İstanbul</span><span>🇧🇷 São Paulo</span><span>Fark</span></div><div class="tb-table">${c.rows.map(([name, tr, br, note]) => {
@@ -113,12 +98,6 @@
     if (on) renderDetail(k);
     if (scroll && (on || k === 'maliyet')) $('#maliyet').scrollIntoView({behavior: 'smooth', block: 'start'});
   }
-  function renderSystems() {
-    $('#tb-systems').innerHTML = SYSTEMS.map(s => `<article class="tb-sys" id="${s.id}"><h3>${s.icon} ${esc(s.title)}</h3><div class="tb-sys-grid"><div><span class="tb-flag">🇹🇷 Türkiye</span><ul>${s.tr.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div><div><span class="tb-flag">🇧🇷 Brezilya</span><ul>${s.br.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></div><p class="tb-verdict">💡 ${esc(s.verdict)}</p></article>`).join('');
-  }
-  function renderClimate(live = {}) {
-    $('#tb-climate').innerHTML = ['tr', 'br'].map(k => { const c = CLIMATE[k], l = live[k]; return `<article class="tb-wx"><div class="tb-wx-top"><div><span class="tb-flag">${k === 'tr' ? '🇹🇷' : '🇧🇷'} ${c.city}</span><b class="tb-temp">${l ? Math.round(l.t) + ' °C' : '—'}</b><small>${l ? 'Şu an · ' + esc(l.desc) : 'Canlı hava durumu yükleniyor…'}</small></div><span class="tb-wx-ico">${l ? l.icon : '⛅'}</span></div><dl><dt>Yıllık ortalama</dt><dd>${c.avg}</dd><dt>Yaz</dt><dd>${c.summer}</dd><dt>Kış</dt><dd>${c.winter}</dd></dl><p>${esc(c.note)}</p></article>`; }).join('');
-  }
   function renderFx() {
     const brlTry = FX.TRY / FX.BRL;
     $('#tb-fx').innerHTML = `<div class="tb-fx-rates"><div><span>1 R$ (Brezilya reali)</span><b>₺${brlTry.toFixed(2).replace('.', ',')}</b></div><div><span>1 USD</span><b>₺${FX.TRY.toFixed(2).replace('.', ',')} · R$ ${FX.BRL.toFixed(2).replace('.', ',')}</b></div><div><span>1.000 ₺</span><b>R$ ${(1000 / brlTry).toFixed(0)}</b></div></div>
@@ -127,25 +106,9 @@
     const calc = () => { const a = Number($('#tb-amt').value) || 0, cur = $('#tb-cur').value; $('#tb-out').innerHTML = cur === 'TRY' ? `<b>R$ ${(a / brlTry).toLocaleString('tr-TR', {maximumFractionDigits: 2})}</b><small>≈ $${(a / FX.TRY).toLocaleString('tr-TR', {maximumFractionDigits: 0})}</small>` : `<b>₺${(a * brlTry).toLocaleString('tr-TR', {maximumFractionDigits: 2})}</b><small>≈ $${(a / FX.BRL).toLocaleString('tr-TR', {maximumFractionDigits: 0})}</small>`; };
     $('#tb-amt').oninput = calc; $('#tb-cur').onchange = calc; calc();
   }
-  function renderScore() {
-    const w = SCORE.map((r, i) => Number(document.querySelector(`[data-w="${i}"]`)?.value ?? r[3]));
-    const tot = w.reduce((a, b) => a + b, 0) || 1;
-    const tr = SCORE.reduce((a, r, i) => a + r[1] * w[i], 0) / tot, br = SCORE.reduce((a, r, i) => a + r[2] * w[i], 0) / tot;
-    $('#tb-score-sum').innerHTML = `<div class="tb-big tr"><span>🇹🇷 Türkiye</span><b>${tr.toFixed(1)}</b><small>/ 10</small></div><div class="tb-vs">VS</div><div class="tb-big br"><span>🇧🇷 Brezilya</span><b>${br.toFixed(1)}</b><small>/ 10</small></div>`;
-    if (!document.querySelector('[data-w]')) {
-      $('#tb-score-rows').innerHTML = SCORE.map(([n, a, b, d], i) => `<div class="tb-sc"><span class="n">${esc(n)}</span><span class="bars"><i class="tr" style="width:${a * 10}%">${a}</i><i class="br" style="width:${b * 10}%">${b}</i></span><label title="Sizin için önemi">Önem <input type="range" min="0" max="3" step="1" value="${d}" data-w="${i}"></label></div>`).join('');
-      document.querySelectorAll('[data-w]').forEach(r => r.oninput = renderScore);
-    }
-    const hero = $('#tb-hero-score'); if (hero) hero.innerHTML = `<span>🇹🇷 ${tr.toFixed(1)}</span><em>genel skor</em><span>🇧🇷 ${br.toFixed(1)}</span>`;
-  }
-
   window.addEventListener('hashchange', () => route(true));
-  renderCards(); route(KEYS.includes(location.hash.slice(1))); renderSystems(); renderClimate(); renderFx(); renderScore();
+  renderCards(); route(KEYS.includes(location.hash.slice(1))); renderFx();
 
   // canlı kur
   fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=TRY,BRL').then(r => r.json()).then(d => { if (d?.rates?.TRY && d.rates.BRL) { FX = {TRY: d.rates.TRY, BRL: d.rates.BRL, date: new Date(d.date).toLocaleDateString('tr-TR'), live: true}; renderFx(); route(false); } }).catch(() => {});
-  // canlı hava durumu (Open-Meteo)
-  const WMO = c => c === 0 ? ['☀️', 'Açık'] : c <= 2 ? ['🌤️', 'Az bulutlu'] : c === 3 ? ['☁️', 'Bulutlu'] : c <= 48 ? ['🌫️', 'Sisli'] : c <= 67 ? ['🌧️', 'Yağmurlu'] : c <= 77 ? ['❄️', 'Karlı'] : c <= 82 ? ['🌦️', 'Sağanak'] : ['⛈️', 'Fırtınalı'];
-  const live = {};
-  Promise.all(['tr', 'br'].map(k => fetch(`https://api.open-meteo.com/v1/forecast?latitude=${CLIMATE[k].lat}&longitude=${CLIMATE[k].lon}&current=temperature_2m,weather_code`).then(r => r.json()).then(d => { const [icon, desc] = WMO(d.current.weather_code); live[k] = {t: d.current.temperature_2m, icon, desc}; }).catch(() => {}))).then(() => renderClimate(live));
 })();
