@@ -65,3 +65,7 @@ body[data-page="home"] span.bm-ico svg{display:block;margin:0}
 .why .why-grid article.bm-live>span.bm-ico svg{width:22px;height:22px}
 .settling-list.bm-live span.bm-ico svg{width:16px;height:16px}
 .trust.bm-live span.bm-ico svg{width:18px;height:18px}
+
+/* 3 hizmet kartı: masaüstünde tek satır (eski 5 kartlık düzendeki span 2 boşluk bırakıyordu) */
+@media (min-width:761px){.services-grid .service-card:last-child{grid-column:auto}}
+@media (min-width:441px) and (max-width:760px){.services-grid .service-card.bm-live:last-child{padding-right:calc(46% + 22px);min-height:220px}.services-grid .service-card.bm-live:last-child .bm-thumb{position:absolute;top:0;right:0;bottom:0;width:46%;height:auto;margin:0;border-bottom:0;border-left:1px solid var(--line);background-position:center}.services-grid .service-card.bm-live:last-child>span.bm-ico{margin-top:4px}}
