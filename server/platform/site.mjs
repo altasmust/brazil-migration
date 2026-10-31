@@ -157,7 +157,8 @@ function applyOverrides(root, overrides, editorMode) {
 const nl2br = s => esc(s).replace(/\n/g, '<br>');
 export function extractMenu(html) {
   const root = parseHTML(html);
-  const groups = root.querySelectorAll('nav.mega-nav details.nav-group').map(d => {
+  const groups = (root.querySelector('nav.mega-nav')?.childNodes || []).filter(isEl).filter(d => d.classList.contains('nav-group') || d.classList.contains('nav-direct')).map(d => {
+    if (d.classList.contains('nav-direct')) return {title: d.childNodes.filter(n => n.nodeType === 3).map(n => n.text).join('').trim().replace(/&amp;/g, '&'), href: d.getAttribute('href') || '', intro: {kicker: '', heading: '', text: '', cta: {label: '', href: ''}}, links: []};
     const intro = d.querySelector('.mega-intro');
     return {
       title: d.querySelector('summary').childNodes.filter(n => n.nodeType === 3).map(n => n.text).join('').trim(),
@@ -182,9 +183,10 @@ const href = h => esc(safeUrl(h) || '#');
 function applyMenu(root, m) {
   if (!m) return;
   const nav = root.querySelector('nav.mega-nav');
-  if (nav && Array.isArray(m.groups)) nav.set_content(m.groups.map(g => `<details class="nav-group"><summary>${esc(g.title)} <span>⌄</span></summary><div class="mega-panel"><div class="mega-intro"><span class="kicker">${esc(g.intro?.kicker)}</span><h2>${esc(g.intro?.heading || g.title)}</h2><p>${nl2br(g.intro?.text)}</p>${g.intro?.cta?.label ? `<a href="${href(g.intro.cta.href)}">${esc(g.intro.cta.label)}</a>` : ''}</div><div class="mega-links">${(g.links || []).map(l => `<a href="${href(l.href)}"><strong>${esc(l.title)} <span>↗</span></strong><small>${esc(l.desc)}</small></a>`).join('')}</div></div></details>`).join(''));
+  const direct = g => !(g.links || []).length && g.href;
+  if (nav && Array.isArray(m.groups)) nav.set_content(m.groups.map(g => direct(g) ? `<a class="nav-direct" href="${href(g.href)}">${esc(g.title)}</a>` : `<details class="nav-group"><summary>${esc(g.title)} <span>⌄</span></summary><div class="mega-panel"><div class="mega-intro"><span class="kicker">${esc(g.intro?.kicker)}</span><h2>${esc(g.intro?.heading || g.title)}</h2><p>${nl2br(g.intro?.text)}</p>${g.intro?.cta?.label ? `<a href="${href(g.intro.cta.href)}">${esc(g.intro.cta.label)}</a>` : ''}</div><div class="mega-links">${(g.links || []).map(l => `<a href="${href(l.href)}"><strong>${esc(l.title)} <span>↗</span></strong><small>${esc(l.desc)}</small></a>`).join('')}</div></div></details>`).join(''));
   const grid = root.querySelector('#full-menu .full-menu-grid');
-  if (grid && Array.isArray(m.groups)) grid.set_content(m.groups.map(g => `<section><h2>${esc(g.title)}</h2>${(g.links || []).map(l => `<a href="${href(l.href)}">${esc(l.title)} <span>↗</span></a>`).join('')}</section>`).join(''));
+  if (grid && Array.isArray(m.groups)) grid.set_content(m.groups.map(g => direct(g) ? `<section class="fm-solo"><h2><a href="${href(g.href)}">${esc(g.title)} <span>↗</span></a></h2></section>` : `<section><h2>${esc(g.title)}</h2>${(g.links || []).map(l => `<a href="${href(l.href)}">${esc(l.title)} <span>↗</span></a>`).join('')}</section>`).join(''));
   const f = root.querySelector('footer.site-footer'), F = m.footer;
   if (f && F) {
     const fg = f.querySelector('.footer-grid'), brand = fg?.querySelector('.footer-brand');

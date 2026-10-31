@@ -45,3 +45,12 @@ body{font-family:'Poppins',Arial,sans-serif;font-size:16px;line-height:1.75}h1,h
 @media(max-width:1200px){.mega-nav{display:none}.nav-right{gap:20px}.footer-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:800px){.home-hero{min-height:640px}.hero-content>p{font-size:16px}.home-story-extra figure{margin:0}.quiz-picker{grid-template-columns:1fr 1fr}.site-footer{padding:40px 24px 24px}.reading article h2{font-size:24px}.home-story{gap:32px}.nav-right{gap:12px}}
 @media(max-width:540px){.footer-grid,.quiz-picker{grid-template-columns:1fr}.footer-grid{gap:30px}.footer-bottom{flex-direction:column;gap:10px}.home-hero h1{font-size:39px;letter-spacing:-1px}.hero-shade{background:linear-gradient(90deg,#071c14bd,#071c1438)}.hero-content .actions{gap:14px}.hero-content .btn{font-size:13px}.home-hero{min-height:670px}.nav-right{gap:8px}.quiz-teaser h2{font-size:28px}.lens-info h3{font-size:23px}.lens-info .btn{font-size:12px}.lens-info p{font-size:12px}}
+
+/* menü: doğrudan bağlantılar (Blog, Hakkımızda) */
+.nav-direct{font-size:15px;padding:38px 0;display:flex;align-items:center;color:inherit;text-decoration:none;white-space:nowrap}
+.nav-direct:hover,.nav-direct[aria-current=page]{color:var(--forest)}
+.full-menu .fm-solo h2 a{color:inherit;text-decoration:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.full-menu .fm-solo h2 a span{font-size:.55em}
+/* yığın etiketi: arka katmanlar ortalı */
+.stack-label:before{inset:5px -12px;left:-12px;right:-12px}
+.stack-label:after{inset:10px -24px;left:-24px;right:-24px}

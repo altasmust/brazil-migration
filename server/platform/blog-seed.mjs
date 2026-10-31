@@ -117,3 +117,32 @@ export async function migrateMenuV2(client) {
   }
   await client.execute({sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('migration-menu-v2','migration','owner','{}',?,?)", args: [now, now]});
 }
+
+// One-time: menu groups become Bireysel / Kurumsal / Rehber, Blog and Hakkımızda become direct top links,
+// the old "Kurumsal" (about) group is removed (menu saved in the admin).
+export async function migrateMenuV3(client) {
+  const done = await client.execute({sql: "SELECT id FROM items WHERE id='migration-menu-v3'", args: []});
+  if (done.rows.length) return;
+  const now = Date.now();
+  const m = (await client.execute({sql: "SELECT data FROM items WHERE id='site-menu'", args: []})).rows[0];
+  if (m) {
+    try {
+      const menu = JSON.parse(m[0] ?? m.data); let G = menu.groups || [];
+      const has = (g, re) => (g.links || []).some(l => re.test(l.href || ''));
+      const ren = (g, t) => { if (!g) return; g.title = t; g.intro = {...(g.intro || {}), heading: t}; };
+      G = G.filter(g => !(has(g, /#yaklasim|#dunya-haritasi/) && !has(g, /brezilya|degerlendirme|portekizce|turkiye/)));
+      ren(G.find(g => has(g, /brezilya-oturum-izni/)), 'Bireysel');
+      ren(G.find(g => has(g, /brezilyada-sirket-kurma/)), 'Kurumsal');
+      const r = G.find(g => has(g, /degerlendirme|portekizce|turkiye-brezilya/)); ren(r, 'Rehber');
+      if (r) r.links = r.links.filter(l => l.href !== '/blog/');
+      const blank = {kicker: '', heading: '', text: '', cta: {label: '', href: ''}};
+      if (!G.some(g => g.href === '/blog/')) G.push({title: 'Blog', href: '/blog/', intro: blank, links: []});
+      if (!G.some(g => g.href === '/hakkimizda/')) G.push({title: 'Hakkımızda', href: '/hakkimizda/', intro: blank, links: []});
+      menu.groups = G;
+      const col = (menu.footer?.cols || []).find(c => (c.links || []).some(l => l.href === '/blog/'));
+      if (col && !col.links.some(l => l.href === '/hakkimizda/')) col.links.splice(col.links.findIndex(l => l.href === '/blog/') + 1, 0, {label: 'Hakkımızda', href: '/hakkimizda/'});
+      await client.execute({sql: "UPDATE items SET data=?, updated=? WHERE id='site-menu'", args: [JSON.stringify(menu), now]});
+    } catch {}
+  }
+  await client.execute({sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('migration-menu-v3','migration','owner','{}',?,?)", args: [now, now]});
+}

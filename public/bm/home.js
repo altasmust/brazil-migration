@@ -30,7 +30,7 @@
   $$('.service-card').forEach(c => {
     const m = CARDS[c.getAttribute('href')]; if (!m) return;
     c.classList.add('bm-live');
-    c.insertAdjacentHTML('afterbegin', `<span class="bm-thumb" style="background-image:url('/images/marketing-v2/${m[1]}-768.webp')" aria-hidden="true"></span>${ico(m[0])}`);
+    c.insertAdjacentHTML('afterbegin', `<span class="bm-thumb" aria-hidden="true"><img src="/images/marketing-v2/${m[1]}-768.webp" srcset="/images/marketing-v2/${m[1]}-768.webp 768w, /images/marketing-v2/${m[1]}.webp 1536w" sizes="(max-width: 760px) 92vw, 420px" width="768" height="512" alt="" loading="lazy" decoding="async"></span>${ico(m[0])}`);
   });
 
   const WHY = ['home', 'scale', 'leaf'];
@@ -55,10 +55,10 @@
     qt.querySelector('div')?.insertAdjacentHTML('beforeend', `<div class="bm-qicons">${ico('home')}${ico('flag')}${ico('building')}</div>`);
   }
 
-  const services = $('#hizmetler .section-head');
-  if (services && !$('.bm-ribbon')) services.insertAdjacentHTML('afterend', `<div class="bm-ribbon">
+  const foot = $('footer.site-footer');
+  if (foot && !$('.bm-ribbon')) foot.insertAdjacentHTML('beforebegin', `<section class="wrap bm-ribbon-wrap" aria-label="Neden Brazil Migration"><div class="bm-ribbon">
     <div>${ico('route')}<span><b>3 ana hizmet</b><small>Oturum, vatandaşlık ve şirket kurulumu</small></span></div>
     <div>${ico('chat', 'gold')}<span><b>Türkçe destek</b><small>Baştan sona tek muhatap</small></span></div>
     <div>${ico('scale')}<span><b>Avukat koordinasyonu</b><small>Dosyanıza özel hukuki kontrol</small></span></div>
-    <div>${ico('shield')}<span><b>Güvenli panel</b><small>Belgeler, süreç ve bildirimler</small></span></div></div>`);
+    <div>${ico('shield')}<span><b>Güvenli panel</b><small>Belgeler, süreç ve bildirimler</small></span></div></div></section>`);
 })();

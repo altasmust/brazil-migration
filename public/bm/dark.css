@@ -1,0 +1,30 @@
+/* Koyu mod uyumu: sayfa CSS'lerindeki sabit açık renkler için ortak düzeltmeler (tüm public sayfalarda yüklenir). */
+:root[data-theme=dark]{--d-bg:#0d1613;--d-sec:#101c17;--d-card:#14241c;--d-card2:#172a20;--d-warm:#1f1d16;--d-warm-line:#3b3626;--d-chip:#1e3727;--d-text:#cfdcd2;--d-accent:#8fcf8a;--d-accent2:#a9d89f}
+/* bölümler ve kutular */
+:root[data-theme=dark] .oi-band:not(.green){background:var(--d-sec)}
+:root[data-theme=dark] .oi-band.green{background:#0f2218}
+:root[data-theme=dark] .oi-steps,:root[data-theme=dark] .oi-docs{background:var(--d-card);border-color:var(--line)}
+:root[data-theme=dark] .oi-doc,:root[data-theme=dark] .oi-card,:root[data-theme=dark] .oi-pack,:root[data-theme=dark] .sk-pack,:root[data-theme=dark] .sk-ideal,:root[data-theme=dark] .sk-taxc,:root[data-theme=dark] .vt-table,:root[data-theme=dark] dialog.vt-d,:root[data-theme=dark] .hk-svc{background:var(--d-card);border-color:var(--line);color:var(--ink)}
+:root[data-theme=dark] .oi-doc{background:var(--d-card2)}
+:root[data-theme=dark] .oi-pack.feat,:root[data-theme=dark] .sk-pack.t2,:root[data-theme=dark] .vt-col.feat{background:#142b1d}
+:root[data-theme=dark] .oi-pack.custom,:root[data-theme=dark] .oi-note,:root[data-theme=dark] .sk-pack.t3{background:var(--d-warm);border-color:var(--d-warm-line)}
+:root[data-theme=dark] .oi-acc{border-color:var(--d-warm-line)}
+:root[data-theme=dark] .oi-bar{background:#2a3a31}
+:root[data-theme=dark] .oi-card .n,:root[data-theme=dark] .sk-ico{background:var(--d-chip);color:var(--d-accent2)}
+:root[data-theme=dark] .vt-th,:root[data-theme=dark] .vt-table th,:root[data-theme=dark] .bl-body th,:root[data-theme=dark] main table th{background:var(--d-card2);color:var(--ink)}
+:root[data-theme=dark] .vt-dot{background:#26332c;color:#a6b8ac}:root[data-theme=dark] .vt-dot.a{background:#17324a;color:#9cc8ef}:root[data-theme=dark] .vt-dot.t{background:#3a2e12;color:#f0c66b}
+:root[data-theme=dark] .vt-compare-btn:hover{background:#18301f}
+/* metinler */
+:root[data-theme=dark] .oi-list li,:root[data-theme=dark] .sk-facts,:root[data-theme=dark] .sk-l,:root[data-theme=dark] .vt-news p{color:var(--d-text)}
+:root[data-theme=dark] .oi-pack .tag,:root[data-theme=dark] .oi-compare,:root[data-theme=dark] .sk-h.plus,:root[data-theme=dark] .vt-compare-btn,:root[data-theme=dark] .bl-cat,:root[data-theme=dark] .hk-svc-b small,:root[data-theme=dark] .btn.ghost,:root[data-theme=dark] .oi-bar-label b,:root[data-theme=dark] .oi-meter b,:root[data-theme=dark] .card-number,:root[data-theme=dark] .bl-body a,:root[data-theme=dark] .bl-src a,:root[data-theme=dark] .bl-toc a span,:root[data-theme=dark] .bl-mtoc a span{color:var(--d-accent)}
+:root[data-theme=dark] .vt-compare-btn,:root[data-theme=dark] .btn.ghost{border-color:#4f8f5c}
+:root[data-theme=dark] .sk-h.minus{color:#e39a7d}
+:root[data-theme=dark] .oi-btn[disabled]{background:#26382d;color:#8fa596}
+/* ana sayfa */
+:root[data-theme=dark] .hero-card{background:rgba(16,29,23,.94);color:var(--ink);border:1px solid var(--line)}
+:root[data-theme=dark] .hero-card p{color:var(--muted)}:root[data-theme=dark] .hero-card a{border-color:var(--line);color:var(--ink)}
+:root[data-theme=dark] .bm-thumb,:root[data-theme=dark] .hk-svc img{background-color:var(--d-card2)}
+:root[data-theme=dark] .bm-ribbon div{background:var(--d-card);border-color:var(--line)}
+:root[data-theme=dark] .skip{background:var(--d-card);color:var(--ink)}
+/* stack etiketi */
+:root[data-theme=dark] .stack-label:before{background:#3f6b4a99}:root[data-theme=dark] .stack-label:after{background:#2c4a3466}

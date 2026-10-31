@@ -49,3 +49,4 @@
 .bms td.bms-acts{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;min-width:330px}
 .bms td.bms-acts .btn{margin:0;height:34px;padding:0 11px}
 .bms .bmc-table table{min-width:980px}
+.bms-direct{display:grid;gap:4px;font-size:12px;font-weight:600;color:#4d5f53;margin:6px 0}.bms-direct small{font-weight:400;color:var(--muted)}

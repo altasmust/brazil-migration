@@ -1,0 +1,15 @@
+/* Hakkımızda */
+.hk-two{display:grid;grid-template-columns:.9fr 1.1fr;gap:48px;align-items:start}
+.hk-text p{font-size:16px;line-height:1.85;color:var(--ink);margin:0 0 16px}
+.oi-card .n bm-i{font-size:17px}
+.hk-svcs{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.hk-svc{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--card-bg,#fff);color:var(--ink);text-decoration:none;transition:transform .2s,box-shadow .2s}
+.hk-svc:hover{transform:translateY(-3px);box-shadow:0 18px 40px -26px rgba(16,41,28,.5)}
+.hk-svc img{width:100%;aspect-ratio:3/2;object-fit:cover;display:block;background:#f3f6ee}
+.hk-svc-b{display:grid;gap:6px;padding:18px 20px 22px}
+.hk-svc-b small{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--forest);font-weight:600}
+.hk-svc-b b{font-size:18px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.hk-svc-b>span{color:var(--muted);font-size:14px;line-height:1.6}
+.hk-cta{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+@media (max-width:900px){.hk-two{grid-template-columns:1fr;gap:10px}.hk-svcs{grid-template-columns:1fr}}
+.hk-svc img{height:auto;flex:none}
