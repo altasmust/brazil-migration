@@ -2,9 +2,10 @@
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
   createSession, currentUser, destroySession, createToken, useToken, siteUrl, adminUrl, isAdminRequest, adminHosts, sha,
-  createImpersonationSession, isImpersonated,
+  createImpersonationSession, isImpersonated, readCookie,
 } from './auth.mjs';
-import {sendMail, mailConfigured} from './mail.mjs';
+import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
+import {applyConfig} from './config.mjs';
 import {CITIES, locate, fromRequest, distanceKm} from './geo.mjs';
 import {PARTNER_DOCS, verifyPartner, verifyCustomerDocument, verifierConfigured} from './verify.mjs';
 
@@ -506,6 +507,13 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     return json({accounts: list, groups: G.groups || []});
   }
 
+  const MASK = '••••••••';
+  if (['settings/mail', 'settings/didit', 'profile'].includes(route) && req.method === 'GET') {
+    if (route === 'settings/mail') { const d = (await getItem(db, 'config-mail'))?.data || {}; return json({mail: {active: d.active !== false, host: d.host || 'smtp.hostinger.com', port: d.port || 465, secure: d.secure !== false, user: d.user || '', pass: d.pass ? MASK : '', fromName: d.fromName || 'Brazil Migration', fromEmail: d.fromEmail || '', replyTo: d.replyTo || '', saved: !!d.host, updated: d.updated || null}, provider: mailProvider(), configured: mailConfigured(), envResend: !!process.env.RESEND_API_KEY}); }
+    if (route === 'settings/didit') { const d = (await getItem(db, 'config-didit'))?.data || {}; return json({didit: {enabled: d.enabled ?? process.env.DIDIT_ENABLED === 'true', apiKey: (d.apiKey || process.env.DIDIT_API_KEY) ? MASK : '', workflowId: d.workflowId || process.env.DIDIT_WORKFLOW_ID || '', limit: d.limit || Number(process.env.DIDIT_MONTHLY_LIMIT || 30), updated: d.updated || null}, ready: diditReady(process.env), callback: siteUrl(req) + '/partner/?kyc=done'}); }
+    const owner = await one(db, "SELECT name FROM people WHERE role='owner' LIMIT 1");
+    return json({profile: {email: u.email, name: owner?.name || 'Yönetici'}});
+  }
   if (['groups', 'accounts/notes', 'accounts/activity', 'accounts/files', 'accounts/file'].includes(route) && req.method === 'GET') {
     if (route === 'groups') { const G = (await getItem(db, 'account-groups'))?.data || {groups: [], assign: {}}; return json({groups: G.groups || [], assign: G.assign || {}}); }
     const id = clean(new URL(req.url).searchParams.get('id'), 80); if (!id) fail(400, 'Hesap gerekli.');
@@ -646,6 +654,61 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const name = clean(b.name, 100) || p.name;
     await db.batch([putItem(db, 'meta-' + id, 'account_meta', id, meta), putItem(db, 'profile-' + id, 'profile', id, {...prof, name, phone: meta.phone, company: meta.company}), q(db, 'UPDATE people SET name=? WHERE id=?', name, id), audit(db, actor, 'account.profile', id)]);
     return json({ok: true});
+  }
+  if (route === 'settings/mail' && req.method === 'POST') {
+    const old = (await getItem(db, 'config-mail'))?.data || {};
+    const fromEmail = clean(b.fromEmail, 254).toLowerCase(), user = clean(b.user, 254);
+    if (b.active !== false) {
+      if (!clean(b.host, 200) || !/^[a-z0-9.-]+$/i.test(clean(b.host, 200))) fail(400, 'SMTP sunucu adresini girin (ör. smtp.hostinger.com).');
+      if (!validEmail(fromEmail)) fail(400, 'Gönderen e-posta adresi geçersiz.');
+      if (!user) fail(400, 'SMTP kullanıcı adını girin (genellikle e-posta adresinin kendisi).');
+      if (!(b.pass && b.pass !== MASK) && !old.pass) fail(400, 'E-posta hesabının şifresini girin.');
+    }
+    const port = Math.round(Number(b.port) || 465); if (port < 1 || port > 65535) fail(400, 'Port geçersiz.');
+    const data = {active: b.active !== false, host: clean(b.host, 200), port, secure: b.secure !== false, user, pass: b.pass && b.pass !== MASK ? String(b.pass).slice(0, 300) : old.pass || '', fromName: clean(b.fromName, 80) || 'Brazil Migration', fromEmail, replyTo: validEmail(clean(b.replyTo, 254)) ? clean(b.replyTo, 254) : '', updated: now()};
+    await db.batch([putItem(db, 'config-mail', 'config', 'owner', data), audit(db, actor, 'settings.mail', data.host)]);
+    if (!data.active) for (const k of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS']) delete process.env[k];
+    applyConfig('config-mail', data);
+    return json({ok: true, provider: mailProvider(), configured: mailConfigured()});
+  }
+  if (route === 'settings/mail/test' && req.method === 'POST') {
+    const to = clean(b.to, 254).toLowerCase(); if (!validEmail(to)) fail(400, 'Test için geçerli bir e-posta adresi yazın.');
+    if (!mailConfigured()) fail(400, 'Önce SMTP ayarlarını kaydedin.');
+    try { await sendMail({to, subject: 'Brazil Migration · Test e-postası', title: 'E-posta ayarlarınız çalışıyor', text: 'Bu mesaj yönetim panelindeki E-posta Ayarları sayfasından gönderilen bir test e-postasıdır. Sitenin tüm bildirimleri bu adresten gönderilecek.', throwOnError: true}); }
+    catch (e) { fail(400, 'Gönderilemedi: ' + clean(e.message, 300) + '. Sunucu, port, kullanıcı adı ve şifreyi kontrol edin.'); }
+    return json({ok: true});
+  }
+  if (route === 'settings/didit' && req.method === 'POST') {
+    const old = (await getItem(db, 'config-didit'))?.data || {};
+    const data = {enabled: !!b.enabled, apiKey: b.apiKey && b.apiKey !== MASK ? clean(b.apiKey, 300) : old.apiKey || process.env.DIDIT_API_KEY || '', workflowId: clean(b.workflowId, 120), limit: Math.max(1, Math.min(10000, Math.round(Number(b.limit) || 30))), updated: now()};
+    if (data.enabled && (!data.apiKey || !data.workflowId)) fail(400, 'Etkinleştirmek için API anahtarı ve Workflow ID gerekli.');
+    await db.batch([putItem(db, 'config-didit', 'config', 'owner', data), audit(db, actor, 'settings.didit', data.enabled ? 'on' : 'off')]);
+    applyConfig('config-didit', data);
+    return json({ok: true, ready: diditReady(process.env)});
+  }
+  if (route === 'profile' && req.method === 'POST') {
+    const name = clean(b.name, 100), email = clean(b.email, 254).toLowerCase();
+    if (name.length < 2) fail(400, 'Ad soyad girin.');
+    if (!validEmail(email)) fail(400, 'Geçerli bir e-posta adresi girin.');
+    const changingEmail = email !== u.email, changingPw = !!b.newPassword;
+    if (changingEmail || changingPw) {
+      if (!b.currentPassword || !u.hash || !await checkPassword(String(b.currentPassword), u.salt, u.hash)) fail(400, 'Mevcut şifre hatalı.');
+    }
+    const ops = [q(db, "UPDATE people SET name=? WHERE role='owner'", name)];
+    if (changingPw) {
+      if (String(b.newPassword).length < 12) fail(400, 'Yeni şifre en az 12 karakter olmalı.');
+      const {salt, hash} = await hashPassword(String(b.newPassword));
+      ops.push(q(db, 'UPDATE auth_users SET hash=?, salt=? WHERE id=?', hash, salt, u.id));
+    }
+    if (changingEmail) {
+      if (await one(db, 'SELECT id FROM auth_users WHERE email=? AND id!=?', email, u.id) || await one(db, "SELECT id FROM people WHERE email=? AND role!='owner'", email)) fail(409, 'Bu e-posta başka bir hesapta kullanılıyor.');
+      ops.push(q(db, 'UPDATE auth_users SET email=? WHERE id=?', email, u.id), q(db, "UPDATE people SET email=? WHERE role='owner'", email), q(db, "UPDATE law_accounts SET email=? WHERE role='owner'", email), putItem(db, 'config-owner', 'config', 'owner', {email, updated: now()}));
+    }
+    ops.push(audit(db, actor, 'admin.profile', changingEmail ? 'email' : changingPw ? 'password' : 'name'));
+    await db.batch(ops);
+    if (changingEmail) applyConfig('config-owner', {email});
+    if (changingPw) await q(db, "DELETE FROM auth_sessions WHERE user=? AND scope='admin' AND token!=?", u.id, sha(readCookie(req, 'bm_admin') || '')).run();
+    return json({ok: true, email, name});
   }
   if (route === 'accounts/impersonate' && req.method === 'POST') {
     const id = clean(b.id, 80);

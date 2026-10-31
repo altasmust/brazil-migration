@@ -23,7 +23,7 @@ export function legacy(area, handler, opts = {}) {
         if (adminArea && !onAdminHost(req)) return notFound();
         if (!adminArea && onAdminHost(req) && !opts.adminHostToo) return notFound();
       }
-      const env = getEnv();
+      await getDatabase().ready(); const env = getEnv();
       const {req: r, user} = await withIdentity(env.DB, req);
       const route = new URL(req.url).pathname.replace(new RegExp('^/api/' + area + '/?'), '').replace(/\/$/, '');
       if (['workspace', 'advisor', 'kyc'].includes(area)) await partnerGate(env.DB, r, user, area, route);
@@ -41,7 +41,7 @@ export function legacy(area, handler, opts = {}) {
 export function platform(kind, after) {
   return async (req, ctx) => {
     try {
-      const env = getEnv();
+      await getDatabase().ready(); const env = getEnv();
       const params = ctx?.params ? await ctx.params : {};
       const route = (params.path || []).join('/');
       if (kind === 'auth') return await handleAuth(req, env, route);

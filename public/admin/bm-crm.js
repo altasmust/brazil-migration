@@ -357,6 +357,87 @@
   };
   for (const [k, t] of Object.entries(EMBED)) routes[k] = () => mount(`<div class="bm-embed">${heading(t)}<div id="note" class="bm-note"></div><section id="view"><div class="loading">Yükleniyor…</div></section></div>`, () => window.BMAcc.route());
 
+  // ---------- E-POSTA (SMTP) AYARLARI ----------
+  const field = (l, inp, hint = '', cls = '') => `<label class="${cls}">${l}${inp}${hint ? `<small class="muted">${hint}</small>` : ''}</label>`;
+  routes.eposta = () => mount(`<div class="bmc" id="bmc-root">${heading('E-posta (SMTP) Ayarları')}<div class="loading">Yükleniyor…</div></div>`, async () => {
+    const d = await A('settings/mail'), m = d.mail, root = $('#bmc-root');
+    const st = d.provider === 'smtp' ? ['on', 'SMTP ile gönderiliyor'] : d.provider === 'resend' ? ['on', 'Resend ile gönderiliyor'] : ['wait', 'Test modu — e-posta gönderilmiyor'];
+    root.innerHTML = heading('E-posta (SMTP) Ayarları') + `<div class="bmc-grid2 bmc-set"><section class="panel"><header class="panel-head">${I('mail')}<h2>Gönderim hesabı</h2><span class="bmc-login ${st[0]}">${st[1]}</span></header>
+      <form class="bmc-form" id="bmc-mail">
+        ${field('Gönderen adı', `<input class="bmc-in" name="fromName" value="${esc(m.fromName)}">`, 'Alıcının gelen kutusunda görünen ad.')}
+        ${field('Gönderen e-posta adresi', `<input class="bmc-in" name="fromEmail" type="email" value="${esc(m.fromEmail)}" placeholder="bilgi@brazilmigration.com" required>`, 'Tüm bildirimler bu adresten gider.')}
+        ${field('SMTP sunucusu', `<input class="bmc-in" name="host" value="${esc(m.host)}" required>`, 'Hostinger: smtp.hostinger.com')}
+        <div class="bmc-two">${field('Port', `<input class="bmc-in" name="port" type="number" value="${esc(m.port)}">`)}${field('Güvenlik', `<select class="bmc-in" name="secure"><option value="ssl" ${m.secure ? 'selected' : ''}>SSL/TLS (465)</option><option value="starttls" ${!m.secure ? 'selected' : ''}>STARTTLS (587)</option></select>`)}</div>
+        ${field('Kullanıcı adı', `<input class="bmc-in" name="user" value="${esc(m.user)}" placeholder="bilgi@brazilmigration.com" autocomplete="off">`, 'Genellikle e-posta adresinin kendisi.')}
+        ${field('Şifre', `<input class="bmc-in" name="pass" type="password" value="${esc(m.pass)}" placeholder="E-posta hesabının şifresi" autocomplete="new-password">`, m.pass ? 'Kayıtlı. Değiştirmek için yenisini yazın.' : 'Hostinger’da bu e-posta hesabını oluştururken belirlediğiniz şifre.')}
+        ${field('Yanıt adresi (isteğe bağlı)', `<input class="bmc-in" name="replyTo" type="email" value="${esc(m.replyTo)}" placeholder="bilgi@brazilmigration.com">`, 'Müşteri “Yanıtla”ya bastığında gideceği adres.', 'full')}
+        <label class="bmc-cb full"><input type="checkbox" name="active" ${m.active ? 'checked' : ''}> SMTP gönderimini kullan</label>
+        <div class="full bmc-actions"><button class="btn primary">${I('check')} Kaydet</button><button type="button" class="btn" id="bmc-hostinger">Hostinger varsayılanlarını doldur</button></div></form></section>
+      <section class="panel"><header class="panel-head">${I('send')}<h2>Test e-postası</h2></header><form class="bmc-form" id="bmc-mtest" style="grid-template-columns:1fr auto;align-items:end"><label>Alıcı<input class="bmc-in" name="to" type="email" required placeholder="admin@brazilmigration.com"></label><button class="btn primary" style="height:40px">Test gönder</button></form>
+        <div class="bmc-notes"><div class="bmc-note"><p><b>Hostinger için ayarlar</b></p><small>Sunucu <b>smtp.hostinger.com</b> · Port <b>465</b> (SSL/TLS) veya <b>587</b> (STARTTLS) · Kullanıcı adı: tam e-posta adresi · Şifre: Hostinger → E-postalar bölümünde bu hesap için belirlediğiniz şifre.</small></div>
+        <div class="bmc-note"><p><b>Hangi e-postalar gider?</b></p><small>E-posta doğrulama, şifre sıfırlama ve davet bağlantıları, ön görüşme (Google Meet) bilgileri, ön değerlendirme yol haritası ve sistem bildirimleri.</small></div>
+        <div class="bmc-note"><p><b>Teslim edilebilirlik</b></p><small>E-postaların spam’e düşmemesi için Hostinger’da alan adınızın SPF, DKIM ve DMARC kayıtlarının etkin olduğundan emin olun (Hostinger → E-postalar → Bağlantı / DNS ayarları).</small></div></div></section></div>`;
+    const f = $('#bmc-mail');
+    f.secure.onchange = () => { f.port.value = f.secure.value === 'ssl' ? 465 : 587; };
+    $('#bmc-hostinger').onclick = () => { f.host.value = 'smtp.hostinger.com'; f.port.value = 465; f.secure.value = 'ssl'; if (!f.fromEmail.value) f.fromEmail.value = 'bilgi@brazilmigration.com'; if (!f.user.value) f.user.value = f.fromEmail.value; if (!f.replyTo.value) f.replyTo.value = f.fromEmail.value; f.active.checked = true; };
+    f.fromEmail.oninput = () => { if (!f.user.dataset.touched) f.user.value = f.fromEmail.value; };
+    f.user.oninput = () => { f.user.dataset.touched = 1; };
+    f.onsubmit = async e => { e.preventDefault(); try { const r = await A('settings/mail', 'POST', {fromName: f.fromName.value, fromEmail: f.fromEmail.value, host: f.host.value, port: f.port.value, secure: f.secure.value === 'ssl', user: f.user.value, pass: f.pass.value, replyTo: f.replyTo.value, active: f.active.checked}); say(r.configured ? 'Kaydedildi. Şimdi test e-postası gönderin.' : 'Kaydedildi.'); render(); } catch (err) { say(err.message); } };
+    const t = $('#bmc-mtest');
+    t.onsubmit = async e => { e.preventDefault(); const b = t.querySelector('button'); b.disabled = true; b.textContent = 'Gönderiliyor…'; try { await A('settings/mail/test', 'POST', {to: t.to.value}); say('Test e-postası gönderildi. Gelen kutunuzu (ve spam klasörünü) kontrol edin.'); } catch (err) { modal('Test e-postası gönderilemedi', `<p class="bmc-p">${esc(err.message)}</p>`); } finally { b.disabled = false; b.textContent = 'Test gönder'; } };
+  });
+
+  // ---------- KİMLİK DOĞRULAMA (DIDIT) ----------
+  routes.kimlik = () => mount(`<div class="bmc" id="bmc-root">${heading('Kimlik Doğrulama (Didit API)')}<div class="loading">Yükleniyor…</div></div>`, async () => {
+    const d = await A('settings/didit'), k = d.didit, root = $('#bmc-root');
+    root.innerHTML = heading('Kimlik Doğrulama (Didit API)') + `<div class="bmc-grid2 bmc-set"><section class="panel"><header class="panel-head">${I('shield')}<h2>Didit bağlantısı</h2><span class="bmc-login ${d.ready ? 'on' : 'wait'}">${d.ready ? 'Etkin' : 'Kapalı'}</span></header>
+      <form class="bmc-form" id="bmc-didit">
+        <label class="bmc-sw full"><input type="checkbox" name="enabled" ${k.enabled ? 'checked' : ''}><i></i><span><b>Didit kimlik doğrulamasını kullan</b><small>Açıkken partnerler kimlik kartı yerine Didit ile canlı kimlik doğrulaması yapar; yalnızca Vergi Levhası ve İmza Sirküsü yükler.</small></span></label>
+        ${field('API anahtarı', `<input class="bmc-in" name="apiKey" type="password" value="${esc(k.apiKey)}" placeholder="Didit → API Keys" autocomplete="new-password">`, k.apiKey ? 'Kayıtlı. Değiştirmek için yenisini yazın.' : '', 'full')}
+        ${field('Workflow ID', `<input class="bmc-in" name="workflowId" value="${esc(k.workflowId)}" placeholder="Didit → Workflows → ID">`)}
+        ${field('Aylık doğrulama sınırı', `<input class="bmc-in" name="limit" type="number" min="1" value="${esc(k.limit)}">`, 'Ücretsiz plan ≈ 30 doğrulama / ay.')}
+        <div class="full bmc-actions"><button class="btn primary">${I('check')} Kaydet</button></div></form></section>
+      <section class="panel"><header class="panel-head">${I('note')}<h2>Kurulum adımları</h2></header><div class="bmc-notes">
+        <div class="bmc-note"><p><b>1. Hesap</b></p><small>business.didit.me adresinde iş e-postanızla hesap açın.</small></div>
+        <div class="bmc-note"><p><b>2. Workflow</b></p><small>Workflows bölümünde “KYC” (kimlik belgesi + canlılık) akışı oluşturun ve Workflow ID’sini kopyalayın.</small></div>
+        <div class="bmc-note"><p><b>3. API anahtarı</b></p><small>API &amp; Webhooks bölümünden API anahtarı oluşturun ve bu sayfaya yapıştırın.</small></div>
+        <div class="bmc-note"><p><b>Dönüş adresi</b></p><small>Partner doğrulamayı bitirince bu adrese döner: <b>${esc(d.callback)}</b></small></div>
+        <div class="bmc-note"><p><b>Belge taraması</b></p><small>Yüklenen belgelerin otomatik ön kontrolü Didit’ten bağımsızdır ve dosya yüklenince kendiliğinden çalışır.</small></div></div></section></div>`;
+    const f = $('#bmc-didit');
+    f.onsubmit = async e => { e.preventDefault(); try { const r = await A('settings/didit', 'POST', {enabled: f.enabled.checked, apiKey: f.apiKey.value, workflowId: f.workflowId.value, limit: f.limit.value}); say(r.ready ? 'Didit etkinleştirildi.' : 'Kaydedildi.'); render(); } catch (err) { say(err.message); } };
+  });
+  Object.assign(names, {eposta: 'E-posta (SMTP) Ayarları', kimlik: 'Kimlik Doğrulama (Didit API)'});
+
+  // ---------- YÖNETİCİ PROFİLİ ----------
+  document.addEventListener('click', async e => {
+    const t = e.target.closest('[data-action=profile]'); if (!t) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    let p; try { p = (await A('profile')).profile; } catch (err) { return say(err.message); }
+    modal('Yönetici Profili', `<form class="bmc-form" id="bmc-prof" style="padding:0">
+      <div class="full bmc-card" style="padding:0 0 14px;border:0"><span class="bmc-av lg">${esc(initials(p.name))}</span><div><b>${esc(p.name)}</b><small>${esc(p.email)} · Site yöneticisi</small></div></div>
+      ${field('Ad soyad', `<input class="bmc-in" name="name" value="${esc(p.name)}" required>`)}
+      ${field('Giriş e-postası', `<input class="bmc-in" name="email" type="email" value="${esc(p.email)}" required>`, 'Yönetim paneline bu adresle girersiniz.')}
+      <div class="full" style="border-top:1px solid var(--line);padding-top:14px"><b style="font-size:13px">Şifre değiştir</b><small class="muted" style="display:block;margin-top:2px">E-posta veya şifre değiştirmek için mevcut şifrenizi girin. Değiştirmeyecekseniz yeni şifre alanlarını boş bırakın.</small></div>
+      ${field('Mevcut şifre', '<input class="bmc-in" name="currentPassword" type="password" autocomplete="current-password">', '', 'full')}
+      ${field('Yeni şifre (en az 12 karakter)', '<input class="bmc-in" name="newPassword" type="password" minlength="12" autocomplete="new-password">')}
+      ${field('Yeni şifre (tekrar)', '<input class="bmc-in" name="newPassword2" type="password" minlength="12" autocomplete="new-password">')}
+      <div class="full bmc-actions" style="padding:6px 0 0"><button class="btn primary">${I('check')} Kaydet</button><a class="btn" href="#eposta">${I('mail')} E-posta ayarları</a><a class="btn" href="#security">${I('shield')} Güvenlik ayarları</a></div></form>`);
+    const f = $('#bmc-prof');
+    f.querySelectorAll('a.btn').forEach(a => a.onclick = () => $('#modal').close());
+    f.onsubmit = async ev => {
+      ev.preventDefault();
+      if (f.newPassword.value !== f.newPassword2.value) return say('Yeni şifreler eşleşmiyor.');
+      try {
+        const r = await A('profile', 'POST', {name: f.name.value, email: f.email.value, currentPassword: f.currentPassword.value, newPassword: f.newPassword.value || undefined});
+        $('#modal').close(); say(r.email !== p.email ? 'Kaydedildi. Bundan sonra ' + r.email + ' ile giriş yapın.' : 'Profil kaydedildi.');
+        const nm = document.getElementById('user-name'); if (nm) nm.textContent = r.name; const av = document.getElementById('user-avatar'); if (av) av.textContent = initials(r.name);
+      } catch (err) { say(err.message); }
+    };
+  }, true);
+
+  // Genel Ayarlar sayfasında e-posta ayarlarına kısayol
+  if (typeof general === 'function') { const _general = general; general = function () { const h = _general(); const i = h.indexOf('</div>'); const card = `<div class="bmc-callout">${I('mail')}<div><b>E-posta gönderimi</b><span>Bildirim, doğrulama ve şifre e-postalarının hangi adresten gideceğini SMTP ayarlarından belirleyin.</span></div><a class="btn primary" href="#eposta">E-posta (SMTP) Ayarları</a></div>`; return i > 0 ? h.slice(0, i + 6) + card + h.slice(i + 6) : card + h; }; }
+
   const _listPage = listPage;
   listPage = function (type) {
     if (type !== 'customer') return _listPage(type);
