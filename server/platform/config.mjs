@@ -14,3 +14,11 @@ export async function loadConfig(client) {
   const rs = await client.execute({sql: `SELECT id, data FROM items WHERE id IN (${ids.map(() => '?').join(',')})`, args: ids});
   for (const row of rs.rows) { try { applyConfig(row[0] ?? row.id, JSON.parse(row[1] ?? row.data)); } catch {} }
 }
+// Re-read the saved settings at most every few seconds, so all server processes see changes
+// made from the admin panel (e.g. the admin's login e-mail) without a restart.
+let lastRefresh = 0;
+export async function refreshConfig(client, maxAgeMs = 5000) {
+  if (Date.now() - lastRefresh < maxAgeMs) return;
+  lastRefresh = Date.now();
+  try { await loadConfig(client); } catch (e) { console.error('[config]', e.message); }
+}
