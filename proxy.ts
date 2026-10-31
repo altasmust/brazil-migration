@@ -4,6 +4,7 @@ import {NextResponse, type NextRequest} from 'next/server';
 // everything else (site + customer/advisor/lawyer/staff panels) on the main domain.
 // Also maps "/folder/" to "/folder/index.html" for the static pages in /public.
 const adminHosts = () => (process.env.ADMIN_HOST || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+const PANEL = /^\/(admin|panel|partner|avukat|kyc)(\/|$)/;
 const SHARED = /^\/(brazil-migration-logo\.png|theme\.js|style\.css|page-visuals\.css|favicon\.ico|robots\.txt|bm\/|images\/|illustrations\/|kyc\/)/;
 
 export function proxy(req: NextRequest) {
@@ -26,10 +27,17 @@ export function proxy(req: NextRequest) {
       return new NextResponse('Not found', {status: 404});
     }
   }
+  if (path === '/sitemap.xml' || path === '/robots.txt') { const r = url.clone(); r.pathname = path === '/sitemap.xml' ? '/api/site/sitemap' : '/api/site/robots'; r.search = ''; return NextResponse.rewrite(r); }
   const last = path.split('/').pop() || '';
   if (!last.includes('.')) {
     if (!path.endsWith('/')) return NextResponse.redirect(new URL(path + '/' + url.search, url), 308);
-    const r = url.clone(); r.pathname = path + 'index.html';
+    const r = url.clone();
+    if (PANEL.test(path) || !['GET', 'HEAD'].includes(req.method)) r.pathname = path + 'index.html';
+    else { // site pages: rendered with admin edits (menu, texts, SEO, new pages)
+      r.pathname = '/api/site/page';
+      const h = new Headers(req.headers); h.set('x-bm-path', path);
+      return NextResponse.rewrite(r, {request: {headers: h}});
+    }
     return NextResponse.rewrite(r);
   }
   return NextResponse.next();

@@ -1,6 +1,7 @@
 // Glue between Next.js route handlers and the existing (Cloudflare-style) server modules.
 import {getDatabase} from './db.mjs';
 import {refreshConfig} from './config.mjs';
+import {renderPage, readStatic, sitemapXML} from './site.mjs';
 import {getBucket} from './storage.mjs';
 import {withIdentity, isAdminRequest, onAdminHost, adminHosts} from './auth.mjs';
 import {handleAuth, handlePlatform, handlePlatformAdmin, partnerGate, maybeVerifyCustomerUpload} from './api.mjs';
@@ -57,3 +58,36 @@ export function platform(kind, after) {
   };
 }
 export {isAdminRequest};
+
+// Public site pages (rewritten here by proxy.ts), uploaded site media, sitemap and robots.
+export function site() {
+  return async (req, ctx) => {
+    const params = ctx?.params ? await ctx.params : {};
+    const route = (params.path || []).join('/');
+    const url = new URL(req.url);
+    const htmlHeaders = {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=0, must-revalidate'};
+    try {
+      await getDatabase().ready(); await refreshConfig(getDatabase().client, 30000);
+      const db = getDatabase();
+      if (route === 'page') {
+        const path = req.headers.get('x-bm-path') || url.searchParams.get('p') || '/';
+        const r = await renderPage(db, path);
+        return new Response(req.method === 'HEAD' ? null : r.html, {status: r.status, headers: htmlHeaders});
+      }
+      if (route.startsWith('media/')) {
+        const id = route.slice(6); if (!/^[a-f0-9-]{8,40}\.(png|jpe?g|webp|gif|svg)$/i.test(id)) return new Response('Not found', {status: 404});
+        const obj = await getBucket().get('site-media/' + id); if (!obj) return new Response('Not found', {status: 404});
+        const ext = id.split('.').pop().toLowerCase();
+        const type = {png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml'}[ext];
+        return new Response(obj.body, {headers: {'Content-Type': type, 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff', ...(ext === 'svg' ? {'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox"} : {})}});
+      }
+      if (route === 'sitemap') return new Response(await sitemapXML(db), {headers: {'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}});
+      if (route === 'robots') { const base = (process.env.SITE_URL || url.origin).replace(/\/$/, ''); return new Response(`User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /panel/\nDisallow: /partner/\nDisallow: /avukat/\nDisallow: /kyc/\nDisallow: /api/\nSitemap: ${base}/sitemap.xml\n`, {headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}}); }
+      return new Response('Not found', {status: 404});
+    } catch (e) {
+      console.error('[site]', e);
+      if (route === 'page') { const html = await readStatic(req.headers.get('x-bm-path') || url.searchParams.get('p') || '/'); if (html) return new Response(html, {headers: htmlHeaders}); }
+      return new Response('Hata', {status: 500});
+    }
+  };
+}

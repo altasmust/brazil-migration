@@ -1,0 +1,299 @@
+// Site content management. Public pages are the static HTML files in /public; changes made in the admin
+// (menu, texts/images/links, hidden elements, SEO, new pages) are stored in the items table and applied here
+// when a page is served. If anything fails, the untouched static file is served.
+import {readFile, readdir, stat} from 'node:fs/promises';
+import {join} from 'node:path';
+import {createHash} from 'node:crypto';
+import {parse} from 'node-html-parser';
+
+const PUBLIC = () => join(/* turbopackIgnore: true */ process.cwd(), 'public');
+export const PANEL = /^\/(admin|panel|partner|avukat|kyc)(\/|$)/;
+const OLD_HOSTS = /https?:\/\/brasil-yeni-baslangic\.fatih-altas\.chatgpt\.site/g;
+const siteUrl = () => (process.env.SITE_URL || '').replace(/\/$/, '');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const parseJSON = s => { try { return JSON.parse(s || '{}'); } catch { return {}; } };
+export const hash = s => createHash('sha1').update(String(s)).digest('hex').slice(0, 12);
+const parseHTML = h => parse(h, {comment: true, blockTextElements: {script: true, noscript: true, style: true, pre: true}});
+
+// ---------- static files ----------
+const fileCache = new Map();
+export async function readStatic(path) {
+  if (!/^\/[a-z0-9/_-]*$/i.test(path) || path.includes('..')) return null;
+  if (fileCache.has(path)) return fileCache.get(path);
+  let html = null;
+  try { html = await readFile(join(PUBLIC(), path, 'index.html'), 'utf8'); } catch {}
+  fileCache.set(path, html);
+  return html;
+}
+let pageList = null;
+export async function staticPages() {
+  if (pageList) return pageList;
+  const out = [];
+  const walk = async (dir, rel) => {
+    let entries = []; try { entries = await readdir(dir, {withFileTypes: true}); } catch { return; }
+    if (entries.some(e => e.isFile() && e.name === 'index.html') && !PANEL.test(rel)) {
+      const html = await readStatic(rel);
+      const t = (html?.match(/<title>([^<]*)<\/title>/) || [])[1] || rel;
+      out.push({path: rel, title: t.replace(/\s*\|\s*Brazil Migration\s*$/, '').replace(/&amp;/g, '&').trim()});
+    }
+    for (const e of entries) if (e.isDirectory() && !['bm', 'images', 'illustrations'].includes(e.name)) await walk(join(dir, e.name), rel + e.name + '/');
+  };
+  await walk(PUBLIC(), '/');
+  pageList = out.sort((a, b) => a.path === '/' ? -1 : b.path === '/' ? 1 : a.path.localeCompare(b.path));
+  return pageList;
+}
+
+// ---------- saved site state (short in-memory cache, shared by all requests) ----------
+let state = null, stateAt = 0;
+export function invalidateSite() { stateAt = 0; renderCache.clear(); }
+export async function siteState(db) {
+  if (state && Date.now() - stateAt < 15000) return state;
+  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom')").all()).results || [];
+  const s = {menu: null, pages: {}, custom: {}, stamp: ''};
+  let stamp = rows.length;
+  for (const r of rows) {
+    const d = parseJSON(r.data); stamp += ':' + r.updated;
+    if (r.kind === 'site_menu') s.menu = d;
+    if (r.kind === 'site_page' && d.path) s.pages[d.path] = d;
+    if (r.kind === 'site_custom' && d.path) s.custom[d.path] = {...d, id: r.id};
+  }
+  s.stamp = hash(stamp);
+  if (state?.stamp !== s.stamp) renderCache.clear();
+  state = s; stateAt = Date.now();
+  return s;
+}
+
+// ---------- editable elements ----------
+const SKIP = new Set(['script', 'style', 'noscript', 'svg', 'template', 'select', 'option', 'textarea', 'input', 'dialog', 'canvas', 'iframe', 'video', 'audio', 'picture', 'source']);
+const TEXT = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'a', 'button', 'span', 'small', 'strong', 'em', 'b', 'label', 'figcaption', 'td', 'th', 'dt', 'dd', 'blockquote', 'summary', 'div', 'i']);
+const INLINE = new Set(['strong', 'b', 'em', 'i', 'u', 'br', 'small', 'span', 'sup', 'sub', 'mark']);
+const isEl = n => n.nodeType === 1;
+const kids = n => n.childNodes.filter(isEl);
+function skipSubtree(el) {
+  const tag = el.rawTagName?.toLowerCase();
+  if (SKIP.has(tag)) return true;
+  if (tag === 'header' && /new-header/.test(el.getAttribute('class') || '')) return true;
+  if (tag === 'footer') return true;
+  const id = el.getAttribute?.('id');
+  if (id === 'full-menu' || id === 'booking') return true;
+  if (el.getAttribute?.('aria-hidden') === 'true' && tag !== 'img') return true;
+  return false;
+}
+function textOnly(el) { // only text + inline formatting, with some visible text
+  const ok = n => n.nodeType === 3 || (isEl(n) && INLINE.has(n.rawTagName.toLowerCase()) && n.childNodes.every(ok));
+  return el.childNodes.every(ok) && el.text.trim().length > 0;
+}
+// Walks <body> and returns [{key, el, kind}] — kind: t (text), l (link), i (image); keys are element-index paths.
+export function editables(root) {
+  const body = root.querySelector('body'); if (!body) return [];
+  const out = [];
+  const visit = (el, key, underText) => {
+    const tag = el.rawTagName.toLowerCase();
+    if (skipSubtree(el)) return;
+    if (tag === 'img') { out.push({key, el, kind: 'i'}); return; }
+    let kind = '';
+    if (!underText && TEXT.has(tag) && textOnly(el)) kind += 't';
+    if (tag === 'a') kind += 'l';
+    if (kind) out.push({key, el, kind});
+    if (kind.includes('t')) return;
+    kids(el).forEach((c, i) => visit(c, key + '.' + i, underText));
+  };
+  kids(body).forEach((c, i) => visit(c, String(i), false));
+  return out;
+}
+const fingerprint = el => hash(el.innerHTML + '|' + (el.getAttribute('href') || '') + '|' + (el.getAttribute('src') || ''));
+export function sanitizeInline(html) {
+  const root = parse('<div>' + String(html || '').slice(0, 20000) + '</div>');
+  const clean = n => n.childNodes.map(c => {
+    if (c.nodeType === 3) return esc(c.text);
+    if (!isEl(c)) return '';
+    const t = c.rawTagName.toLowerCase();
+    if (t === 'br') return '<br>';
+    if (['strong', 'b', 'em', 'i', 'u', 'small', 'sup', 'sub', 'mark'].includes(t)) return `<${t}>${clean(c)}</${t}>`;
+    return clean(c);
+  }).join('');
+  return clean(root.firstChild).replace(/&amp;(#?\w+;)/g, '&$1');
+}
+const safeUrl = u => { u = String(u || '').trim().slice(0, 1000); return /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(u) && !/^javascript:/i.test(u) ? u : ''; };
+
+// Builds the stored override set for a page from the editor's changes (fingerprints come from the static source).
+export function buildOverrides(staticHtml, changes) {
+  const map = new Map(editables(parseHTML(staticHtml)).map(e => [e.key, e]));
+  const out = {};
+  for (const [key, c] of Object.entries(changes || {})) {
+    const e = map.get(key); if (!e || !c) continue;
+    const o = {};
+    if (c.html !== undefined && e.kind.includes('t')) o.html = sanitizeInline(c.html);
+    if (c.href !== undefined && e.kind.includes('l')) { const u = safeUrl(c.href); if (u) o.href = u; }
+    if (e.kind === 'i') { if (c.src !== undefined) { const u = safeUrl(c.src); if (u) o.src = u; } if (c.alt !== undefined) o.alt = String(c.alt).slice(0, 300); }
+    if (c.hide) o.hide = true;
+    if (Object.keys(o).length) { o.f = fingerprint(e.el); o.k = e.kind; out[key] = o; }
+  }
+  return out;
+}
+function applyOverrides(root, overrides, editorMode) {
+  if (!overrides || !Object.keys(overrides).length) return 0;
+  const map = new Map(editables(root).map(e => [e.key, e]));
+  const prints = new Map(); for (const k of Object.keys(overrides)) { const e = map.get(k); if (e) prints.set(k, fingerprint(e.el)); } // before any change
+  let n = 0; const hide = [];
+  for (const [key, o] of Object.entries(overrides)) {
+    const e = map.get(key); if (!e) continue;
+    if (o.f && prints.get(key) !== o.f) continue; // static source changed since the edit → skip stale change
+    if (o.html !== undefined) e.el.set_content(o.html);
+    if (o.href !== undefined) e.el.setAttribute('href', o.href);
+    if (o.src !== undefined) { e.el.setAttribute('src', o.src); e.el.removeAttribute('srcset'); }
+    if (o.alt !== undefined) e.el.setAttribute('alt', o.alt);
+    if (o.hide) hide.push(e.el);
+    n++;
+  }
+  for (const el of hide) { if (editorMode) el.setAttribute('data-bm-hidden', '1'); else el.remove(); }
+  return n;
+}
+
+// ---------- menu ----------
+const nl2br = s => esc(s).replace(/\n/g, '<br>');
+export function extractMenu(html) {
+  const root = parseHTML(html);
+  const groups = root.querySelectorAll('nav.mega-nav details.nav-group').map(d => {
+    const intro = d.querySelector('.mega-intro');
+    return {
+      title: d.querySelector('summary').childNodes.filter(n => n.nodeType === 3).map(n => n.text).join('').trim(),
+      intro: {kicker: intro?.querySelector('.kicker')?.text.trim() || '', heading: intro?.querySelector('h2')?.text.trim() || '', text: (intro?.querySelector('p')?.innerHTML || '').replace(/<br\s*\/?>/g, '\n').replace(/<[^>]+>/g, '').trim(), cta: {label: intro?.querySelector('a')?.text.trim() || '', href: intro?.querySelector('a')?.getAttribute('href') || ''}},
+      links: d.querySelectorAll('.mega-links a').map(a => ({title: a.querySelector('strong').childNodes.filter(n => n.nodeType === 3).map(n => n.text).join('').trim().replace(/&amp;/g, '&'), desc: a.querySelector('small')?.text.trim() || '', href: a.getAttribute('href') || ''})),
+    };
+  });
+  const f = root.querySelector('footer.site-footer');
+  const cols = f ? f.querySelectorAll('.footer-grid > div').filter(d => !/footer-brand|footer-contact/.test(d.getAttribute('class') || '')) : [];
+  const contact = f?.querySelector('.footer-contact');
+  const bottom = f?.querySelector('.footer-bottom');
+  const dec = s => String(s || '').replace(/&amp;/g, '&');
+  return {groups, footer: {
+    brandText: dec(f?.querySelector('.footer-brand p')?.text.trim()), location: dec(f?.querySelector('.footer-location')?.text.trim()),
+    cols: cols.map(c => ({title: dec(c.querySelector('h2')?.text.trim()), links: c.querySelectorAll('a').map(a => ({label: dec(a.text.trim()), href: a.getAttribute('href') || ''}))})),
+    contact: {title: dec(contact?.querySelector('h2')?.text.trim()), text: dec(contact?.querySelector('p')?.text.trim()), button: {label: dec(contact?.querySelector('a')?.text.trim()), href: contact?.querySelector('a')?.getAttribute('href') || ''}},
+    bottom: {copy: dec(bottom?.querySelector('span')?.text.trim()), links: (bottom?.querySelectorAll('a') || []).map(a => ({label: dec(a.text.trim()), href: a.getAttribute('href') || ''}))},
+    legal: dec(f?.querySelector('p.legal')?.text.trim()),
+  }};
+}
+const href = h => esc(safeUrl(h) || '#');
+function applyMenu(root, m) {
+  if (!m) return;
+  const nav = root.querySelector('nav.mega-nav');
+  if (nav && Array.isArray(m.groups)) nav.set_content(m.groups.map(g => `<details class="nav-group"><summary>${esc(g.title)} <span>⌄</span></summary><div class="mega-panel"><div class="mega-intro"><span class="kicker">${esc(g.intro?.kicker)}</span><h2>${esc(g.intro?.heading || g.title)}</h2><p>${nl2br(g.intro?.text)}</p>${g.intro?.cta?.label ? `<a href="${href(g.intro.cta.href)}">${esc(g.intro.cta.label)}</a>` : ''}</div><div class="mega-links">${(g.links || []).map(l => `<a href="${href(l.href)}"><strong>${esc(l.title)} <span>↗</span></strong><small>${esc(l.desc)}</small></a>`).join('')}</div></div></details>`).join(''));
+  const grid = root.querySelector('#full-menu .full-menu-grid');
+  if (grid && Array.isArray(m.groups)) grid.set_content(m.groups.map(g => `<section><h2>${esc(g.title)}</h2>${(g.links || []).map(l => `<a href="${href(l.href)}">${esc(l.title)} <span>↗</span></a>`).join('')}</section>`).join(''));
+  const f = root.querySelector('footer.site-footer'), F = m.footer;
+  if (f && F) {
+    const fg = f.querySelector('.footer-grid'), brand = fg?.querySelector('.footer-brand');
+    if (fg && brand) {
+      const logo = brand.querySelector('a')?.toString() || '';
+      fg.set_content(`<div class="footer-brand">${logo}<p>${esc(F.brandText)}</p><span class="footer-location">${esc(F.location)}</span></div>${(F.cols || []).map(c => `<div><h2>${esc(c.title)}</h2>${(c.links || []).map(l => `<a href="${href(l.href)}">${esc(l.label)}</a>`).join('')}</div>`).join('')}<div class="footer-contact"><h2>${esc(F.contact?.title)}</h2><p>${esc(F.contact?.text)}</p>${F.contact?.button?.label ? `<a class="btn" href="${href(F.contact.button.href)}">${esc(F.contact.button.label)}</a>` : ''}</div>`);
+    }
+    const fb = f.querySelector('.footer-bottom');
+    if (fb && F.bottom) fb.set_content(`<span>${esc(F.bottom.copy)}</span>${(F.bottom.links || []).map(l => `<a href="${href(l.href)}">${esc(l.label)}</a>`).join('')}`);
+    const legal = f.querySelector('p.legal'); if (legal && F.legal !== undefined) legal.set_content(esc(F.legal));
+  }
+}
+
+// ---------- SEO ----------
+function setMeta(head, attr, key, value) {
+  let m = head.querySelector(`meta[${attr}="${key}"]`);
+  if (!m) { head.insertAdjacentHTML('beforeend', `<meta ${attr}="${key}" content="">`); m = head.querySelector(`meta[${attr}="${key}"]`); }
+  m.setAttribute('content', value);
+}
+function applySeo(root, path, seo = {}) {
+  const head = root.querySelector('head'); if (!head) return;
+  const base = siteUrl();
+  if (seo.title) { const t = head.querySelector('title'); if (t) t.set_content(esc(seo.title)); setMeta(head, 'property', 'og:title', seo.title); }
+  if (seo.description) { setMeta(head, 'name', 'description', seo.description); setMeta(head, 'property', 'og:description', seo.description); }
+  if (seo.image) setMeta(head, 'property', 'og:image', /^https?:/.test(seo.image) ? seo.image : base + seo.image);
+  if (seo.noindex) setMeta(head, 'name', 'robots', 'noindex,follow');
+  if (base) {
+    const c = head.querySelector('link[rel="canonical"]'); if (c) c.setAttribute('href', base + path);
+    const ou = head.querySelector('meta[property="og:url"]'); if (ou) ou.setAttribute('content', base + path);
+  }
+}
+
+// ---------- custom pages (blocks) ----------
+const paras = s => String(s || '').split(/\n{2,}/).map(p => p.trim()).filter(Boolean).map(p => `<p>${nl2br(p)}</p>`).join('');
+const cta = (label, link, cls = 'btn') => !label ? '' : link === '#gorusme' ? `<button class="${cls}" type="button" onclick="book()">${esc(label)} <span>↗</span></button>` : `<a class="${cls}" href="${href(link)}">${esc(label)} <span>↗</span></a>`;
+export function blocksHTML(blocks = []) {
+  return blocks.map(b => {
+    if (b.type === 'hero') return `<section class="service-hero wrap"><div>${b.kicker ? `<div class="kicker">${esc(b.kicker)}</div>` : ''}<h1>${esc(b.title)}</h1>${paras(b.text)}<div class="actions">${cta(b.button, b.link)}</div></div>${b.image ? `<figure><img class="service-vector page-art" src="${href(b.image)}" alt="${esc(b.alt || b.title)}" decoding="async"></figure>` : ''}</section>`;
+    if (b.type === 'text') return `<section class="oi-sec bp-text">${b.kicker ? `<p class="oi-kicker">${esc(b.kicker)}</p>` : ''}${b.title ? `<h2 class="oi-h2">${esc(b.title)}</h2>` : ''}<div class="bp-body">${paras(b.text)}</div></section>`;
+    if (b.type === 'cards') return `<section class="oi-sec">${b.kicker ? `<p class="oi-kicker">${esc(b.kicker)}</p>` : ''}${b.title ? `<h2 class="oi-h2">${esc(b.title)}</h2>` : ''}<div class="bp-cards">${(b.items || []).map((it, i) => `<article><span class="oi-num">${String(i + 1).padStart(2, '0')}</span><h3>${esc(it.title)}</h3>${paras(it.text)}</article>`).join('')}</div></section>`;
+    if (b.type === 'faq') return `<section class="oi-sec">${b.title ? `<h2 class="oi-h2">${esc(b.title)}</h2>` : ''}<div class="bp-faq">${(b.items || []).map(it => `<details><summary>${esc(it.title)}</summary>${paras(it.text)}</details>`).join('')}</div></section>`;
+    if (b.type === 'image') return b.image ? `<section class="oi-sec"><figure class="bp-img"><img src="${href(b.image)}" alt="${esc(b.alt)}" loading="lazy">${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ''}</figure></section>` : '';
+    if (b.type === 'cta') return `<section class="oi-sec"><div class="bp-cta"><div><h2>${esc(b.title)}</h2>${paras(b.text)}</div>${cta(b.button, b.link)}</div></section>`;
+    return '';
+  }).join('\n');
+}
+async function shell() { return await readStatic('/kaynaklar/'); }
+async function renderCustom(page, path) {
+  const sh = await shell(); if (!sh) return null;
+  const root = parseHTML(sh);
+  const main = root.querySelector('main#main'); main.set_content(`<div class="bp-page">${blocksHTML(page.blocks)}</div>`);
+  root.querySelector('body')?.setAttribute('data-page', 'custom');
+  const head = root.querySelector('head');
+  head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/oturum.css?v=3"><link rel="stylesheet" href="/bm/sayfa.css?v=1">');
+  root.querySelectorAll('head link[rel="stylesheet"]').filter(l => /kaynak/.test(l.getAttribute('href') || '')).forEach(l => l.remove());
+  root.querySelectorAll('body script').filter(s => /\/bm\/(?!session)/.test(s.getAttribute('src') || '')).forEach(s => s.remove());
+  applySeo(root, path, {title: (page.seo?.title || page.title + ' | Brazil Migration'), description: page.seo?.description || page.description || '', image: page.seo?.image, noindex: page.seo?.noindex});
+  return root;
+}
+
+// ---------- render ----------
+const renderCache = new Map();
+export async function renderPage(db, path, {editor = false, preview = null} = {}) {
+  const st = preview ? null : await siteState(db);
+  const ckey = path + '|' + (st?.stamp || '');
+  if (!editor && !preview && renderCache.has(ckey)) return renderCache.get(ckey);
+  const staticHtml = await readStatic(path);
+  const page = st?.pages[path] || {};
+  let root, status = 200;
+  if (preview) root = await renderCustom(preview, path);
+  else if (staticHtml) {
+    if (page.hidden && !editor) return {status: 404, html: await notFound(db)};
+    root = parseHTML(staticHtml);
+    applyOverrides(root, page.overrides, editor);
+    if (!editor) applySeo(root, path, page.seo);
+  } else if (st?.custom[path] && (st.custom[path].published || editor)) root = await renderCustom(st.custom[path], path);
+  else return {status: 404, html: await notFound(db)};
+  if (!root) return {status: 404, html: await notFound(db)};
+  if (st?.menu || preview) applyMenu(root, (st || await siteState(db)).menu);
+  let html = '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
+  if (siteUrl()) html = html.replace(OLD_HOSTS, siteUrl());
+  const out = {status, html};
+  if (!editor && !preview) { if (renderCache.size > 200) renderCache.clear(); renderCache.set(ckey, out); }
+  return out;
+}
+async function notFound(db) {
+  const sh = await shell(); if (!sh) return '<h1>Sayfa bulunamadı</h1>';
+  const root = parseHTML(sh);
+  root.querySelector('main#main')?.set_content('<section class="wrap" style="padding:90px 0 110px;text-align:center"><div class="kicker">404</div><h1 style="margin:10px 0 14px">Aradığınız sayfa bulunamadı.</h1><p style="color:var(--muted)">Sayfa taşınmış veya kaldırılmış olabilir.</p><p><a class="btn" href="/">Ana sayfaya dön ↗</a></p></section>');
+  const t = root.querySelector('title'); if (t) t.set_content('Sayfa bulunamadı | Brazil Migration');
+  try { const st = await siteState(db); if (st.menu) applyMenu(root, st.menu); } catch {}
+  return '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
+}
+
+// Editor document: the page with saved changes applied, every editable element tagged, scripts removed.
+export async function editorHTML(db, path) {
+  const staticHtml = await readStatic(path); if (!staticHtml) return null;
+  const st = await siteState(db);
+  const root = parseHTML(staticHtml);
+  const tags = editables(root);
+  for (const e of tags) { e.el.setAttribute('data-bm-k', e.key); e.el.setAttribute('data-bm-t', e.kind); }
+  applyOverrides(root, st.pages[path]?.overrides, true);
+  if (st.menu) applyMenu(root, st.menu);
+  root.querySelectorAll('script').forEach(s => { if (!/theme\.js/.test(s.getAttribute('src') || '')) s.remove(); });
+  root.querySelectorAll('[onclick]').forEach(el => el.removeAttribute('onclick'));
+  return '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
+}
+
+export async function sitemapXML(db) {
+  const st = await siteState(db), base = siteUrl() || '';
+  const today = new Date().toISOString().slice(0, 10);
+  const urls = (await staticPages()).filter(p => !st.pages[p.path]?.hidden && !st.pages[p.path]?.seo?.noindex && !['/giris/', '/icerik-plani/'].includes(p.path)).map(p => p.path);
+  for (const c of Object.values(st.custom)) if (c.published && !c.seo?.noindex) urls.push(c.path);
+  return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${esc(base + u)}</loc><lastmod>${today}</lastmod></url>`).join('')}</urlset>`;
+}

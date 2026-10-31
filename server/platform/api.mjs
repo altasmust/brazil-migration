@@ -6,6 +6,7 @@ import {
 } from './auth.mjs';
 import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
 import {applyConfig} from './config.mjs';
+import {staticPages, siteState, invalidateSite, editorHTML, readStatic, buildOverrides, extractMenu, renderPage, hash as shash, PANEL} from './site.mjs';
 import {creditState, creditRecord, saveCredit, monthKey, monthStart as creditMonthStart, DEFAULT_MONTHLY} from './credits.mjs';
 import {CITIES, locate, fromRequest, distanceKm} from './geo.mjs';
 import {PARTNER_DOCS, verifyPartner, verifyCustomerDocument, verifierConfigured} from './verify.mjs';
@@ -536,6 +537,38 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   }
 
   const MASK = '••••••••';
+  // ---------- site content (pages, menu, SEO, new pages, media) ----------
+  const sitePageId = path => 'sitepage-' + shash(path);
+  if (route === 'site/pages' && req.method === 'GET') {
+    const st = await siteState(db);
+    const pages = (await staticPages()).map(p => { const d = st.pages[p.path] || {}; return {path: p.path, title: p.title, type: 'static', edited: Object.keys(d.overrides || {}).length, hidden: !!d.hidden, seo: d.seo || {}, updated: d.updated || null}; });
+    const custom = Object.values(st.custom).map(c => ({id: c.id, path: c.path, title: c.title, type: 'custom', published: !!c.published, seo: c.seo || {}, blocks: c.blocks || [], updated: c.updated || null}));
+    return json({pages, custom, menuSaved: !!st.menu});
+  }
+  if (route === 'site/editor' && req.method === 'GET') {
+    const path = clean(new URL(req.url).searchParams.get('path'), 200);
+    const html = await editorHTML(db, path); if (!html) fail(404, 'Sayfa bulunamadı.');
+    return json({html});
+  }
+  if (route === 'site/menu' && req.method === 'GET') {
+    const st = await siteState(db);
+    return json({menu: st.menu || extractMenu(await readStatic('/')), saved: !!st.menu});
+  }
+  if (route === 'site/media' && req.method === 'POST') {
+    sameOrigin(req);
+    if (Number(req.headers.get('content-length') || 0) > 6 * 1048576) fail(413, 'Görsel en fazla 5 MB olabilir.');
+    const f = await req.formData(), file = f.get('file');
+    if (!file || typeof file === 'string') fail(400, 'Görsel seçin.');
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (bytes.length > 5 * 1048576) fail(413, 'Görsel en fazla 5 MB olabilir.');
+    const sig = [...bytes.slice(0, 12)];
+    const ext = sig[0] === 0x89 && sig[1] === 0x50 ? 'png' : sig[0] === 0xff && sig[1] === 0xd8 ? 'jpg' : String.fromCharCode(...sig.slice(8, 12)) === 'WEBP' ? 'webp' : String.fromCharCode(...sig.slice(0, 3)) === 'GIF' ? 'gif' : '';
+    if (!ext) fail(400, 'Yalnızca PNG, JPG, WEBP veya GIF yükleyebilirsiniz.');
+    const id = uuid() + '.' + ext;
+    await env.BUCKET.put('site-media/' + id, bytes, {httpMetadata: {contentType: 'image/' + (ext === 'jpg' ? 'jpeg' : ext)}});
+    await audit(db, actor, 'site.media', id).run();
+    return json({ok: true, url: '/api/site/media/' + id});
+  }
   if (route === 'health' && req.method === 'GET') {
     const t = [];
     for (let i = 0; i < 3; i++) { const a = performance.now(); await one(db, 'SELECT 1 AS ok'); t.push(performance.now() - a); }
@@ -697,6 +730,57 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const name = clean(b.name, 100) || p.name;
     await db.batch([putItem(db, 'meta-' + id, 'account_meta', id, meta), putItem(db, 'profile-' + id, 'profile', id, {...prof, name, phone: meta.phone, company: meta.company}), q(db, 'UPDATE people SET name=? WHERE id=?', name, id), audit(db, actor, 'account.profile', id)]);
     return json({ok: true});
+  }
+  if (route.startsWith('site/') && req.method === 'POST') {
+    const SEO = x => ({title: clean(x?.title, 120), description: clean(x?.description, 320), image: clean(x?.image, 500), noindex: !!x?.noindex});
+    const loadPage = async path => (await getItem(db, sitePageId(path)))?.data || {path, overrides: {}};
+    const savePage = async d => { d.updated = now(); await db.batch([putItem(db, sitePageId(d.path), 'site_page', 'owner', d), audit(db, actor, 'site.page', d.path)]); invalidateSite(); };
+    if (route === 'site/page') {
+      const path = clean(b.path, 200), src = await readStatic(path); if (!src) fail(404, 'Sayfa bulunamadı.');
+      const d = await loadPage(path); d.overrides = d.overrides || {};
+      const changes = b.changes && typeof b.changes === 'object' ? b.changes : {};
+      const revert = Object.entries(changes).filter(([, c]) => c?.revert).map(([k]) => k);
+      for (const k of revert) delete d.overrides[k];
+      const built = buildOverrides(src, Object.fromEntries(Object.entries(changes).filter(([, c]) => !c?.revert)));
+      for (const [k, o] of Object.entries(built)) d.overrides[k] = {...(d.overrides[k] || {}), ...o};
+      for (const [k, c] of Object.entries(changes)) if (c?.hide === false && d.overrides[k]) { delete d.overrides[k].hide; if (!['html', 'href', 'src', 'alt'].some(x => x in d.overrides[k])) delete d.overrides[k]; }
+      await savePage(d);
+      return json({ok: true, edited: Object.keys(d.overrides).length});
+    }
+    if (route === 'site/page/reset') { const path = clean(b.path, 200); const d = await loadPage(path); d.overrides = {}; await savePage(d); return json({ok: true}); }
+    if (route === 'site/visibility') { const path = clean(b.path, 200); if (path === '/') fail(400, 'Ana sayfa gizlenemez.'); if (!await readStatic(path)) fail(404, 'Sayfa bulunamadı.'); const d = await loadPage(path); d.hidden = !!b.hidden; await savePage(d); return json({ok: true}); }
+    if (route === 'site/seo') {
+      const path = clean(b.path, 200);
+      if (b.id) { const c = await getItem(db, clean(b.id, 80)); if (!c || c.kind !== 'site_custom') fail(404, 'Sayfa bulunamadı.'); c.data.seo = SEO(b.seo); c.data.updated = now(); await db.batch([putItem(db, c.id, 'site_custom', 'owner', c.data), audit(db, actor, 'site.seo', c.data.path)]); invalidateSite(); return json({ok: true}); }
+      if (!await readStatic(path)) fail(404, 'Sayfa bulunamadı.');
+      const d = await loadPage(path); d.seo = SEO(b.seo); await savePage(d); return json({ok: true});
+    }
+    if (route === 'site/menu') {
+      const m = b.menu; if (!m || !Array.isArray(m.groups) || m.groups.length > 10) fail(400, 'Menü verisi geçersiz.');
+      const L = l => ({title: clean(l.title, 80), desc: clean(l.desc, 200), href: clean(l.href, 300)});
+      const F = l => ({label: clean(l.label, 80), href: clean(l.href, 300)});
+      const menu = {groups: m.groups.map(g => ({title: clean(g.title, 40), intro: {kicker: clean(g.intro?.kicker, 60), heading: clean(g.intro?.heading, 60), text: clean(g.intro?.text, 200), cta: F(g.intro?.cta || {})}, links: (g.links || []).slice(0, 20).map(L).filter(l => l.title)})).filter(g => g.title),
+        footer: {brandText: clean(m.footer?.brandText, 300), location: clean(m.footer?.location, 80), cols: (m.footer?.cols || []).slice(0, 4).map(c => ({title: clean(c.title, 60), links: (c.links || []).slice(0, 20).map(F).filter(l => l.label)})), contact: {title: clean(m.footer?.contact?.title, 80), text: clean(m.footer?.contact?.text, 300), button: F(m.footer?.contact?.button || {})}, bottom: {copy: clean(m.footer?.bottom?.copy, 100), links: (m.footer?.bottom?.links || []).slice(0, 6).map(F).filter(l => l.label)}, legal: clean(m.footer?.legal, 400)}};
+      if (b.reset) await q(db, "DELETE FROM items WHERE id='site-menu'").run(); else await db.batch([putItem(db, 'site-menu', 'site_menu', 'owner', menu), audit(db, actor, 'site.menu', String(menu.groups.length))]);
+      invalidateSite(); return json({ok: true});
+    }
+    if (route === 'site/custom') {
+      const path = '/' + clean(b.slug, 80).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') + '/';
+      if (path.length < 3) fail(400, 'Sayfa adresi girin (ör. brezilya-yasam-rehberi).');
+      if (PANEL.test(path) || ['/api/', '/bm/', '/images/', '/illustrations/', '/r/'].includes(path) || await readStatic(path)) fail(409, 'Bu adres kullanılıyor, başka bir adres seçin.');
+      const st = await siteState(db); const other = st.custom[path]; if (other && other.id !== b.id) fail(409, 'Bu adreste başka bir sayfa var.');
+      const title = clean(b.title, 120); if (title.length < 2) fail(400, 'Sayfa başlığı girin.');
+      const T = (v, n) => clean(v, n);
+      const blocks = (Array.isArray(b.blocks) ? b.blocks : []).slice(0, 40).map(x => ({type: ['hero', 'text', 'cards', 'faq', 'image', 'cta'].includes(x.type) ? x.type : 'text', kicker: T(x.kicker, 80), title: T(x.title, 200), text: T(x.text, 6000), button: T(x.button, 60), link: T(x.link, 300), image: T(x.image, 500), alt: T(x.alt, 200), caption: T(x.caption, 200), items: (Array.isArray(x.items) ? x.items : []).slice(0, 24).map(i => ({title: T(i.title, 200), text: T(i.text, 2000)}))}));
+      const id = b.id && /^sitecustom-/.test(b.id) ? b.id : 'sitecustom-' + uuid().slice(0, 12);
+      const old = (await getItem(db, id))?.data || {};
+      const data = {path, title, published: !!b.published, blocks, seo: old.seo || {}, created: old.created || now(), updated: now()};
+      await db.batch([putItem(db, id, 'site_custom', 'owner', data), audit(db, actor, 'site.custom', path)]); invalidateSite();
+      return json({ok: true, id, path});
+    }
+    if (route === 'site/custom/delete') { const id = clean(b.id, 80); if (!/^sitecustom-/.test(id)) fail(400, 'Geçersiz sayfa.'); await db.batch([q(db, "DELETE FROM items WHERE id=? AND kind='site_custom'", id), audit(db, actor, 'site.custom.delete', id)]); invalidateSite(); return json({ok: true}); }
+    if (route === 'site/preview') { const r = await renderPage(db, '/onizleme/', {preview: {title: clean(b.title, 120) || 'Önizleme', blocks: Array.isArray(b.blocks) ? b.blocks.slice(0, 40) : [], seo: {}}}); return json({html: r.html}); }
+    fail(404, 'İşlem bulunamadı.');
   }
   if (route.startsWith('kyc-credits/') && req.method === 'POST') {
     const pid = clean(b.partner, 80);

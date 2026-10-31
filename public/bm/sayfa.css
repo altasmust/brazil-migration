@@ -1,0 +1,16 @@
+/* Yönetim panelinden oluşturulan sayfaların blokları */
+.bp-page{padding-bottom:40px}
+.bp-text .bp-body{max-width:820px}.bp-body p{font-size:16px;line-height:1.85;color:var(--ink);margin:0 0 14px}
+.bp-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+.bp-cards article{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px}
+.bp-cards h3{margin:10px 0 8px;font-size:18px;color:var(--ink)}.bp-cards p{margin:0;color:var(--muted);line-height:1.7;font-size:14.5px}
+.bp-faq{display:grid;gap:10px;max-width:880px}
+.bp-faq details{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+.bp-faq summary{cursor:pointer;font-weight:600;color:var(--ink);font-size:15.5px;list-style:none;display:flex;justify-content:space-between;gap:10px}.bp-faq summary::-webkit-details-marker{display:none}
+.bp-faq summary:after{content:'+';font-size:20px;color:var(--forest);line-height:1}.bp-faq details[open] summary:after{content:'−'}
+.bp-faq p{margin:12px 0 0;color:var(--muted);line-height:1.75}
+.bp-img{margin:0}.bp-img img{width:100%;height:auto;border-radius:18px;display:block}.bp-img figcaption{margin-top:8px;font-size:13px;color:var(--muted);text-align:center}
+.bp-cta{display:flex;align-items:center;gap:20px;flex-wrap:wrap;background:linear-gradient(135deg,var(--forest),#2e7d32);color:#fff;border-radius:22px;padding:30px 32px}
+.bp-cta>div{flex:1;min-width:240px}.bp-cta h2{margin:0 0 6px;color:#fff;font-size:clamp(22px,2.6vw,30px)}.bp-cta p{margin:0;opacity:.9;line-height:1.6}
+.bp-cta .btn{background:#d7eca4;color:#123d27;border-color:#d7eca4}
+[data-theme=dark] .bp-cards article,[data-theme=dark] .bp-faq details{background:#13201b}
