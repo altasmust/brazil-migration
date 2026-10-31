@@ -40,6 +40,18 @@ export function readCookie(req, name) {
   const m = (req.headers.get('cookie') || '').match(new RegExp('(?:^|;\\s*)' + name + '=([^;]+)'));
   return m ? decodeURIComponent(m[1]) : null;
 }
+export async function createImpersonationSession(db, req, userId, byEmail) {
+  const token = randomBytes(32).toString('base64url'), ttl = 2 * 36e5;
+  await db.batch([
+    db.prepare('INSERT INTO auth_sessions VALUES(?,?,?,?,?)').bind(sha(token), userId, 'site', now() + ttl, now()),
+    db.prepare('INSERT INTO items(id,kind,owner,data,created,updated) VALUES(?,?,?,?,?,?)').bind('imp-' + sha(token), 'impersonation', userId, JSON.stringify({by: byEmail}), now(), now()),
+  ]);
+  return sessionCookie(req, token, ttl / 1000);
+}
+export async function isImpersonated(db, req) {
+  const token = readCookie(req, cookieName(req)); if (!token) return false;
+  return !!(await db.prepare('SELECT id FROM items WHERE id=?').bind('imp-' + sha(token)).first());
+}
 export function sessionCookie(req, token, maxAge) {
   return `${cookieName(req)}=${token ? encodeURIComponent(token) : ''}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${token ? maxAge : 0}${secure(req) ? '; Secure' : ''}`;
 }
@@ -68,7 +80,8 @@ export async function currentUser(db, req) {
   const s = await db.prepare('SELECT * FROM auth_sessions WHERE token=? AND scope=?').bind(sha(token), scope).first();
   if (!s || s.expires < now()) return null;
   const u = await db.prepare('SELECT * FROM auth_users WHERE id=?').bind(s.user).first();
-  if (!u || !u.verified) return null;
+  if (!u) return null;
+  if (!u.verified && !(scope === 'site' && await db.prepare('SELECT id FROM items WHERE id=?').bind('imp-' + sha(token)).first())) return null;
   if (scope === 'admin' && u.email !== OWNER_EMAIL()) return null;
   if (scope === 'site' && u.email === OWNER_EMAIL()) return null;
   return u;

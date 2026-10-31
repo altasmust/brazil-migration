@@ -2,6 +2,7 @@
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
   createSession, currentUser, destroySession, createToken, useToken, siteUrl, adminUrl, isAdminRequest, adminHosts, sha,
+  createImpersonationSession, isImpersonated,
 } from './auth.mjs';
 import {sendMail, mailConfigured} from './mail.mjs';
 import {CITIES, locate, fromRequest, distanceKm} from './geo.mjs';
@@ -107,7 +108,16 @@ export async function handleAuth(req, env, route) {
     const u = await currentUser(db, req); if (!u) return json({user: null});
     const accounts = isAdminRequest(req) ? [{panel: 'admin', home: '/admin/', label: 'Yönetim paneli'}] : await accountsFor(db, u);
     const pm = isAdminRequest(req) ? null : await one(db, "SELECT i.data FROM items i JOIN people p ON i.owner=p.id WHERE p.uid=? AND i.kind='account_meta' LIMIT 1", u.id);
-    return json({user: {email: u.email, country: pm ? parse(pm.data).country || '' : ''}, accounts});
+    const imp = isAdminRequest(req) ? false : await isImpersonated(db, req);
+    return json({user: {email: u.email, country: pm ? parse(pm.data).country || '' : '', impersonated: imp}, accounts});
+  }
+  if (route === 'impersonate' && req.method === 'GET') {
+    if (isAdminRequest(req)) fail(404, 'İşlem bulunamadı.');
+    const t = await useToken(db, new URL(req.url).searchParams.get('t'), ['impersonate']);
+    const u = await one(db, 'SELECT * FROM auth_users WHERE id=?', t.user); if (!u || u.email === OWNER_EMAIL()) fail(400, 'Hesap bulunamadı.');
+    const accounts = await accountsFor(db, u); if (!accounts.length) fail(403, 'Bu kişinin aktif bir panel hesabı yok.');
+    const cookie = await createImpersonationSession(db, req, u.id, OWNER_EMAIL());
+    return new Response(null, {status: 302, headers: {Location: accounts[0].home, 'Set-Cookie': cookie, 'Cache-Control': 'no-store'}});
   }
   if (route === 'logout' && req.method === 'POST') return json({ok: true}, 200, {'Set-Cookie': await destroySession(db, req)});
 
@@ -636,6 +646,19 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const name = clean(b.name, 100) || p.name;
     await db.batch([putItem(db, 'meta-' + id, 'account_meta', id, meta), putItem(db, 'profile-' + id, 'profile', id, {...prof, name, phone: meta.phone, company: meta.company}), q(db, 'UPDATE people SET name=? WHERE id=?', name, id), audit(db, actor, 'account.profile', id)]);
     return json({ok: true});
+  }
+  if (route === 'accounts/impersonate' && req.method === 'POST') {
+    const id = clean(b.id, 80);
+    let email, lawId = null;
+    if (id.startsWith('law:')) { const r = await one(db, "SELECT * FROM law_accounts WHERE id=? AND role!='owner'", id.slice(4)); if (!r) fail(404, 'Hesap bulunamadı.'); if (r.status !== 'active') fail(400, 'Hesap pasif; önce aktif yapın.'); email = r.email; lawId = r.id; }
+    else { const p = await one(db, "SELECT * FROM people WHERE id=? AND role!='owner'", id); if (!p) fail(404, 'Hesap bulunamadı.'); if (p.status !== 'active') fail(400, 'Hesap pasif; önce aktif yapın.'); email = p.email; }
+    let u = await one(db, 'SELECT * FROM auth_users WHERE email=?', email);
+    if (!u) u = await newAuthUser(db, email, null, true);
+    if (lawId) await q(db, 'UPDATE law_accounts SET uid=? WHERE id=? AND uid IS NULL', u.id, lawId).run();
+    else await q(db, "UPDATE people SET uid=? WHERE id=? AND (uid IS NULL OR uid='')", u.id, id).run();
+    const token = await createToken(db, u.id, 'impersonate', 0.05);
+    await audit(db, actor, 'account.impersonate', id).run();
+    return json({ok: true, url: siteUrl(req) + '/api/auth/impersonate?t=' + encodeURIComponent(token)});
   }
   if (route === 'accounts/notes' && req.method === 'POST') {
     const id = clean(b.id, 80); if (!id) fail(400, 'Hesap gerekli.');

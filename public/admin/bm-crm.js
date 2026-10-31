@@ -137,18 +137,24 @@
     $$('.bmc-menu').forEach(x => x.remove());
     const a = D.accounts.find(x => x.id === btn.dataset.menu); if (!a) return;
     const m = document.createElement('div'); m.className = 'bmc-menu';
-    m.innerHTML = [['open', 'person', 'Detayı aç'], ['edit', 'lock', kindOf(a) === 'customer' ? 'Düzenle / danışman ata' : 'Düzenle / izinler'], ['invite', 'send', 'Giriş bağlantısı gönder'], ['toggle', 'shield', a.status === 'active' ? 'Pasif yap (giriş kapat)' : 'Aktif yap']].map(([k, i, l]) => `<button data-mi="${k}" data-id="${esc(a.id)}">${I(i)}${l}</button>`).join('');
+    m.innerHTML = [['manage', 'key', 'Hesabı yönet (panele gir)'], ['open', 'person', 'Detayı aç'], ['edit', 'lock', kindOf(a) === 'customer' ? 'Düzenle / danışman ata' : 'Düzenle / izinler'], ['invite', 'send', 'Giriş bağlantısı gönder'], ['toggle', 'shield', a.status === 'active' ? 'Pasif yap (giriş kapat)' : 'Aktif yap']].map(([k, i, l]) => `<button data-mi="${k}" data-id="${esc(a.id)}">${I(i)}${l}</button>`).join('');
     btn.parentElement.style.position = 'relative'; btn.parentElement.appendChild(m);
     setTimeout(() => document.addEventListener('click', () => m.remove(), {once: true}), 0);
   }
   async function rowAction(k, id) {
     const a = D.accounts.find(x => x.id === id); if (!a) return;
     try {
+      if (k === 'manage') return manage(id);
       if (k === 'open') location.hash = '#account/' + encodeURIComponent(id);
       if (k === 'edit') await window.BMAcc.edit(id);
       if (k === 'invite') { const d = await A('accounts/invite', 'POST', {id}); linkInfo(d); }
       if (k === 'toggle') { await A('accounts', 'PATCH', {id, status: a.status === 'active' ? 'disabled' : 'active'}); await load(true); say('Durum güncellendi.'); render(); }
     } catch (err) { say(err.message); }
+  }
+  async function manage(id) {
+    const w = window.open('about:blank', '_blank');
+    try { const d = await A('accounts/impersonate', 'POST', {id}); if (w) w.location.href = d.url; else location.href = d.url; }
+    catch (err) { if (w) w.close(); say(err.message); }
   }
   function linkInfo(d) {
     if (d.devLink) modal('Giriş bağlantısı', `<p class="bmc-p">E-posta servisi henüz bağlı olmadığı için bağlantı e-postayla gönderilemedi. Bu bağlantıyı kişiye iletin (7 gün geçerli):</p><input class="bmc-in" readonly value="${esc(d.devLink)}" onclick="this.select()">`);
@@ -249,7 +255,7 @@
       ...(kd !== 'customer' ? [['izin', 'İzinler']] : []), ['not', 'Notlar'], ['etkinlik', 'Etkinlik Kayıtları']];
     if (!tabs.some(t => t[0] === dTab)) dTab = 'ozet';
     const head = `<div class="bmc-dhead"><div><a class="bmc-back" href="#customers">${I('back')} Müşteri Listesi</a><h1>${k.label} Detayı / ${esc(a.name)} <small>(#${esc(String(a.id).replace('law:', '').slice(0, 6))})</small></h1>
-      <div class="bmc-chips">${statusChip(a)}${kindChip(a)}${g ? groupChip(g) : ''}${loginChip(a)}${a.partner ? `<a class="bmc-kind k-par" href="#partnerler">Partner başvurusu: ${esc({approved: 'Onaylı', review: 'İnceleme bekliyor', rejected: 'Düzeltme istendi', docs_required: 'Belge bekleniyor', kyc_pending: 'Kimlik bekleniyor'}[a.partner.status] || a.partner.status)}</a>` : ''}</div></div></div>
+      <div class="bmc-chips">${statusChip(a)}${kindChip(a)}${g ? groupChip(g) : ''}${loginChip(a)}${a.partner ? `<a class="bmc-kind k-par" href="#partnerler">Partner başvurusu: ${esc({approved: 'Onaylı', review: 'İnceleme bekliyor', rejected: 'Düzeltme istendi', docs_required: 'Belge bekleniyor', kyc_pending: 'Kimlik bekleniyor'}[a.partner.status] || a.partner.status)}</a>` : ''}</div></div><div class="bmc-dact"><button class="btn primary" data-act="manage" title="Şifre sormadan bu kişinin paneline girer (yeni sekmede, 2 saat geçerli)">${I('key')} Hesabı yönet</button></div></div>
       <nav class="bmc-tabs">${tabs.map(([id, l]) => `<button data-dtab="${id}" class="${dTab === id ? 'on' : ''}">${l}</button>`).join('')}</nav>`;
     const stat = (i, l, v, sub, badge = '') => `<article class="bmc-stat">${I(i)}<div><small>${l}</small><b>${v}</b><span>${sub}</span></div>${badge ? `<em>${badge}</em>` : ''}</article>`;
     const row = (l, v, i) => `<div class="bmc-kv"><small>${i ? I(i) : ''}${l}</small><span>${v || '—'}</span></div>`;
@@ -261,7 +267,7 @@
           <div class="bmc-kvs">${row('E-posta', esc(a.email), 'mail')}${row('Telefon', esc(a.phone || ''), 'phone')}${row('Konum', esc([a.country, a.city].filter(Boolean).join(' / ')), 'pin')}${row('Hesap türü', k.label, k.icon)}${row('Kayıt tarihi', day(a.created), 'calendar')}${row('Giriş', esc(a.login), 'key')}${kindOf(a) === 'customer' ? row('Danışman', esc(a.advisorName || 'Merkez ofis'), 'briefcase') : ''}${row('Grup', g ? esc(g.name) + (g.discount ? ` · %${g.discount} indirim` : '') : '', 'users')}</div></section>
         <section class="panel"><header class="panel-head">${I('file')}<h2>Muhasebe</h2></header><div class="bmc-acc"><small>ÖDENMEMİŞ FATURALAR</small><b class="${unpaid.length ? 'red' : ''}">${money(sum(unpaid))}</b><i class="${L.invoices.length ? '' : 'none'}" style="--p:${L.invoices.length ? Math.round(paid.length / L.invoices.length * 100) : 0}%"></i>
           <div class="bmc-acc3"><div><small>ÖDENEN</small><b>${money(sum(paid))}</b><span>×${paid.length}</span></div><div><small>BEKLEYEN</small><b>${money(sum(unpaid))}</b><span>×${unpaid.length}</span></div><div><small>SİPARİŞ</small><b>${L.orders.length}</b><span>toplam</span></div></div></div>
-          <div class="bmc-actions"><a class="btn" href="#invoiceNew">${I('plus')} Yeni Fatura</a><button class="btn" data-act="invite">${I('send')} Giriş bağlantısı</button></div></section>
+          <div class="bmc-actions"><a class="btn" href="#invoiceNew">${I('plus')} Yeni Fatura</a><button class="btn primary" data-act="manage">${I('key')} Hesabı yönet</button></div></section>
         <section class="panel bmc-score"><header class="panel-head">${I('shield')}<h2>Hesap Puanı</h2></header><div class="bmc-gauge" style="--v:${s.total}"><b>${s.total}</b><small>/ 100</small></div><p class="bmc-glabel">${s.total >= 70 ? 'İyi' : s.total >= 40 ? 'Orta' : 'Eksik'}</p>
           ${s.parts.map(([l, v, m]) => `<div class="bmc-bar"><span>${l}</span><em>${v}/${m}</em><i style="--p:${Math.round(v / m * 100)}%"></i></div>`).join('')}</section>
       </div>
@@ -285,7 +291,7 @@
     return head + `<div class="bmc-dbody">${body}</div>`;
   }
   const notesHTML = (ns, del = true) => ns.length ? ns.map(n => `<div class="bmc-note"><p>${esc(n.text)}</p><small>${esc(n.by || '')} · ${new Date(n.at).toLocaleString('tr-TR', {dateStyle: 'short', timeStyle: 'short'})}</small>${del ? `<button data-ndel="${esc(n.id)}" aria-label="Notu sil">${I('trash')}</button>` : ''}</div>`).join('') : '<small class="muted">Henüz not yok.</small>';
-  const ACT = {'account.create.customer': 'Müşteri hesabı oluşturuldu', 'account.update': 'Hesap güncellendi', 'account.profile': 'Profil bilgileri güncellendi', 'account.group': 'Grup ataması değişti', 'partner.approve': 'Partner başvurusu onaylandı', 'partner.reject': 'Partner başvurusu reddedildi', 'partner.recheck': 'Partner belgeleri yeniden kontrole gönderildi'};
+  const ACT = {'account.create.customer': 'Müşteri hesabı oluşturuldu', 'account.update': 'Hesap güncellendi', 'account.profile': 'Profil bilgileri güncellendi', 'account.group': 'Grup ataması değişti', 'account.impersonate': 'Yönetici hesaba giriş yaptı (Hesabı yönet)', 'partner.approve': 'Partner başvurusu onaylandı', 'partner.reject': 'Partner başvurusu reddedildi', 'partner.recheck': 'Partner belgeleri yeniden kontrole gönderildi'};
   async function bindDetail(a) {
     const root = $('#bmc-root');
     root.onclick = async e => {
@@ -293,6 +299,7 @@
       const nd = e.target.closest('[data-ndel]'); if (nd) { const d = await A('accounts/notes', 'POST', {id: a.id, remove: nd.dataset.ndel}); $('#bmc-notes').innerHTML = notesHTML(d.notes); return; }
       const act = e.target.closest('button[data-act]'); if (!act) return;
       try {
+        if (act.dataset.act === 'manage') return manage(a.id);
         if (act.dataset.act === 'edit') await window.BMAcc.edit(a.id);
         if (act.dataset.act === 'invite') linkInfo(await A('accounts/invite', 'POST', {id: a.id}));
         if (act.dataset.act === 'toggle') { await A('accounts', 'PATCH', {id: a.id, status: a.status === 'active' ? 'disabled' : 'active'}); await reload(); say('Durum güncellendi.'); }

@@ -155,6 +155,14 @@
     if (!here && area !== 'kyc') { location.href = accounts[0]?.home || '/giris/'; return; }
     addLogout(me.user.email);
     if (area === 'customer' || area === 'partner') currency(me.user.country);
+    if (me.user.impersonated && !document.getElementById('bm-imp')) {
+      const bar = document.createElement('div'); bar.id = 'bm-imp';
+      bar.style.cssText = 'position:sticky;top:0;z-index:9999;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:9px 16px;background:#7a5410;color:#fff;font:600 13px/1.4 Poppins,system-ui,sans-serif';
+      bar.innerHTML = '<span>🔑 Yönetici olarak <b></b> hesabını yönetiyorsunuz.</span><button type="button" style="border:1px solid #fff8;background:#fff2;color:#fff;border-radius:999px;padding:5px 14px;font:inherit;cursor:pointer">Oturumu kapat</button>';
+      bar.querySelector('b').textContent = me.user.email;
+      bar.querySelector('button').onclick = async () => { await fetch('/api/auth/logout', {method: 'POST'}).catch(() => {}); window.close(); location.href = '/admin/'; };
+      document.body.prepend(bar);
+    }
     if (area === 'partner') {
       const p = (await get('/api/platform/partner').catch(() => ({}))).partner;
       if (p && p.status !== 'approved') { const member = (await get('/api/workspace/bootstrap').catch(() => ({}))).member; personalize(member?.name); return onboarding(p, member); }

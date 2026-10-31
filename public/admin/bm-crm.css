@@ -178,3 +178,5 @@ table.bmc-mini{width:100%;border-collapse:collapse;font-size:13px}.bmc-mini th{t
 .bmc-mini td .bmc-i{color:var(--teal)}
 @media(max-width:1100px){.bmc-prof{grid-template-columns:1fr}.bmc-pnav{position:static;grid-template-columns:repeat(4,1fr)}.bmc-sws{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.bmc-pgrid,.bmc-two,.bmc-three,.bmc-sws{grid-template-columns:1fr}.bmc-pnav{grid-template-columns:1fr 1fr}.bmc-pfoot{flex-wrap:wrap;gap:14px}}
+
+.bmc-dact{display:flex;align-items:flex-start;padding-top:26px}.bmc-dact .btn{margin:0;float:none;height:42px;font-size:13px;padding:0 18px}
