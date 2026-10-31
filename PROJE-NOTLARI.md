@@ -39,9 +39,9 @@
   - `npm ci` → 687 paket kuruldu (Node 22.23)
   - 4 test paketi (authorization, admin, advisor, lawyer) → hepsi PASS
   - Yerel D1'e migration uygulandı: önce `npm run build`, sonra `wrangler d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/000X.sql` (0000 + 0001)
-  - Sahip hesabı kodda sabit: `fatih.altas@elevandos.com` (server/workspace.mjs ve server/lawyer.mjs). İlk girişte owner olarak bağlanıyor.
+  - Sahip hesabı kodda sabit: `(eski yönetici adresi — kaldırıldı)` (server/workspace.mjs ve server/lawyer.mjs). İlk girişte owner olarak bağlanıyor.
   - `scripts/vite/sites-vite-plugin.ts` → yerel sahte giriş artık `SITES_LOCAL_EMAIL` / `SITES_LOCAL_UID` ortam değişkenlerini okuyor (sadece geliştirme; üretimi etkilemez)
-  - Çalıştırma: `SITES_LOCAL_EMAIL=fatih.altas@elevandos.com SITES_LOCAL_UID=local_owner npm run dev -- --port 5173`, sonra `/signin-with-chatgpt?return_to=/admin/`
+  - Çalıştırma: `SITES_LOCAL_EMAIL=(eski yönetici adresi — kaldırıldı) SITES_LOCAL_UID=local_owner npm run dev -- --port 5173`, sonra `/signin-with-chatgpt?return_to=/admin/`
   - Sonuç: site, admin, müşteri paneli, partner, avukat paneli ve KYC açılıyor, konsolda hata yok (yalnızca dış kaynak yükleme hataları — sandbox ağı)
 - Gözlem: müşteri paneli ("Mustafa ALTAŞ", 288,12 MKD fatura, 355 gün oturum kartı) gerçek veri değil, örnek/demo veri gösteriyor; admin'de "Örnek verilerle önizle" butonu var.
 
@@ -62,7 +62,7 @@
 - server/platform/auth.mjs: e-posta/şifre (scrypt), oturum çerezi bm_session (site) / bm_admin (admin), tek kullanımlık tokenlar (verify/reset/invite). Eski modüllere kimlik, `oai-authenticated-user-*` başlıkları sunucu tarafında eklenerek aktarılıyor (tarayıcıdan gelenler siliniyor)
 - server/platform/api.mjs: /api/auth/* (register, partner-register, verify, login, logout, me, forgot, reset, admin/login, admin/setup, admin/status, cities), /api/platform/* (partner durum/yükleme, modules), /api/platform/admin/* (accounts, partners, modules, builtins)
 - proxy.ts: ADMIN_HOST tanımlıysa admin sadece o host'ta; ana sitede /admin 404. "/klasor/" → "/klasor/index.html"
-- Sahip e-postası OWNER_EMAIL (varsayılan fatih.altas@elevandos.com); yönetici yalnızca admin host'tan girer. İlk şifre ADMIN_SETUP_KEY ile /admin/giris/ üzerinden.
+- Sahip e-postası OWNER_EMAIL (varsayılan (eski yönetici adresi — kaldırıldı)); yönetici yalnızca admin host'tan girer. İlk şifre ADMIN_SETUP_KEY ile /admin/giris/ üzerinden.
 - Merkez ofis personeli (employee + manager='owner', ör. muhasebeci) tüm müşterileri görebilir (workspace.mjs + advisor.mjs küçük yama)
 - Vercel'de yükleme sınırı 4 MB (Vercel fonksiyon gövde limiti 4.5 MB) — MAX_UPLOAD_MB ile değişir
 
@@ -143,4 +143,7 @@
   - Kimlik Doğrulama menüsü → #kimlik (Didit API: etkin, API anahtarı, Workflow ID, aylık sınır, kurulum adımları, dönüş adresi). /kyc/ linki menüden kaldırıldı.
   - Yönetici profili modalı (sağ üst): ad soyad, giriş e-postası, mevcut/yeni şifre. POST /api/platform/admin/profile; e-posta değişince auth_users + people/law_accounts owner + config-owner güncellenir, OWNER_EMAIL çalışma anında değişir. Şifre değişince diğer admin oturumları kapanır. Test: e-posta değiştirildi → eski adresle giriş reddedildi, yeniyle girildi; sonra geri alındı. Kullanıcı admin@brazilmigration.com'a geçişi profilden kendisi yapacak.
   - Sandbox smtp.hostinger.com'a erişemiyor (ENOTFOUND) — gerçek gönderim canlıda test edilmeli.
-- 2026-10-31: Kullanıcı admin girişinde 'Bu adres yalnızca yönetici girişi içindir' aldı (admin@brazilmigration.com ile) — 'Ben zaten yönetici değil miyim?'. Sebep: OWNER_EMAIL hâlâ fatih.altas@elevandos.com (profil'den e-posta değişikliği yapılmamış ya da başka sunucu süreci eski değeri tutuyor). Düzeltme: config.mjs refreshConfig — http wrapper'lar her istekte (5 sn önbellekle) DB ayarlarını yeniden yükler. Yeniden başlatma sonrası config-owner ile girişin çalıştığı test edildi. Kullanıcıya: önce fatih.altas@elevandos.com ile girip profilden admin@ yapması söylendi.
+- 2026-10-31: Kullanıcı admin girişinde 'Bu adres yalnızca yönetici girişi içindir' aldı (admin@brazilmigration.com ile) — 'Ben zaten yönetici değil miyim?'. Sebep: OWNER_EMAIL hâlâ (eski yönetici adresi — kaldırıldı) (profil'den e-posta değişikliği yapılmamış ya da başka sunucu süreci eski değeri tutuyor). Düzeltme: config.mjs refreshConfig — http wrapper'lar her istekte (5 sn önbellekle) DB ayarlarını yeniden yükler. Yeniden başlatma sonrası config-owner ile girişin çalıştığı test edildi. Kullanıcıya: önce (eski yönetici adresi — kaldırıldı) ile girip profilden admin@ yapması söylendi.
+- 2026-10-31: Kullanıcı: "Tüm eski mailleri unut. admin@brazilmigration.com yönetici olsun, yeni şifre oluştur, bundan başka yönetici maili olmasın."
+  - Yapılan: koddaki tüm varsayılan yönetici adresleri admin@brazilmigration.com (auth.mjs, seed.mjs, workspace.mjs, lawyer.mjs, README, testler). seed.mjs migrateOwner (tek seferlik, items 'migration-owner-v1'): eski yönetici kaydını aynı kullanıcı kimliğiyle admin@brazilmigration.com'a çevirir, YENİ şifre hash'ini yazar, people/law_accounts owner e-postasını günceller, tüm admin oturumlarını kapatır, config-owner'ı ayarlar. db ready sırası: migrate → migrateOwner → loadConfig → seed. Demo ADMIN hash'i de yeni şifreyle değişti. Yeni şifre sohbette kullanıcıya verildi (dosyalara yazılmadı; düz metin yalnızca sandbox scratchpad'de). Test: eski adres 403, eski şifre 401, yeni şifre 200.
+  - Not: Turso'daki canlı veritabanı yeni zip yüklendiğinde ilk istekte otomatik dönüşür.

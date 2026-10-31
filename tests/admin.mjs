@@ -6,7 +6,7 @@ import {handle} from '../server/admin.mjs';
 const sql=new DatabaseSync(':memory:');sql.exec(readFileSync('drizzle/0000_safe_doctor_octopus.sql','utf8'));
 const db={prepare(q){let v=[];return{bind(...x){v=x;return this},async first(){return sql.prepare(q).get(...v)||null},async all(){return {results:sql.prepare(q).all(...v)}},async run(){return sql.prepare(q).run(...v)}}},async batch(a){sql.exec('BEGIN');try{const r=await Promise.all(a.map(s=>s.run()));sql.exec('COMMIT');return r}catch(e){sql.exec('ROLLBACK');throw e}}};
 const env={DB:db};
-async function call(path,body,opts={}){const headers={origin:opts.origin||'https://site.test'};if(opts.auth!==false){headers['oai-authenticated-user-id']=opts.staff?'staff':'owner-id';headers['oai-authenticated-user-email']=opts.staff?'staff@example.com':'fatih.altas@elevandos.com'}const r=await handle(new Request('https://site.test/api/admin/'+path,{method:opts.method||(body?'POST':'GET'),headers,body:body?JSON.stringify(body):undefined}),env);return {status:r.status,data:await r.json()}}
+async function call(path,body,opts={}){const headers={origin:opts.origin||'https://site.test'};if(opts.auth!==false){headers['oai-authenticated-user-id']=opts.staff?'staff':'owner-id';headers['oai-authenticated-user-email']=opts.staff?'staff@example.com':'admin@brazilmigration.com'}const r=await handle(new Request('https://site.test/api/admin/'+path,{method:opts.method||(body?'POST':'GET'),headers,body:body?JSON.stringify(body):undefined}),env);return {status:r.status,data:await r.json()}}
 assert.equal((await call('bootstrap',null,{auth:false})).status,401);
 assert.equal((await call('bootstrap')).status,200);
 sql.prepare('INSERT INTO people VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run('staff','staff','staff@example.com','Staff','staff','owner','{}','"all"','active',null,null,Date.now());
@@ -48,7 +48,7 @@ for(const section of ['Genel','Güvenlik','Kartlar','Özel Alanlar']){vm.runInCo
 const c2=await call('record',{type:'customer',name:'Files Customer',email:'files@example.com',birthday:'1990-01-01',taxNumber:'123',mail0:true});
 const blobStore=new Map();env.BUCKET={async put(k,b){blobStore.set(k,b)},async get(k){return blobStore.has(k)?{body:blobStore.get(k)}:null},async delete(k){blobStore.delete(k)}};
 const form=()=>{const f=new FormData();f.set('customer',c2.data.id);f.set('direction','incoming');f.set('sender','Avukat');f.set('file',new Blob(['%PDF-1.7 test'],{type:'application/pdf'}),'contract.pdf');return f};
-const ownerHeaders={'origin':'https://site.test','oai-authenticated-user-id':'owner-id','oai-authenticated-user-email':'fatih.altas@elevandos.com'};
+const ownerHeaders={'origin':'https://site.test','oai-authenticated-user-id':'owner-id','oai-authenticated-user-email':'admin@brazilmigration.com'};
 let uploaded=await handle(new Request('https://site.test/api/admin/upload',{method:'POST',headers:ownerHeaders,body:form()}),env);assert.equal(uploaded.status,200);const documentId=(await uploaded.json()).id;
 let file=await handle(new Request('https://site.test/api/admin/file/'+documentId,{headers:ownerHeaders}),env);assert.equal(file.status,200);assert.equal(await file.text(),'%PDF-1.7 test');
 file=await handle(new Request('https://site.test/api/admin/file/'+documentId,{headers:{...ownerHeaders,'oai-authenticated-user-id':'staff','oai-authenticated-user-email':'staff@example.com'}}),env);assert.equal(file.status,403);

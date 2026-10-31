@@ -3,7 +3,7 @@ import {scrypt as _scrypt, randomBytes, createHash, timingSafeEqual} from 'node:
 import {promisify} from 'node:util';
 const scrypt = promisify(_scrypt);
 
-export const OWNER_EMAIL = () => (process.env.OWNER_EMAIL || 'fatih.altas@elevandos.com').toLowerCase();
+export const OWNER_EMAIL = () => (process.env.OWNER_EMAIL || 'admin@brazilmigration.com').toLowerCase();
 export const now = () => Date.now();
 export const uuid = () => crypto.randomUUID();
 export const fail = (status, message, extra) => { throw Object.assign(new Error(message), {status, extra}); };

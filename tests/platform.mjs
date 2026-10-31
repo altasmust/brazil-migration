@@ -44,13 +44,13 @@ const tokenFrom = link => new URL(link).searchParams.get('dogrula') || new URL(l
 
 try {
   // header spoofing must not authenticate
-  assert.equal((await call('x', 'workspace', 'bootstrap', undefined, 'GET', {'oai-authenticated-user-id': 'owner', 'oai-authenticated-user-email': 'fatih.altas@elevandos.com'})).status, 401);
+  assert.equal((await call('x', 'workspace', 'bootstrap', undefined, 'GET', {'oai-authenticated-user-id': 'owner', 'oai-authenticated-user-email': 'admin@brazilmigration.com'})).status, 401);
 
   // admin first setup + admin-only login
   assert.equal((await call('admin', 'auth', 'admin/setup', {setupKey: 'wrong', password: 'AdminPassword2026'})).status, 403);
   assert.equal((await call('admin', 'auth', 'admin/setup', {setupKey: 'setup-key-123', password: 'AdminPassword2026'})).status, 200);
   assert.equal((await call('admin', 'auth', 'admin/setup', {setupKey: 'setup-key-123', password: 'AdminPassword2026'})).status, 409);
-  assert.equal((await call('site-owner', 'auth', 'login', {email: 'fatih.altas@elevandos.com', password: 'AdminPassword2026'})).status, 403);
+  assert.equal((await call('site-owner', 'auth', 'login', {email: 'admin@brazilmigration.com', password: 'AdminPassword2026'})).status, 403);
   assert.equal((await call('admin', 'admin', 'meta')).status, 200);
 
   // admin creates an advisor in İzmir and an accountant

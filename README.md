@@ -30,7 +30,7 @@ Next.js 16 (Vercel), veritabanı Turso (libSQL), özel dosyalar Vercel Blob (pri
 | `ADMIN_HOST` | Önerilir | Yönetim panelinin host adı (virgülle birden fazla). Tanımlıysa ana sitede `/admin` 404 olur |
 | `SITE_URL` | Önerilir | Ana site adresi, ör. `https://brazil-migration.vercel.app` (e-posta bağlantıları ve admin→site yönlendirmesi) |
 | `ADMIN_URL` | İsteğe bağlı | Yönetim adresi (varsayılan `https://<ADMIN_HOST>`) |
-| `OWNER_EMAIL` | İsteğe bağlı | Yönetici e-postası (varsayılan `fatih.altas@elevandos.com`) |
+| `OWNER_EMAIL` | İsteğe bağlı | Yönetici e-postası (varsayılan `admin@brazilmigration.com`) |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Canlı e-posta için | Yoksa **test modu**: e-posta gitmez, bağlantı ekranda gösterilir |
 | `EMAIL_TEST_MODE=off` | Canlıya geçince | Test modunda bağlantıların ekranda görünmesini kapatır |
 | `ANTHROPIC_API_KEY` | Otomatik belge onayı için | Yoksa partner/müşteri belgeleri admin/danışman incelemesine düşer |

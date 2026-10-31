@@ -5,7 +5,7 @@ import {handle,referral} from '../server/workspace.mjs';
 const sql=new DatabaseSync(':memory:');sql.exec(readFileSync('drizzle/0000_safe_doctor_octopus.sql','utf8'));
 const db={prepare(q){let vals=[];return {bind(...a){vals=a;return this},async first(){return sql.prepare(q).get(...vals)||null},async all(){return {results:sql.prepare(q).all(...vals)}},async run(){const r=sql.prepare(q).run(...vals);return {meta:{changes:r.changes}}}}},async batch(ss){sql.exec('BEGIN');try{const r=await Promise.all(ss.map(s=>s.run()));sql.exec('COMMIT');return r}catch(e){sql.exec('ROLLBACK');throw e}}};
 const blobs=new Map(),env={DB:db,BUCKET:{async put(k,b){blobs.set(k,b)},async get(k){return blobs.has(k)?{body:blobs.get(k)}:null},async delete(k){blobs.delete(k)}}};
-const owner=['owner-user','fatih.altas@elevandos.com'],alice=['alice','alice@test.com'],bob=['bob','bob@test.com'],staff=['staff','staff@test.com'];
+const owner=['owner-user','admin@brazilmigration.com'],alice=['alice','alice@test.com'],bob=['bob','bob@test.com'],staff=['staff','staff@test.com'];
 async function call(path,user,body,method){const h={'Origin':'https://site.test'};if(user){h['oai-authenticated-user-id']=user[0];h['oai-authenticated-user-email']=user[1]}let opts={method:method||(!body?'GET':'POST'),headers:h};if(body)opts.body=body instanceof FormData?body:JSON.stringify(body);const r=await handle(new Request('https://site.test/api/workspace/'+path,opts),env);const text=await r.text();let data;try{data=JSON.parse(text)}catch{data=text}return {status:r.status,data}}
 assert.equal((await call('bootstrap')).status,401);
 assert.equal((await call('bootstrap',bob)).status,403);
