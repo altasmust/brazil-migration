@@ -508,7 +508,8 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   }
 
   const MASK = '••••••••';
-  if (['settings/mail', 'settings/didit', 'profile'].includes(route) && req.method === 'GET') {
+  if (['settings/mail', 'settings/didit', 'settings/ai', 'profile'].includes(route) && req.method === 'GET') {
+    if (route === 'settings/ai') { const d = (await getItem(db, 'config-ai'))?.data || {}; return json({ai: {apiKey: (d.apiKey || process.env.ANTHROPIC_API_KEY) ? MASK : '', minConfidence: d.minConfidence || Number(process.env.AI_VERIFY_MIN_CONFIDENCE || 0.85), updated: d.updated || null}, ready: verifierConfigured()}); }
     if (route === 'settings/mail') { const d = (await getItem(db, 'config-mail'))?.data || {}; return json({mail: {active: d.active !== false, host: d.host || 'smtp.hostinger.com', port: d.port || 465, secure: d.secure !== false, user: d.user || '', pass: d.pass ? MASK : '', fromName: d.fromName || 'Brazil Migration', fromEmail: d.fromEmail || '', replyTo: d.replyTo || '', saved: !!d.host, updated: d.updated || null}, provider: mailProvider(), configured: mailConfigured(), envResend: !!process.env.RESEND_API_KEY}); }
     if (route === 'settings/didit') { const d = (await getItem(db, 'config-didit'))?.data || {}; return json({didit: {enabled: d.enabled ?? process.env.DIDIT_ENABLED === 'true', apiKey: (d.apiKey || process.env.DIDIT_API_KEY) ? MASK : '', workflowId: d.workflowId || process.env.DIDIT_WORKFLOW_ID || '', limit: d.limit || Number(process.env.DIDIT_MONTHLY_LIMIT || 30), updated: d.updated || null}, ready: diditReady(process.env), callback: siteUrl(req) + '/partner/?kyc=done'}); }
     const owner = await one(db, "SELECT name FROM people WHERE role='owner' LIMIT 1");
@@ -677,6 +678,17 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     try { await sendMail({to, subject: 'Brazil Migration · Test e-postası', title: 'E-posta ayarlarınız çalışıyor', text: 'Bu mesaj yönetim panelindeki E-posta Ayarları sayfasından gönderilen bir test e-postasıdır. Sitenin tüm bildirimleri bu adresten gönderilecek.', throwOnError: true}); }
     catch (e) { fail(400, 'Gönderilemedi: ' + clean(e.message, 300) + '. Sunucu, port, kullanıcı adı ve şifreyi kontrol edin.'); }
     return json({ok: true});
+  }
+  if (route === 'settings/ai' && req.method === 'POST') {
+    const old = (await getItem(db, 'config-ai'))?.data || {};
+    const key = b.apiKey && b.apiKey !== MASK ? clean(b.apiKey, 300) : old.apiKey || '';
+    if (key && !/^sk-ant-/.test(key)) fail(400, 'Anthropic API anahtarı "sk-ant-" ile başlar.');
+    const minConfidence = Math.max(0.5, Math.min(0.99, Number(b.minConfidence) || 0.85));
+    const data = {apiKey: b.remove ? '' : key, minConfidence, updated: now()};
+    await db.batch([putItem(db, 'config-ai', 'config', 'owner', data), audit(db, actor, 'settings.ai', data.apiKey ? 'on' : 'off')]);
+    if (!data.apiKey) delete process.env.ANTHROPIC_API_KEY;
+    applyConfig('config-ai', data);
+    return json({ok: true, ready: verifierConfigured()});
   }
   if (route === 'settings/didit' && req.method === 'POST') {
     const old = (await getItem(db, 'config-didit'))?.data || {};

@@ -4,6 +4,7 @@ const MAP = {
   'config-mail': d => d.active === false ? {} : {SMTP_HOST: d.host, SMTP_PORT: String(d.port || ''), SMTP_SECURE: d.secure === false ? 'false' : 'true', SMTP_USER: d.user, SMTP_PASS: d.pass, EMAIL_FROM: d.fromEmail ? `${d.fromName || 'Brazil Migration'} <${d.fromEmail}>` : '', EMAIL_REPLY_TO: d.replyTo || ''},
   'config-didit': d => ({DIDIT_ENABLED: d.enabled ? 'true' : 'false', DIDIT_API_KEY: d.apiKey || '', DIDIT_WORKFLOW_ID: d.workflowId || '', DIDIT_MONTHLY_LIMIT: String(d.limit || 30)}),
   'config-owner': d => d.email ? {OWNER_EMAIL: d.email} : {},
+  'config-ai': d => d.apiKey ? {ANTHROPIC_API_KEY: d.apiKey, AI_VERIFY_MIN_CONFIDENCE: String(d.minConfidence || 0.85)} : {},
 };
 export function applyConfig(id, data) {
   const f = MAP[id]; if (!f || !data) return;

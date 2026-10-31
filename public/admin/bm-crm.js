@@ -389,20 +389,28 @@
 
   // ---------- KİMLİK DOĞRULAMA (DIDIT) ----------
   routes.kimlik = () => mount(`<div class="bmc" id="bmc-root">${heading('Kimlik Doğrulama (Didit API)')}<div class="loading">Yükleniyor…</div></div>`, async () => {
-    const d = await A('settings/didit'), k = d.didit, root = $('#bmc-root');
+    const [d, ai] = await Promise.all([A('settings/didit'), A('settings/ai')]), k = d.didit, root = $('#bmc-root');
     root.innerHTML = heading('Kimlik Doğrulama (Didit API)') + `<div class="bmc-grid2 bmc-set"><section class="panel"><header class="panel-head">${I('shield')}<h2>Didit bağlantısı</h2><span class="bmc-login ${d.ready ? 'on' : 'wait'}">${d.ready ? 'Etkin' : 'Kapalı'}</span></header>
       <form class="bmc-form" id="bmc-didit">
         <label class="bmc-sw full"><input type="checkbox" name="enabled" ${k.enabled ? 'checked' : ''}><i></i><span><b>Didit kimlik doğrulamasını kullan</b><small>Açıkken partnerler kimlik kartı yerine Didit ile canlı kimlik doğrulaması yapar; yalnızca Vergi Levhası ve İmza Sirküsü yükler.</small></span></label>
         ${field('API anahtarı', `<input class="bmc-in" name="apiKey" type="password" value="${esc(k.apiKey)}" placeholder="Didit → API Keys" autocomplete="new-password">`, k.apiKey ? 'Kayıtlı. Değiştirmek için yenisini yazın.' : '', 'full')}
         ${field('Workflow ID', `<input class="bmc-in" name="workflowId" value="${esc(k.workflowId)}" placeholder="Didit → Workflows → ID">`)}
-        ${field('Aylık doğrulama sınırı', `<input class="bmc-in" name="limit" type="number" min="1" value="${esc(k.limit)}">`, 'Ücretsiz plan ≈ 30 doğrulama / ay.')}
-        <div class="full bmc-actions"><button class="btn primary">${I('check')} Kaydet</button></div></form></section>
+        ${field('Aylık doğrulama sınırı', `<input class="bmc-in" name="limit" type="number" min="1" value="${esc(k.limit)}">`, 'Didit ücretsiz kotası: kimlik, canlılık ve yüz eşleştirme için ayda 500.')}
+        <div class="full bmc-actions"><button class="btn primary">${I('check')} Kaydet</button></div></form>
+        <header class="panel-head" style="border-top:1px solid var(--line)">${I('file')}<h2>Otomatik belge kontrolü (yapay zekâ)</h2><span class="bmc-login ${ai.ready ? 'on' : 'wait'}">${ai.ready ? 'Etkin' : 'Kapalı'}</span></header>
+        <form class="bmc-form" id="bmc-ai"><p class="bmc-p full" style="margin:0">Partnerin yüklediği <b>Vergi Levhası, İmza Sirküsü</b> ve kimlik belgeleri yüklendiği anda okunur: belge türü, firma unvanı, vergi numarası ve vergi dairesinin başvuru formuyla eşleşmesi, tarih ve okunabilirlik kontrol edilir. Hepsi uygunsa (ve Didit açıksa kimlik de onaylıysa) partner otomatik onaylanır; şüpheli durumda size “İnceleme bekliyor” olarak düşer. Müşteri belgeleri de satın alma sonrası aynı şekilde ön kontrolden geçer.</p>
+          ${field('Anthropic API anahtarı', `<input class="bmc-in" name="apiKey" type="password" value="${esc(ai.ai.apiKey)}" placeholder="sk-ant-…" autocomplete="new-password">`, ai.ai.apiKey ? 'Kayıtlı. Değiştirmek için yenisini yazın.' : 'console.anthropic.com → API Keys bölümünden alın.', 'full')}
+          ${field('Otomatik onay için en düşük güven', `<select class="bmc-in" name="minConfidence">${[[0.75, '%75 (daha esnek)'], [0.85, '%85 (önerilen)'], [0.95, '%95 (çok sıkı)']].map(([v, l]) => `<option value="${v}" ${Math.abs(ai.ai.minConfidence - v) < 0.001 ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}
+          <div class="full bmc-actions"><button class="btn primary">${I('check')} Kaydet</button>${ai.ai.apiKey ? '<button type="button" class="btn" id="bmc-ai-off">Kapat</button>' : ''}</div></form></section>
       <section class="panel"><header class="panel-head">${I('note')}<h2>Kurulum adımları</h2></header><div class="bmc-notes">
         <div class="bmc-note"><p><b>1. Hesap</b></p><small>business.didit.me adresinde iş e-postanızla hesap açın.</small></div>
         <div class="bmc-note"><p><b>2. Workflow</b></p><small>Workflows bölümünde “KYC” (kimlik belgesi + canlılık) akışı oluşturun ve Workflow ID’sini kopyalayın.</small></div>
         <div class="bmc-note"><p><b>3. API anahtarı</b></p><small>API &amp; Webhooks bölümünden API anahtarı oluşturun ve bu sayfaya yapıştırın.</small></div>
-        <div class="bmc-note"><p><b>Dönüş adresi</b></p><small>Partner doğrulamayı bitirince bu adrese döner: <b>${esc(d.callback)}</b></small></div>
-        <div class="bmc-note"><p><b>Belge taraması</b></p><small>Yüklenen belgelerin otomatik ön kontrolü Didit’ten bağımsızdır ve dosya yüklenince kendiliğinden çalışır.</small></div></div></section></div>`;
+        <div class="bmc-note"><p><b>Dönüş adresi</b></p><small>Kişi Didit ekranında selfie ve belge fotoğrafını çektikten sonra sitemize bu adresle geri döner: <b>${esc(d.callback)}</b> (müşteriler /kyc/ sayfasına döner). Sonuç arka planda sorgulanır.</small></div>
+        <div class="bmc-note"><p><b>Belge taraması</b></p><small>Didit kimliği (selfie + belge) doğrular; vergi levhası ve imza sirküsü kontrolünü soldaki “Otomatik belge kontrolü” yapar. Müşteriler kimliklerini kendi panellerindeki “Kimlik doğrulama” kartından doğrular.</small></div></div></section></div>`;
+    const af = $('#bmc-ai');
+    af.onsubmit = async e => { e.preventDefault(); try { const r = await A('settings/ai', 'POST', {apiKey: af.apiKey.value, minConfidence: af.minConfidence.value}); say(r.ready ? 'Otomatik belge kontrolü etkin.' : 'Kaydedildi.'); render(); } catch (err) { say(err.message); } };
+    const off = $('#bmc-ai-off'); if (off) off.onclick = async () => { try { await A('settings/ai', 'POST', {remove: true}); say('Otomatik belge kontrolü kapatıldı.'); render(); } catch (err) { say(err.message); } };
     const f = $('#bmc-didit');
     f.onsubmit = async e => { e.preventDefault(); try { const r = await A('settings/didit', 'POST', {enabled: f.enabled.checked, apiKey: f.apiKey.value, workflowId: f.workflowId.value, limit: f.limit.value}); say(r.ready ? 'Didit etkinleştirildi.' : 'Kaydedildi.'); render(); } catch (err) { say(err.message); } };
   });

@@ -146,6 +146,23 @@
     fix(); new MutationObserver(fix).observe(document.body, {childList: true, subtree: true});
   }
 
+  // ---------- müşteri paneli: gerçek Didit kimlik doğrulama durumu ----------
+  const KYC_LABEL = {'Not Started': ['amber', 'Başlamadı'], 'In Progress': ['amber', 'Devam ediyor'], 'Awaiting User': ['amber', 'Sizi bekliyor'], 'In Review': ['amber', 'İncelemede'], 'Approved': ['', 'Doğrulandı'], 'Declined': ['red', 'Reddedildi'], 'Resubmitted': ['amber', 'Yeniden gönderildi'], 'Abandoned': ['red', 'Yarım kaldı'], 'Expired': ['red', 'Süresi doldu'], 'Kyc Expired': ['red', 'Süresi doldu']};
+  function kycCard() {
+    let model = null;
+    const paint = () => {
+      const el = document.getElementById('bm-kyc'); if (!el || !model || el.dataset.done) return;
+      const s = (model.sessions || [])[0], st = el.querySelector('[data-kyc-status]'), acts = el.querySelector('[data-kyc-actions]');
+      const [cls, label] = s ? KYC_LABEL[s.status] || ['amber', s.status] : model.ready ? ['amber', 'Henüz yapılmadı'] : ['amber', 'Yakında'];
+      if (st) st.innerHTML = `<span class="badge ${cls}">${label}</span>`;
+      if (acts && s?.status === 'Approved') acts.innerHTML = '<span class="badge">✓ Kimliğiniz doğrulandı</span>';
+      else if (acts && !model.ready) acts.innerHTML = '<small style="color:var(--muted,#7b897f)">Kimlik doğrulama kısa süre içinde açılacak.</small>';
+      el.dataset.done = '1';
+    };
+    fetch('/api/kyc', {cache: 'no-store'}).then(r => r.ok ? r.json() : null).then(d => { model = d; paint(); }).catch(() => {});
+    new MutationObserver(paint).observe(document.body, {childList: true, subtree: true});
+  }
+
   async function start(refresh) {
     let me;
     try { me = await get('/api/auth/me'); } catch { me = {}; }
@@ -155,6 +172,7 @@
     if (!here && area !== 'kyc') { location.href = accounts[0]?.home || '/giris/'; return; }
     addLogout(me.user.email);
     if (area === 'customer' || area === 'partner') currency(me.user.country);
+    if (area === 'customer') kycCard();
     if (me.user.impersonated && !document.getElementById('bm-imp')) {
       const bar = document.createElement('div'); bar.id = 'bm-imp';
       bar.style.cssText = 'position:sticky;top:0;z-index:9999;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:9px 16px;background:#7a5410;color:#fff;font:600 13px/1.4 Poppins,system-ui,sans-serif';
