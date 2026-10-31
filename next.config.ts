@@ -15,7 +15,11 @@ const nextConfig: NextConfig = {
       {key: 'X-Content-Type-Options', value: 'nosniff'},
       {key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin'},
       {key: 'X-Frame-Options', value: 'SAMEORIGIN'},
-    ]}];
+    ]},
+    // static assets: images/fonts cached for a week, scripts/styles for an hour (they are versioned with ?v=)
+    {source: '/:all*(png|jpg|jpeg|webp|svg|ico|woff2)', headers: [{key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400'}]},
+    {source: '/:all*(js|css)', headers: [{key: 'Cache-Control', value: 'public, max-age=3600, stale-while-revalidate=86400'}]},
+    ];
   },
 };
 export default nextConfig;

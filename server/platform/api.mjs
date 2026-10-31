@@ -509,31 +509,43 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   if (route === 'meta' && req.method === 'GET') return json({types: ACCOUNT_TYPES, perms: PERMS, permLabels: PERM_LABELS, defaults: DEFAULT_PERMS, panels: PANELS, countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES, mail: mailConfigured(), verifier: verifierConfigured()});
 
   if (route === 'accounts' && req.method === 'GET') {
-    const people = await rows(db, "SELECT * FROM people WHERE role!='owner' ORDER BY created DESC");
-    const metas = Object.fromEntries((await rows(db, "SELECT owner,data FROM items WHERE kind='account_meta'")).map(r => [r.owner, parse(r.data)]));
-    const partners = Object.fromEntries((await rows(db, "SELECT owner,data FROM items WHERE kind='partner'")).map(r => [r.owner, parse(r.data)]));
-    const authed = Object.fromEntries((await rows(db, 'SELECT id,verified,hash FROM auth_users')).map(r => [r.id, r]));
-    const lastIn = Object.fromEntries((await rows(db, "SELECT user, MAX(created) AS t FROM auth_sessions WHERE scope='site' GROUP BY user")).map(r => [r.user, r.t]));
+    const [people, metaRows, partnerRows, authRows, lastRows, law, groupItem] = await Promise.all([
+      rows(db, "SELECT * FROM people WHERE role!='owner' ORDER BY created DESC"),
+      rows(db, "SELECT owner,data FROM items WHERE kind='account_meta'"),
+      rows(db, "SELECT owner,data FROM items WHERE kind='partner'"),
+      rows(db, 'SELECT id,verified,hash FROM auth_users'),
+      rows(db, "SELECT user, MAX(created) AS t FROM auth_sessions WHERE scope='site' GROUP BY user"),
+      rows(db, "SELECT * FROM law_accounts WHERE role!='owner' ORDER BY created DESC"),
+      getItem(db, 'account-groups'),
+    ]);
+    const metas = Object.fromEntries(metaRows.map(r => [r.owner, parse(r.data)]));
+    const partners = Object.fromEntries(partnerRows.map(r => [r.owner, parse(r.data)]));
+    const authed = Object.fromEntries(authRows.map(r => [r.id, r]));
+    const lastIn = Object.fromEntries(lastRows.map(r => [r.user, r.t]));
     const names = Object.fromEntries(people.map(p => [p.id, p.name]));
     const list = people.map(p => {
       const meta = metas[p.id] || {}, a = authed[p.uid];
       const type = p.role === 'customer' ? 'customer' : meta.type || (p.role === 'advisor' ? 'advisor' : 'other');
       return {id: p.id, name: p.name, email: p.email, type, role: p.role, status: p.status, permissions: parse(p.permissions), scope: parse(p.scope), advisor: p.advisor, advisorName: p.advisor === 'owner' ? 'Merkez ofis' : names[p.advisor] || '', city: meta.city, country: meta.country, company: meta.company, phone: meta.phone, assignedBy: meta.assignedBy, title: meta.title, partner: partners[p.id] ? {status: partners[p.id].status} : null, manager: p.manager, extra: meta.extra || {}, lastLogin: lastIn[p.uid] || null, login: a ? (a.hash ? (a.verified ? 'Aktif' : 'Doğrulama bekliyor') : 'Şifre bekleniyor') : 'Giriş yok', created: p.created};
     });
-    const law = await rows(db, "SELECT * FROM law_accounts WHERE role!='owner' ORDER BY created DESC");
     for (const a of law) { const d = parse(a.data); const au = a.uid ? authed[a.uid] : null; list.push({id: 'law:' + a.id, name: d.profile?.name || a.email, email: a.email, type: 'lawyer', role: a.role, status: a.status === 'active' ? 'active' : 'disabled', permissions: {}, login: au ? (au.hash ? 'Aktif' : 'Şifre bekleniyor') : 'Giriş yok', created: a.created}); }
-    const G = (await getItem(db, 'account-groups'))?.data || {groups: [], assign: {}};
+    const G = groupItem?.data || {groups: [], assign: {}};
     for (const a of list) a.group = G.assign?.[a.id] || '';
     list.sort((x, y) => y.created - x.created);
     return json({accounts: list, groups: G.groups || []});
   }
 
   const MASK = '••••••••';
+  if (route === 'health' && req.method === 'GET') {
+    const t = [];
+    for (let i = 0; i < 3; i++) { const a = performance.now(); await one(db, 'SELECT 1 AS ok'); t.push(performance.now() - a); }
+    const dbUrl = process.env.TURSO_DATABASE_URL || process.env.LIBSQL_URL || '';
+    return json({db: {ms: Math.round(t.reduce((x, y) => x + y, 0) / t.length), samples: t.map(Math.round), remote: !!dbUrl, region: (dbUrl.match(/\.([a-z]+-[a-z]+-\d)\.turso\.io/) || [])[1] || (dbUrl ? 'bilinmiyor' : 'yerel dosya')}, node: process.version, uptime: Math.round(process.uptime()), memoryMb: Math.round(process.memoryUsage().rss / 1048576), mail: mailProvider(), didit: diditReady(process.env), ai: verifierConfigured()});
+  }
   if (route === 'kyc-credits' && req.method === 'GET') {
     const advisors = await rows(db, "SELECT id, name, email, status FROM people WHERE role='advisor' ORDER BY name");
     const partners = Object.fromEntries((await rows(db, "SELECT owner, data FROM items WHERE kind='partner'")).map(r => [r.owner, parse(r.data).status]));
-    const list = [];
-    for (const a of advisors) list.push({id: a.id, name: a.name, email: a.email, status: a.status, partner: partners[a.id] || null, ...(await creditState(db, a.id))});
+    const list = await Promise.all(advisors.map(async a => ({id: a.id, name: a.name, email: a.email, status: a.status, partner: partners[a.id] || null, ...(await creditState(db, a.id))})));
     const reqs = (await rows(db, "SELECT id, owner, data, created, updated FROM items WHERE kind='kyc_credit_req' ORDER BY created DESC LIMIT 200")).map(r => ({id: r.id, owner: r.owner, ...parse(r.data), at: r.created, updated: r.updated}));
     const poolUsed = (await one(db, "SELECT COUNT(*) AS n FROM items WHERE kind='kyc_session' AND created>=?", creditMonthStart()))?.n || 0;
     return json({partners: list, requests: reqs, pool: {limit: Number(process.env.DIDIT_MONTHLY_LIMIT || 30), used: Number(poolUsed), distributed: list.reduce((n, x) => n + x.allowance, 0)}, defaultMonthly: DEFAULT_MONTHLY});

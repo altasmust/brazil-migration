@@ -4,7 +4,8 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
   const date = t => t ? new Date(t).toLocaleString('tr-TR', {dateStyle: 'short', timeStyle: 'short'}) : '';
   async function api(path, method = 'GET', body) {
-    const r = await fetch('/api/platform/admin/' + path, {method, headers: body ? {'Content-Type': 'application/json'} : {}, body: body ? JSON.stringify(body) : undefined});
+    const opts = {method, headers: body ? {'Content-Type': 'application/json'} : {}, body: body ? JSON.stringify(body) : undefined};
+    let r; try { r = await fetch('/api/platform/admin/' + path, opts); } catch (e) { if (method !== 'GET') throw new Error('Sunucuya ulaşılamadı, tekrar deneyin.'); await new Promise(x => setTimeout(x, 900)); r = await fetch('/api/platform/admin/' + path, opts).catch(() => { throw new Error('Sunucu şu an yanıt vermiyor. Birkaç saniye sonra sayfayı yenileyin.'); }); }
     const d = await r.json().catch(() => ({}));
     if (r.status === 401) { location.href = '/admin/giris/?next=' + encodeURIComponent(location.pathname + location.hash); throw new Error('Giriş gerekli'); }
     if (!r.ok) throw new Error(d.error || 'İşlem tamamlanamadı.');

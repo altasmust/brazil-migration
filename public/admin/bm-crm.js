@@ -3,7 +3,10 @@
 // yönetim panelinin içinde listeler; gruplar, kişi detayı ve eski /admin/hesaplar/ sekmeleri burada.
 (() => {
   const A = async (path, method = 'GET', body) => {
-    const r = await fetch('/api/platform/admin/' + path, {method, headers: body ? {'Content-Type': 'application/json'} : {}, body: body ? JSON.stringify(body) : undefined, cache: 'no-store'});
+    const opts = {method, headers: body ? {'Content-Type': 'application/json'} : {}, body: body ? JSON.stringify(body) : undefined, cache: 'no-store'};
+    let r;
+    try { r = await fetch('/api/platform/admin/' + path, opts); }
+    catch (e) { if (method !== 'GET') throw new Error('Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.'); await new Promise(x => setTimeout(x, 900)); try { r = await fetch('/api/platform/admin/' + path, opts); } catch { throw new Error('Sunucu şu an yanıt vermiyor (yeniden başlıyor olabilir). Birkaç saniye sonra sayfayı yenileyin.'); } }
     const d = await r.json().catch(() => ({}));
     if (r.status === 401) { location.href = '/admin/giris/?next=' + encodeURIComponent('/admin/' + location.hash); throw new Error('Giriş gerekli'); }
     if (!r.ok) throw new Error(d.error || 'İşlem tamamlanamadı.');
@@ -469,6 +472,22 @@
     };
   });
   Object.assign(names, {krediler: 'KYC Kredileri'});
+  routes.durum = () => mount(`<div class="bmc" id="bmc-root">${heading('Sistem Durumu')}<div class="loading">Ölçülüyor…</div></div>`, async () => {
+    const a = performance.now(); const h = await A('health'); const total = Math.round(performance.now() - a);
+    const grade = ms => ms < 40 ? ['on', 'Çok iyi'] : ms < 120 ? ['wait', 'Orta'] : ['off', 'Yavaş'];
+    const g = grade(h.db.ms);
+    $('#bmc-root').innerHTML = heading('Sistem Durumu') + `<div class="bmc-stats">
+      <article class="bmc-stat">${I('activity')}<div><small>Veritabanı gecikmesi</small><b>${h.db.ms} ms</b><span><span class="bmc-login ${g[0]}">${g[1]}</span> · ölçümler: ${h.db.samples.join(' / ')} ms</span></div></article>
+      <article class="bmc-stat">${I('globe')}<div><small>Veritabanı konumu</small><b>${esc(h.db.region)}</b><span>${h.db.remote ? 'Turso (uzak)' : 'Sunucu üzerinde'}</span></div></article>
+      <article class="bmc-stat">${I('send')}<div><small>Bu sayfanın yanıt süresi</small><b>${total} ms</b><span>Tarayıcı → sunucu → veritabanı</span></div></article>
+      <article class="bmc-stat">${I('shield')}<div><small>Sunucu</small><b>${Math.floor(h.uptime / 60)} dk açık</b><span>Node ${esc(h.node)} · ${h.memoryMb} MB bellek</span></div></article></div>
+      <section class="panel"><header class="panel-head">${I('note')}<h2>Ne anlama geliyor?</h2></header><div class="bmc-notes">
+      <div class="bmc-note"><p><b>Veritabanı gecikmesi</b></p><small>Her sayfa açılışında 5–20 veritabanı sorgusu yapılır. Gecikme 100 ms’nin üzerindeyse sayfalar 1–2 saniye bekler. Bunun en sık nedeni veritabanının sunucudan uzak bir bölgede (ör. ABD) olmasıdır.</small></div>
+      <div class="bmc-note"><p><b>Sunucu süresi</b></p><small>“Açık” süresi sık sık sıfırlanıyorsa uygulama yeniden başlıyor demektir; bu sırada sayfalarda “Sunucuya ulaşılamadı” görülebilir.</small></div>
+      <div class="bmc-note"><p><b>Durum</b></p><small>E-posta: ${h.mail === 'smtp' ? 'SMTP' : h.mail === 'resend' ? 'Resend' : 'test modu'} · Didit: ${h.didit ? 'etkin' : 'kapalı'} · Otomatik belge kontrolü: ${h.ai ? 'etkin' : 'kapalı'}</small></div></div></section>`;
+  });
+  Object.assign(names, {durum: 'Sistem Durumu'});
+
   setTimeout(() => A('kyc-credits').then(d => { const n = d.requests.filter(r => r.status === 'pending').length; if (!n) return; const a = document.querySelector('#navigation a[href="#krediler"]'); if (a) a.insertAdjacentHTML('beforeend', ` <span class="bmc-count">${n}</span>`); }).catch(() => {}), 900);
 
 

@@ -77,11 +77,11 @@ export async function currentUser(db, req) {
   const token = readCookie(req, cookieName(req));
   if (!token) return null;
   const scope = isAdminRequest(req) ? 'admin' : 'site';
-  const s = await db.prepare('SELECT * FROM auth_sessions WHERE token=? AND scope=?').bind(sha(token), scope).first();
-  if (!s || s.expires < now()) return null;
-  const u = await db.prepare('SELECT * FROM auth_users WHERE id=?').bind(s.user).first();
-  if (!u) return null;
-  if (!u.verified && !(scope === 'site' && await db.prepare('SELECT id FROM items WHERE id=?').bind('imp-' + sha(token)).first())) return null;
+  // one round trip: session + user + impersonation flag
+  const u = await db.prepare("SELECT u.*, s.expires AS _exp, (SELECT 1 FROM items i WHERE i.id=?) AS _imp FROM auth_sessions s JOIN auth_users u ON u.id=s.user WHERE s.token=? AND s.scope=?").bind('imp-' + sha(token), sha(token), scope).first();
+  if (!u || u._exp < now()) return null;
+  if (!u.verified && !(scope === 'site' && u._imp)) return null;
+  delete u._exp; delete u._imp;
   if (scope === 'admin' && u.email !== OWNER_EMAIL()) return null;
   if (scope === 'site' && u.email === OWNER_EMAIL()) return null;
   return u;
