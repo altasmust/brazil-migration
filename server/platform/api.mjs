@@ -6,6 +6,7 @@ import {
 } from './auth.mjs';
 import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
 import {applyConfig} from './config.mjs';
+import {cleanPost, readMinutes} from './blog.mjs';
 import {staticPages, siteState, invalidateSite, editorHTML, readStatic, buildOverrides, extractMenu, renderPage, hash as shash, PANEL} from './site.mjs';
 import {creditState, creditRecord, saveCredit, monthKey, monthStart as creditMonthStart, DEFAULT_MONTHLY} from './credits.mjs';
 import {CITIES, locate, fromRequest, distanceKm} from './geo.mjs';
@@ -545,6 +546,11 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const custom = Object.values(st.custom).map(c => ({id: c.id, path: c.path, title: c.title, type: 'custom', published: !!c.published, seo: c.seo || {}, blocks: c.blocks || [], updated: c.updated || null}));
     return json({pages, custom, menuSaved: !!st.menu});
   }
+  if (route === 'blog' && req.method === 'GET') {
+    const st = await siteState(db);
+    const posts = Object.values(st.blog).map(p => ({...p, readMin: readMinutes(p)})).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    return json({posts, categories: [...new Set(posts.map(p => p.category))]});
+  }
   if (route === 'site/editor' && req.method === 'GET') {
     const path = clean(new URL(req.url).searchParams.get('path'), 200);
     const html = await editorHTML(db, path); if (!html) fail(404, 'Sayfa bulunamadı.');
@@ -780,6 +786,22 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     }
     if (route === 'site/custom/delete') { const id = clean(b.id, 80); if (!/^sitecustom-/.test(id)) fail(400, 'Geçersiz sayfa.'); await db.batch([q(db, "DELETE FROM items WHERE id=? AND kind='site_custom'", id), audit(db, actor, 'site.custom.delete', id)]); invalidateSite(); return json({ok: true}); }
     if (route === 'site/preview') { const r = await renderPage(db, '/onizleme/', {preview: {title: clean(b.title, 120) || 'Önizleme', blocks: Array.isArray(b.blocks) ? b.blocks.slice(0, 40) : [], seo: {}}}); return json({html: r.html}); }
+    fail(404, 'İşlem bulunamadı.');
+  }
+  if (route.startsWith('blog/') && req.method === 'POST') {
+    if (route === 'blog/save') {
+      const id = b.id && /^blog-[a-z0-9-]+$/.test(b.id) ? b.id : 'blog-' + uuid().slice(0, 12);
+      const old = (await getItem(db, id))?.data || {};
+      const d = cleanPost(b, old);
+      if (d.title.length < 3) fail(400, 'Yazı başlığı girin.');
+      if (d.slug.length < 2) fail(400, 'Yazı adresi girin.');
+      const st = await siteState(db); const other = st.blog[d.slug]; if (other && other.id !== id) fail(409, 'Bu adreste başka bir yazı var. Adresi değiştirin.');
+      d.created = old.created || now(); d.updated = now();
+      await db.batch([putItem(db, id, 'blog_post', 'owner', d), audit(db, actor, 'blog.save', d.slug)]); invalidateSite();
+      return json({ok: true, id, path: '/blog/' + d.slug + '/'});
+    }
+    if (route === 'blog/delete') { const id = clean(b.id, 80); if (!/^blog-/.test(id)) fail(400, 'Geçersiz yazı.'); await db.batch([q(db, "DELETE FROM items WHERE id=? AND kind='blog_post'", id), audit(db, actor, 'blog.delete', id)]); invalidateSite(); return json({ok: true}); }
+    if (route === 'blog/preview') { const d = cleanPost(b); d.slug ||= 'onizleme'; const r = await renderPage(db, '/blog/' + d.slug + '/', {preview: {blog: d}}); return json({html: r.html}); }
     fail(404, 'İşlem bulunamadı.');
   }
   if (route.startsWith('kyc-credits/') && req.method === 'POST') {

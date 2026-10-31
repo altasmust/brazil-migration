@@ -1,0 +1,29 @@
+/* Site Yönetimi → Blog */
+.bmb-t{display:flex;align-items:center;gap:12px}.bmb-t img,.bmb-noimg{width:64px;height:44px;border-radius:8px;object-fit:cover;flex:none;background:#eef1ec;display:grid;place-items:center;color:#9aa69e}
+.bmb-ed .bms-side.left{width:min(640px,54vw)}
+.bmb-sec{display:grid;gap:10px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.bmb-sec:last-child{border-bottom:0}
+.bmb-sec h3 small{font-weight:500;color:var(--muted);font-size:12px}
+.bmb-cover{border:1px dashed var(--line);border-radius:10px;min-height:90px;display:grid;place-items:center;overflow:hidden;color:var(--muted);background:#fbfcf9}
+.bmb-cover img{width:100%;max-height:200px;object-fit:cover;display:block}
+.bmb-cover span{display:flex;align-items:center;gap:6px}
+.bmb-tools{display:flex;flex-wrap:wrap;gap:4px;padding:6px;border:1px solid var(--line);border-radius:10px 10px 0 0;background:#f6f8f4;position:sticky;top:-18px;z-index:2}
+.bmb-tools button{min-width:32px;height:32px;border:1px solid transparent;border-radius:7px;background:none;cursor:pointer;font:600 13px Poppins,sans-serif;color:#34463a;display:grid;place-items:center;padding:0 6px}
+.bmb-tools button:hover{background:#fff;border-color:var(--line)}.bmb-tools button.on{background:#e8f3ef;color:var(--teal)}
+.bmb-tools .bms-i{width:16px;height:16px}.bmb-tools i{width:1px;background:var(--line);margin:4px 3px}
+.bmb-rte{min-height:380px;max-height:none;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;padding:16px 18px;margin-top:-10px;outline:none;font-size:14.5px;line-height:1.75;color:#183b2c;background:#fff;font-weight:400}
+.bmb-rte:focus{border-color:#9cc7b5}
+.bmb-rte h2{font-size:20px;margin:22px 0 8px;padding-left:10px;border-left:3px solid #4caf50}.bmb-rte h3{font-size:16.5px;margin:16px 0 6px}
+.bmb-rte p{margin:0 0 10px}.bmb-rte ul,.bmb-rte ol{padding-left:22px;margin:0 0 10px}
+.bmb-rte img{max-width:100%;height:auto;border-radius:8px;display:block}.bmb-rte figure{margin:12px 0}.bmb-rte figcaption{font-size:12px;color:#68776b}
+.bmb-rte blockquote{border-left:3px solid #d7eca4;margin:10px 0;padding-left:12px;color:#68776b;font-style:italic}
+.bmb-rte table{border-collapse:collapse;width:100%;font-size:13px;margin:10px 0}.bmb-rte td,.bmb-rte th{border:1px solid var(--line);padding:6px 8px;vertical-align:top}
+.bmb-rte .bl-tip,.bmb-rte .bl-warn,.bmb-rte .bl-note{padding:10px 14px;border-radius:10px;margin:10px 0}
+.bmb-rte .bl-tip{background:#eef7e4}.bmb-rte .bl-warn{background:#fff6e0}.bmb-rte .bl-note{background:#f1f5ec}
+.bmb-rte .bl-tip:before{content:'İpucu kutusu';display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#4c7a3a}.bmb-rte .bl-warn:before{content:'Uyarı kutusu';display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a6d16}.bmb-rte .bl-note:before{content:'Not kutusu';display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#68776b}
+.bmb-src{min-height:380px;font:12.5px/1.6 ui-monospace,Menlo,monospace;margin-top:-10px;border-radius:0 0 10px 10px}
+.bmb-serp{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:3px;background:#fff}
+.bmb-serp small{color:#4d5f53;font-size:12px}.bmb-serp b{color:#1a0dab;font-weight:500;font-size:16px}.bmb-serp span{color:#4d5156;font-size:13px;line-height:1.5}
+@media (max-width:900px){.bmb-ed .bms-side.left{width:100%;max-height:55vh}}
+#bmb-root code{word-break:break-all;white-space:normal}
+.bmb-acts{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;min-width:250px}.bmb-acts .btn{margin:0;float:none;height:34px;font-size:12.5px;padding:0 12px;display:inline-flex;align-items:center;gap:6px}

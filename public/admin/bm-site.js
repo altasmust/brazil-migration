@@ -213,7 +213,7 @@ P.postMessage({type:'ready'},'*')})();`;
       form.querySelectorAll('[data-i]').forEach(el => el.oninput = () => { const [bi, ii, k] = el.dataset.i.split('.'); P0.blocks[bi].items[ii][k] = el.value; preview(); });
       $('#bms-nb').onchange = e => { if (!e.target.value) return; P0.blocks.push(NEWB[e.target.value]()); draw(); preview(); form.scrollTop = form.scrollHeight; };
     };
-    const slugify = s => String(s).toLocaleLowerCase('tr').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+    const slugify = s => String(s).toLocaleLowerCase('tr').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
     form.onclick = async e => {
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.bmv) { const [i, d] = b.dataset.bmv.split('|').map(Number); const j = i + d; [P0.blocks[i], P0.blocks[j]] = [P0.blocks[j], P0.blocks[i]]; draw(); preview(); }

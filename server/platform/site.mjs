@@ -5,6 +5,7 @@ import {readFile, readdir, stat} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {parse} from 'node-html-parser';
+import {BLOG_POST, blogIndexHTML, blogPostHTML, blogJsonLd} from './blog.mjs';
 
 const PUBLIC = () => join(/* turbopackIgnore: true */ process.cwd(), 'public');
 export const PANEL = /^\/(admin|panel|partner|avukat|kyc)(\/|$)/;
@@ -48,14 +49,15 @@ let state = null, stateAt = 0;
 export function invalidateSite() { stateAt = 0; renderCache.clear(); }
 export async function siteState(db) {
   if (state && Date.now() - stateAt < 15000) return state;
-  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom')").all()).results || [];
-  const s = {menu: null, pages: {}, custom: {}, stamp: ''};
+  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post')").all()).results || [];
+  const s = {menu: null, pages: {}, custom: {}, blog: {}, stamp: ''};
   let stamp = rows.length;
   for (const r of rows) {
     const d = parseJSON(r.data); stamp += ':' + r.updated;
     if (r.kind === 'site_menu') s.menu = d;
     if (r.kind === 'site_page' && d.path) s.pages[d.path] = d;
     if (r.kind === 'site_custom' && d.path) s.custom[d.path] = {...d, id: r.id};
+    if (r.kind === 'blog_post' && d.slug) s.blog[d.slug] = {...d, id: r.id};
   }
   s.stamp = hash(stamp);
   if (state?.stamp !== s.stamp) renderCache.clear();
@@ -242,6 +244,36 @@ async function renderCustom(page, path) {
   return root;
 }
 
+// ---------- blog ----------
+async function renderBlog(path, st, preview) {
+  const sh = await shell(); if (!sh) return null;
+  const posts = Object.values(st?.blog || {}).filter(p => p.published);
+  const m = BLOG_POST.exec(path);
+  const post = preview || (m ? st?.blog[m[1]] : null);
+  if (m && !preview && !post?.published) return null;
+  const root = parseHTML(sh);
+  root.querySelector('main#main').set_content(post ? blogPostHTML(post, posts) : blogIndexHTML(posts));
+  root.querySelector('body')?.setAttribute('data-page', 'blog');
+  const head = root.querySelector('head');
+  head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/blog.css?v=1">' + (post ? blogJsonLd(post) : ''));
+  root.querySelectorAll('head link[rel="stylesheet"]').filter(l => /kaynak/.test(l.getAttribute('href') || '')).forEach(l => l.remove());
+  root.querySelectorAll('body script').filter(s => /\/bm\/(?!session)/.test(s.getAttribute('src') || '')).forEach(s => s.remove());
+  root.querySelector('body').insertAdjacentHTML('beforeend', '<script src="/bm/blog.js?v=1" defer></script>');
+  if (post) {
+    applySeo(root, '/blog/' + post.slug + '/', {title: post.seo?.title || post.title + ' | Brazil Migration Blog', description: post.seo?.description || post.excerpt || '', image: post.cover, noindex: post.seo?.noindex || !!preview});
+    const h = root.querySelector('head'); setMeta(h, 'property', 'og:type', 'article'); setMeta(h, 'property', 'article:published_time', post.date); if (post.modified) setMeta(h, 'property', 'article:modified_time', post.modified);
+  } else applySeo(root, '/blog/', {title: 'Blog: Brezilya’da oturum, vatandaşlık ve yaşam rehberi | Brazil Migration', description: 'Brezilya oturum izni, vatandaşlık, şirket kurulumu ve São Paulo’da yaşam üzerine kaynaklı, güncel Türkçe rehber yazılar.'});
+  return root;
+}
+
+// ---------- arrows: "↗"/"↔" render as emoji on some phones → inline SVG-mask icon (see /bm/arrows.js) ----------
+const ARR_SVG = d => `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='${d}'/%3E%3C/svg%3E")`;
+const ARR_CSS = `<style id="bm-arr-css">.bm-arr{display:inline-block;width:.8em;height:.8em;vertical-align:-.06em;background-color:currentColor;-webkit-mask:${ARR_SVG('M7 17 17 7M8.5 7H17v8.5')} center/contain no-repeat;mask:${ARR_SVG('M7 17 17 7M8.5 7H17v8.5')} center/contain no-repeat;flex:none}.bm-arr.lr{width:1em;-webkit-mask-image:${ARR_SVG('M7 8 3 12l4 4M17 8l4 4-4 4M3 12h18')};mask-image:${ARR_SVG('M7 8 3 12l4 4M17 8l4 4-4 4M3 12h18')}}</style>`;
+export function arrowize(html) {
+  return html.split(/(<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<textarea[\s\S]*?<\/textarea>|<[^>]+>)/i).map((seg, i) => i % 2 ? seg : seg.replace(/↗\uFE0F?/g, '<bm-arr class="bm-arr" aria-hidden="true"></bm-arr>').replace(/↔\uFE0F?/g, '<bm-arr class="bm-arr lr" aria-hidden="true"></bm-arr>')).join('')
+    .replace('</head>', ARR_CSS + '</head>').replace(/<\/body>(?![\s\S]*<\/body>)/, '<script src="/bm/arrows.js?v=1" defer></script></body>');
+}
+
 // ---------- render ----------
 const renderCache = new Map();
 export async function renderPage(db, path, {editor = false, preview = null} = {}) {
@@ -251,18 +283,21 @@ export async function renderPage(db, path, {editor = false, preview = null} = {}
   const staticHtml = await readStatic(path);
   const page = st?.pages[path] || {};
   let root, status = 200;
-  if (preview) root = await renderCustom(preview, path);
+  if (preview?.blog) root = await renderBlog(path, st || await siteState(db), preview.blog);
+  else if (preview) root = await renderCustom(preview, path);
   else if (staticHtml) {
     if (page.hidden && !editor) return {status: 404, html: await notFound(db)};
     root = parseHTML(staticHtml);
     applyOverrides(root, page.overrides, editor);
     if (!editor) applySeo(root, path, page.seo);
-  } else if (st?.custom[path] && (st.custom[path].published || editor)) root = await renderCustom(st.custom[path], path);
+  } else if (path === '/blog/' || BLOG_POST.test(path)) root = await renderBlog(path, st);
+  else if (st?.custom[path] && (st.custom[path].published || editor)) root = await renderCustom(st.custom[path], path);
   else return {status: 404, html: await notFound(db)};
   if (!root) return {status: 404, html: await notFound(db)};
   if (st?.menu || preview) applyMenu(root, (st || await siteState(db)).menu);
   let html = '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
   if (siteUrl()) html = html.replace(OLD_HOSTS, siteUrl());
+  html = arrowize(html);
   const out = {status, html};
   if (!editor && !preview) { if (renderCache.size > 200) renderCache.clear(); renderCache.set(ckey, out); }
   return out;
@@ -273,7 +308,7 @@ async function notFound(db) {
   root.querySelector('main#main')?.set_content('<section class="wrap" style="padding:90px 0 110px;text-align:center"><div class="kicker">404</div><h1 style="margin:10px 0 14px">Aradığınız sayfa bulunamadı.</h1><p style="color:var(--muted)">Sayfa taşınmış veya kaldırılmış olabilir.</p><p><a class="btn" href="/">Ana sayfaya dön ↗</a></p></section>');
   const t = root.querySelector('title'); if (t) t.set_content('Sayfa bulunamadı | Brazil Migration');
   try { const st = await siteState(db); if (st.menu) applyMenu(root, st.menu); } catch {}
-  return '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
+  return arrowize('<!doctype html>' + root.toString().replace(/^<!doctype html>/i, ''));
 }
 
 // Editor document: the page with saved changes applied, every editable element tagged, scripts removed.
@@ -295,5 +330,8 @@ export async function sitemapXML(db) {
   const today = new Date().toISOString().slice(0, 10);
   const urls = (await staticPages()).filter(p => !st.pages[p.path]?.hidden && !st.pages[p.path]?.seo?.noindex && !['/giris/', '/icerik-plani/'].includes(p.path)).map(p => p.path);
   for (const c of Object.values(st.custom)) if (c.published && !c.seo?.noindex) urls.push(c.path);
-  return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${esc(base + u)}</loc><lastmod>${today}</lastmod></url>`).join('')}</urlset>`;
+  const posts = Object.values(st.blog).filter(p => p.published && !p.seo?.noindex);
+  if (posts.length) urls.push('/blog/');
+  const lm = {}; for (const p of posts) { urls.push('/blog/' + p.slug + '/'); lm['/blog/' + p.slug + '/'] = p.modified || p.date; }
+  return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${esc(base + u)}</loc><lastmod>${lm[u] || today}</lastmod></url>`).join('')}</urlset>`;
 }
