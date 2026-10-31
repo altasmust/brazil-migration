@@ -27,7 +27,14 @@ class Statement {
 }
 
 class Database {
-  constructor(client) { this.client = client; this._ready = null; }
+  constructor(client, remote) { this.client = client; this.remote = remote || null; this.mode = remote ? 'replica' : 'direct'; this._ready = null; }
+  // Embedded replica: a local copy of the Turso database that reads come from (no network round trip);
+  // writes still go to Turso and the copy re-syncs every TURSO_SYNC_SECONDS. If the first sync fails, Turso is used directly.
+  async connect() {
+    if (!this.remote) return;
+    try { await Promise.race([this.client.sync(), new Promise((_, no) => setTimeout(() => no(new Error('sync timeout')), 20000))]); }
+    catch (e) { console.error('[db] replica sync failed, using Turso directly:', e.message); try { this.client.close(); } catch {} this.client = this.remote(); this.remote = null; this.mode = 'direct (replica failed)'; }
+  }
   prepare(sql) { return new Statement(this, sql); }
   async batch(stmts) {
     await this.ready();
@@ -36,7 +43,7 @@ class Database {
     return rs.map(r => ({success: true, meta: {changes: r.rowsAffected}, results: r.rows.map(row => toObject(r, row))}));
   }
   async exec(sql) { await this.ready(); return this.client.executeMultiple(sql); }
-  ready() { return this._ready ??= migrate(this.client).then(() => migrateOwner(this.client)).then(() => seedBlog(this.client, cleanPost)).then(() => migrateMenuV2(this.client)).then(() => migrateMenuV3(this.client)).then(() => loadConfig(this.client)).then(() => seedDemo(this.client)).catch(e => { this._ready = null; throw e; }); }
+  ready() { return this._ready ??= this.connect().then(() => migrate(this.client)).then(() => migrateOwner(this.client)).then(() => seedBlog(this.client, cleanPost)).then(() => migrateMenuV2(this.client)).then(() => migrateMenuV3(this.client)).then(() => loadConfig(this.client)).then(() => seedDemo(this.client)).catch(e => { this._ready = null; throw e; }); }
 }
 
 async function migrate(client) {
@@ -63,15 +70,23 @@ export function findTurso(env) {
 export function getDatabase() {
   if (shared) return shared;
   const {url, authToken} = findTurso(process.env);
-  let client;
-  if (url) client = createClient({url, authToken});
+  let client, remote = null;
+  const replica = url && /^(1|on|true|yes)$/i.test(process.env.TURSO_REPLICA || '') && !process.env.VERCEL;
+  if (replica) {
+    try {
+      const file = process.env.TURSO_REPLICA_FILE || '.data/replica.db';
+      mkdirSync(dirname(file), {recursive: true});
+      client = createClient({url: 'file:' + file, syncUrl: url, authToken, syncInterval: Math.max(5, Number(process.env.TURSO_SYNC_SECONDS) || 15)});
+      remote = () => createClient({url, authToken});
+    } catch (e) { console.error('[db] replica unavailable, using Turso directly:', e.message); client = createClient({url, authToken}); remote = null; }
+  } else if (url) client = createClient({url, authToken});
   else {
     if (process.env.VERCEL) throw Object.assign(new Error('TURSO_DATABASE_URL tanımlı değil.'), {status: 503});
     const file = process.env.LOCAL_DB_FILE || '.data/local.db';
     mkdirSync(dirname(file), {recursive: true});
     client = createClient({url: 'file:' + file});
   }
-  shared = new Database(client);
+  shared = new Database(client, remote);
   return shared;
 }
 export function createMemoryDatabase() { return new Database(createClient({url: ':memory:'})); }

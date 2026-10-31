@@ -34,3 +34,6 @@ Yönetim paneli: `https://yonetim.alanadiniz.com/admin/giris/` · Herkes için g
 
 ## 4. Güncelleme
 Yeni bir zip geldiğinde: Web App → Deployments → yeni dosyayı yükleyip yeniden dağıtın. Ortam değişkenleri korunur.
+
+## Hız: yerel veritabanı kopyası (önerilir)
+Turso veritabanı ABD'de (aws-us-east-1) olduğu için her sorgu ~100 ms sürer. Ortam değişkenlerine `TURSO_REPLICA` = `on` ekleyip uygulamayı yeniden başlatın: sunucu `.data/replica.db` adlı yerel bir kopya tutar, okumalar internete çıkmadan yapılır, yazmalar yine Turso'ya gider ve kopya 15 saniyede bir eşitlenir (`TURSO_SYNC_SECONDS`). Kopya kurulamazsa uygulama otomatik olarak Turso'ya doğrudan bağlanır. Admin → Ayarlar → Sistem Durumu'nda "hızlı mod" yazısını görmelisiniz.

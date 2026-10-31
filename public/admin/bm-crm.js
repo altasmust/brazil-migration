@@ -478,11 +478,11 @@
     const g = grade(h.db.ms);
     $('#bmc-root').innerHTML = heading('Sistem Durumu') + `<div class="bmc-stats">
       <article class="bmc-stat">${I('activity')}<div><small>Veritabanı gecikmesi</small><b>${h.db.ms} ms</b><span><span class="bmc-login ${g[0]}">${g[1]}</span> · ölçümler: ${h.db.samples.join(' / ')} ms</span></div></article>
-      <article class="bmc-stat">${I('globe')}<div><small>Veritabanı konumu</small><b>${esc(h.db.region)}</b><span>${h.db.remote ? 'Turso (uzak)' : 'Sunucu üzerinde'}</span></div></article>
+      <article class="bmc-stat">${I('globe')}<div><small>Veritabanı konumu</small><b>${esc(h.db.region)}</b><span>${h.db.mode === 'replica' ? 'Turso + sunucuda yerel kopya (hızlı mod)' : h.db.remote ? 'Turso (uzak, her sorgu internetten)' : 'Sunucu üzerinde'}</span></div></article>
       <article class="bmc-stat">${I('send')}<div><small>Bu sayfanın yanıt süresi</small><b>${total} ms</b><span>Tarayıcı → sunucu → veritabanı</span></div></article>
       <article class="bmc-stat">${I('shield')}<div><small>Sunucu</small><b>${Math.floor(h.uptime / 60)} dk açık</b><span>Node ${esc(h.node)} · ${h.memoryMb} MB bellek</span></div></article></div>
       <section class="panel"><header class="panel-head">${I('note')}<h2>Ne anlama geliyor?</h2></header><div class="bmc-notes">
-      <div class="bmc-note"><p><b>Veritabanı gecikmesi</b></p><small>Her sayfa açılışında 5–20 veritabanı sorgusu yapılır. Gecikme 100 ms’nin üzerindeyse sayfalar 1–2 saniye bekler. Bunun en sık nedeni veritabanının sunucudan uzak bir bölgede (ör. ABD) olmasıdır.</small></div>
+      <div class="bmc-note"><p><b>Veritabanı gecikmesi</b></p><small>Her sayfa açılışında 5–20 veritabanı sorgusu yapılır. Gecikme 100 ms’nin üzerindeyse sayfalar 1–2 saniye bekler. Bunun en sık nedeni veritabanının sunucudan uzak bir bölgede (ör. ABD) olmasıdır.${h.db.remote && h.db.mode !== 'replica' ? ' <b>Hızlandırmak için:</b> Hostinger → Ortam değişkenlerine <code>TURSO_REPLICA</code> = <code>on</code> ekleyip uygulamayı yeniden başlatın. Sunucu veritabanının yerel bir kopyasını tutar; okumalar internete çıkmadan yapılır.' : ''}</small></div>
       <div class="bmc-note"><p><b>Sunucu süresi</b></p><small>“Açık” süresi sık sık sıfırlanıyorsa uygulama yeniden başlıyor demektir; bu sırada sayfalarda “Sunucuya ulaşılamadı” görülebilir.</small></div>
       <div class="bmc-note"><p><b>Durum</b></p><small>E-posta: ${h.mail === 'smtp' ? 'SMTP' : h.mail === 'resend' ? 'Resend' : 'test modu'} · Didit: ${h.didit ? 'etkin' : 'kapalı'} · Otomatik belge kontrolü: ${h.ai ? 'etkin' : 'kapalı'}</small></div></div></section>`;
   });

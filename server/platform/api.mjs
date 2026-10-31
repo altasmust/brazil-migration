@@ -579,7 +579,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const t = [];
     for (let i = 0; i < 3; i++) { const a = performance.now(); await one(db, 'SELECT 1 AS ok'); t.push(performance.now() - a); }
     const dbUrl = process.env.TURSO_DATABASE_URL || process.env.LIBSQL_URL || '';
-    return json({db: {ms: Math.round(t.reduce((x, y) => x + y, 0) / t.length), samples: t.map(Math.round), remote: !!dbUrl, region: (dbUrl.match(/\.([a-z]+-[a-z]+-\d)\.turso\.io/) || [])[1] || (dbUrl ? 'bilinmiyor' : 'yerel dosya')}, node: process.version, uptime: Math.round(process.uptime()), memoryMb: Math.round(process.memoryUsage().rss / 1048576), mail: mailProvider(), didit: diditReady(process.env), ai: verifierConfigured()});
+    return json({db: {ms: Math.round(t.reduce((x, y) => x + y, 0) / t.length), samples: t.map(Math.round), remote: !!dbUrl, mode: db.mode || 'direct', region: (dbUrl.match(/\.((?:aws|gcp|fly)-[a-z0-9-]+?-\d+|[a-z]{3})\.turso\.io/) || [])[1] || (dbUrl ? 'bilinmiyor' : 'yerel dosya')}, node: process.version, uptime: Math.round(process.uptime()), memoryMb: Math.round(process.memoryUsage().rss / 1048576), mail: mailProvider(), didit: diditReady(process.env), ai: verifierConfigured()});
   }
   if (route === 'kyc-credits' && req.method === 'GET') {
     const advisors = await rows(db, "SELECT id, name, email, status FROM people WHERE role='advisor' ORDER BY name");
