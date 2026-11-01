@@ -735,6 +735,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const ops = [];
     for (const x of [p, ...subs]) ops.push(q(db, "DELETE FROM items WHERE owner=? AND kind NOT IN ('invoice','payment','audit')", x.id), q(db, 'DELETE FROM people WHERE id=?', x.id));
     if (moved) ops.push(q(db, "UPDATE people SET advisor='owner' WHERE advisor=?", id));
+    if (/@demo\.bm$/i.test(p.email) || p.id.startsWith('demo-')) ops.push(putItem(db, 'demo-cleared', 'config', 'owner', {at: now()}));
     ops.push(audit(db, actor, 'account.delete', `${p.name} <${p.email}>`));
     await db.batch(ops);
     for (const x of [p, ...subs]) await dropAuth(x.uid);
