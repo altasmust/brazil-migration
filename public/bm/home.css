@@ -77,3 +77,13 @@ body[data-page="home"] span.bm-ico svg{display:block;margin:0}
 /* güven kartları footer üstünde */
 .bm-ribbon-wrap{padding-top:10px;padding-bottom:56px}.bm-ribbon-wrap .bm-ribbon{margin:0}
 @media (max-width:760px){.bm-ribbon-wrap{padding-bottom:36px}}
+/* dünya haritası bölümü: daha kısa */
+.world-section{padding-top:56px!important;padding-bottom:40px!important}
+.world-section h2{margin-bottom:12px!important}
+.world-stage{min-height:0!important;padding-bottom:24px!important}
+.country-strip{display:flex!important;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:thin;border-left:0!important;border-top:1px solid #314d3e!important;border-bottom:1px solid #314d3e;-webkit-overflow-scrolling:touch}
+.country-strip button{flex:0 0 auto;min-width:150px;scroll-snap-align:start;border-bottom:0!important;padding:14px 16px!important}
+.country-strip::-webkit-scrollbar{height:4px}.country-strip::-webkit-scrollbar-thumb{background:#47664b;border-radius:4px}
+.world-section .map-bottom{padding-top:18px!important;margin-top:0!important}
+.world-section p.map-note{margin-top:12px!important}
+@media (max-width:760px){.world-section{padding-top:40px!important}.country-strip button{min-width:132px}.world-section .map-bottom{gap:14px}}

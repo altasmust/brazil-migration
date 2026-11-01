@@ -165,3 +165,19 @@ export async function migrateMenuV4(client) {
   }
   await client.execute({sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('migration-menu-v4','migration','owner','{}',?,?)", args: [now, now]});
 }
+
+// One-time: drop the footer "Danışmanlık yaklaşımımız" link (duplicates Hakkımızda) from a saved menu.
+export async function migrateMenuV5(client) {
+  const done = await client.execute({sql: "SELECT id FROM items WHERE id='migration-menu-v5'", args: []});
+  if (done.rows.length) return;
+  const now = Date.now();
+  const m = (await client.execute({sql: "SELECT data FROM items WHERE id='site-menu'", args: []})).rows[0];
+  if (m) {
+    try {
+      const menu = JSON.parse(m[0] ?? m.data);
+      for (const c of menu.footer?.cols || []) c.links = (c.links || []).filter(l => l.href !== '/#yaklasim');
+      await client.execute({sql: "UPDATE items SET data=?, updated=? WHERE id='site-menu'", args: [JSON.stringify(menu), now]});
+    } catch {}
+  }
+  await client.execute({sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('migration-menu-v5','migration','owner','{}',?,?)", args: [now, now]});
+}
