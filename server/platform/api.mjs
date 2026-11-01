@@ -6,6 +6,7 @@ import {
 } from './auth.mjs';
 import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
 import {applyConfig} from './config.mjs';
+import {loadSplits, cleanSplits, splitFor, serviceKey, SPLIT_DEFAULTS} from './commission.mjs';
 import {wafState, unban, clearEvents, cleanIps, clientIp} from '../waf.mjs';
 import {cleanPost, readMinutes} from './blog.mjs';
 import {loadPayments, publicView as paymentsView, savePayment, enabledMethods} from './payments.mjs';
@@ -714,6 +715,35 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     await db.batch(ops);
     return json({ok: true});
   }
+  if (route === 'accounts/delete' && req.method === 'POST') {
+    const id = clean(b.id, 80);
+    const dropAuth = async uid => {
+      if (!uid) return;
+      if (await one(db, 'SELECT id FROM people WHERE uid=? LIMIT 1', uid) || await one(db, 'SELECT id FROM law_accounts WHERE uid=? LIMIT 1', uid)) return;
+      await db.batch([q(db, 'DELETE FROM auth_sessions WHERE user=?', uid), q(db, 'DELETE FROM auth_tokens WHERE user=?', uid), q(db, 'DELETE FROM auth_users WHERE id=?', uid)]);
+    };
+    if (id.startsWith('law:')) {
+      const a = await one(db, "SELECT id, uid, email FROM law_accounts WHERE id=? AND role!='owner'", id.slice(4)); if (!a) fail(404, 'Hesap bulunamadı.');
+      await db.batch([q(db, 'DELETE FROM law_sessions WHERE owner=?', a.id), q(db, 'DELETE FROM law_accounts WHERE id=?', a.id), audit(db, actor, 'account.delete', a.email)]);
+      await dropAuth(a.uid); return json({ok: true});
+    }
+    const p = await one(db, "SELECT * FROM people WHERE id=? AND role!='owner'", id); if (!p) fail(404, 'Hesap bulunamadı.');
+    const subs = p.role === 'advisor' ? await rows(db, "SELECT id, uid FROM people WHERE manager=? AND id!=? AND role='employee'", id, id) : [];
+    const moved = p.role === 'advisor' ? Number((await one(db, 'SELECT COUNT(*) AS n FROM people WHERE advisor=?', id))?.n || 0) : 0;
+    const ops = [];
+    for (const x of [p, ...subs]) ops.push(q(db, "DELETE FROM items WHERE owner=? AND kind NOT IN ('invoice','payment','audit')", x.id), q(db, 'DELETE FROM people WHERE id=?', x.id));
+    if (moved) ops.push(q(db, "UPDATE people SET advisor='owner' WHERE advisor=?", id));
+    ops.push(audit(db, actor, 'account.delete', `${p.name} <${p.email}>`));
+    await db.batch(ops);
+    for (const x of [p, ...subs]) await dropAuth(x.uid);
+    return json({ok: true, moved, subs: subs.length});
+  }
+  if (route === 'commission' && req.method === 'GET') return json({splits: await loadSplits(db)});
+  if (route === 'commission' && req.method === 'POST') {
+    const data = {...cleanSplits(b.splits), updated: now()};
+    await db.batch([putItem(db, 'config-commission', 'config', 'owner', data), audit(db, actor, 'settings.commission', '')]);
+    return json({splits: await loadSplits(db)});
+  }
   if (route === 'accounts/invite' && req.method === 'POST') {
     const id = clean(b.id, 80);
     const row = id.startsWith('law:') ? await one(db, 'SELECT email, data FROM law_accounts WHERE id=?', id.slice(4)) : await one(db, 'SELECT email, name FROM people WHERE id=?', id);
@@ -858,7 +888,8 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const currency = ['USD', 'BRL', 'EUR', 'TRY'].includes(b.currency) ? b.currency : 'USD', number = clean(b.number, 40) || 'BM-' + String(now()).slice(-6);
     const status = ['Ödenmedi', 'Ödendi', 'İptal'].includes(b.status) ? b.status : 'Ödenmedi', id = 'inv-' + uuid().slice(0, 16);
     const advisor = p.role === 'customer' && p.advisor && p.advisor !== 'owner' ? p.advisor : null;
-    const data = {title: clean(b.title, 160) || `Fatura ${number}`, number, amount, currency, status, issued: clean(b.issued, 10), due: clean(b.due, 10), lines, discount, notes: clean(b.notes, 2000), advisor, rate: Math.max(0, Math.min(100, Number(b.rate) || 0)), createdBy: 'admin', ...(status === 'Ödendi' ? {reference: clean(b.reference, 200) || 'Yönetim kaydı', paidAt: now(), confirmedBy: actor} : {})};
+    const service = serviceKey(b.service), split = splitFor(await loadSplits(db), service);
+    const data = {title: clean(b.title, 160) || `Fatura ${number}`, number, amount, currency, status, issued: clean(b.issued, 10), due: clean(b.due, 10), lines, discount, notes: clean(b.notes, 2000), advisor, service, split: {owner: split.owner, cost: split.cost, advisor: split.advisor}, rate: advisor ? split.advisor : 0, createdBy: 'admin', ...(status === 'Ödendi' ? {reference: clean(b.reference, 200) || 'Yönetim kaydı', paidAt: now(), confirmedBy: actor} : {})};
     const ops = [putItem(db, id, 'invoice', p.id, data), notice(db, p.id, `Yeni faturanız var: ${data.title}`, 'finance'), audit(db, actor, 'invoice.create', id)];
     if (status === 'Ödendi' && advisor) ops.push(q(db, 'INSERT OR IGNORE INTO ledger VALUES(?,?,?,?,?,?,?)', uuid(), id, p.id, advisor, amount, Math.round(amount * data.rate / 100), now()));
     await db.batch(ops);

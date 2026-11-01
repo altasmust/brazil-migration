@@ -130,3 +130,6 @@ textarea.bmy-in{height:auto;padding:10px 12px;resize:vertical}.bmy-in.mono{font-
 [data-theme=dark] .bmw-card{background:#141c17;border-color:#26332a}[data-theme=dark] .bmw-hero{background:#2a1715;border-color:#4a2622}[data-theme=dark] .bmw-hero.on{background:#13251a;border-color:#2a4532}[data-theme=dark] .bmw-card code{background:#1e2a22}[data-theme=dark] .bmw-t td,[data-theme=dark] .bmw-t th{border-color:#223027}
 .bmw .bmi-stats{grid-template-columns:repeat(4,1fr)}.bmw-card>.btn{justify-self:start}
 @media (max-width:760px){.bmw .bmi-stats{grid-template-columns:1fr 1fr}.bmw-hero{flex-wrap:wrap}}
+.bmi-rt input{width:76px}.bmi-rt td,.bmi-rt th{padding:8px}.bmi-sum{font-weight:700}
+.bmi-rt .bmi-in{width:78px!important;min-width:0!important}.bmi-rt th:first-child{min-width:130px}
+.bmc-table table.bmi-rt{min-width:0!important;width:100%}

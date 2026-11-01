@@ -58,13 +58,12 @@
   // ---------- hesap türleri ----------
   const KIND = {
     customer: {label: 'Müşteri', icon: 'person', cls: 'k-cus'},
-    partner: {label: 'Partner', icon: 'handshake', cls: 'k-par'},
     advisor: {label: 'Danışman', icon: 'briefcase', cls: 'k-adv'},
     lawyer: {label: 'Avukat', icon: 'scale', cls: 'k-law'},
     accountant: {label: 'Muhasebe', icon: 'calculator', cls: 'k-acc'},
     other: {label: 'Personel', icon: 'badge', cls: 'k-oth'},
   };
-  const kindOf = a => a.type === 'advisor' && a.partner ? 'partner' : (KIND[a.type] ? a.type : 'other');
+  const kindOf = a => KIND[a.type] ? a.type : a.type === 'partner' ? 'advisor' : 'other';
   const kindChip = a => { const k = KIND[kindOf(a)]; return `<span class="bmc-kind ${k.cls}">${I(k.icon)}${k.label}</span>`; };
   const groupOf = a => D.groups.find(g => g.id === a.group);
   const groupChip = g => g ? `<span class="bmc-grp" style="--g:${esc(g.color)}">${I(g.icon)}${esc(g.name)}</span>` : '<span class="bmc-none">—</span>';
@@ -88,7 +87,7 @@
     const waiting = L.filter(a => a.login !== 'Aktif').length;
     const pend = D.partners ?? '…';
     const shown = filtered();
-    return `<div class="account-stats">${card('Müşteriler', act('customer'), 'person')}${card('Partner & Danışman', act('advisor'), 'handshake')}${card('Avukat', act('lawyer'), 'scale')}${card('Muhasebe & Personel', L.filter(a => ['accountant', 'other'].includes(kindOf(a))), 'calculator')}</div>
+    return `<div class="account-stats">${card('Müşteriler', act('customer'), 'person')}${card('Danışmanlar', act('advisor'), 'handshake')}${card('Avukat', act('lawyer'), 'scale')}${card('Muhasebe & Personel', L.filter(a => ['accountant', 'other'].includes(kindOf(a))), 'calculator')}</div>
       <div class="customer-band"><div>${I('users')}<span><small>Toplam hesap</small><b>${L.length}</b></span></div><div>${I('key')}<span><small>Girişi tamamlanmamış</small><b>${waiting}</b></span></div><div>${I('handshake')}<span><small>İncelenecek partner başvurusu</small><b><a href="#partnerler">${pend}</a></b></span></div><div>${I('calendar')}<span><small>Son 30 gün yeni hesap</small><b>${recent}</b></span></div></div>
       <section class="panel bmc-list"><div class="bmc-tools">
         <label class="bmc-search">${I('search', 'sr')}<input id="bmc-q" placeholder="Ara… (ad, e-posta, telefon, şehir)" value="${esc(F.q)}"><em>${shown.length} kayıt</em></label>
@@ -140,8 +139,10 @@
     $$('.bmc-menu').forEach(x => x.remove());
     const a = D.accounts.find(x => x.id === btn.dataset.menu); if (!a) return;
     const m = document.createElement('div'); m.className = 'bmc-menu';
-    m.innerHTML = [['manage', 'key', 'Hesabı yönet (panele gir)'], ['open', 'person', 'Detayı aç'], ['edit', 'lock', kindOf(a) === 'customer' ? 'Düzenle / danışman ata' : 'Düzenle / izinler'], ['invite', 'send', 'Giriş bağlantısı gönder'], ['toggle', 'shield', a.status === 'active' ? 'Pasif yap (giriş kapat)' : 'Aktif yap']].map(([k, i, l]) => `<button data-mi="${k}" data-id="${esc(a.id)}">${I(i)}${l}</button>`).join('');
+    m.innerHTML = [['manage', 'key', 'Hesabı yönet (panele gir)'], ['open', 'person', 'Detayı aç'], ['edit', 'lock', kindOf(a) === 'customer' ? 'Düzenle / danışman ata' : 'Düzenle / izinler'], ['invite', 'send', 'Giriş bağlantısı gönder'], ['toggle', 'shield', a.status === 'active' ? 'Pasif yap (giriş kapat)' : 'Aktif yap'], ['delete', 'trash', 'Hesabı sil']].map(([k, i, l]) => `<button data-mi="${k}" data-id="${esc(a.id)}">${I(i)}${l}</button>`).join('');
     btn.parentElement.style.position = 'relative'; btn.parentElement.appendChild(m);
+    const box = btn.closest('.bmc-table'), rb = m.getBoundingClientRect(), cb = box ? box.getBoundingClientRect() : {bottom: innerHeight};
+    if (rb.bottom > Math.min(cb.bottom, innerHeight) - 4) m.classList.add('up');
     setTimeout(() => document.addEventListener('click', () => m.remove(), {once: true}), 0);
   }
   async function rowAction(k, id) {
@@ -151,6 +152,11 @@
       if (k === 'open') location.hash = '#account/' + encodeURIComponent(id);
       if (k === 'edit') await window.BMAcc.edit(id);
       if (k === 'invite') { const d = await A('accounts/invite', 'POST', {id}); linkInfo(d); }
+      if (k === 'delete') {
+        const adv = kindOf(a) === 'advisor', n = adv ? D.accounts.filter(x => x.advisor === a.id).length : 0;
+        if (!confirm(`${a.name} (${a.email}) kalıcı olarak silinsin mi?\n\nGiriş hesabı, belgeleri, başvuruları ve notları silinir. Faturalar muhasebe kaydı olarak saklanır.${adv ? `\nBu danışmanın alt hesapları da silinir${n ? `; ${n} müşterisi merkez ofise aktarılır` : ''}.` : ''}\n\nBu işlem geri alınamaz.`)) return;
+        await A('accounts/delete', 'POST', {id}); await load(true); say('Hesap silindi.'); render(); return;
+      }
       if (k === 'toggle') { await A('accounts', 'PATCH', {id, status: a.status === 'active' ? 'disabled' : 'active'}); await load(true); say('Durum güncellendi.'); render(); }
     } catch (err) { say(err.message); }
   }
@@ -254,7 +260,7 @@
     const kd = kindOf(a), isAdv = kd === 'partner' || kd === 'advisor';
     const tabs = [['ozet', 'Özet'], ['profil', 'Profil'],
       ...(kd === 'customer' ? [['dosya', 'Dosyalar'], ['siparis', 'Ürün & Hizmetler'], ['fatura', 'Faturalar']] : []),
-      ...(isAdv ? [['musteri', 'Müşterileri'], ['alt', 'Alt Hesaplar'], ['kredi', 'KYC Kredisi'], ...(kd === 'partner' ? [['evrak', 'Doğrulanmış Evraklar']] : []), ['dosya', 'Dosyalar']] : []),
+      ...(isAdv ? [['musteri', 'Müşterileri'], ['alt', 'Alt Hesaplar'], ['kredi', 'KYC Kredisi'], ...(a.partner ? [['evrak', 'Doğrulanmış Evraklar']] : []), ['dosya', 'Dosyalar']] : []),
       ...(kd !== 'customer' ? [['izin', 'İzinler']] : []), ['not', 'Notlar'], ['etkinlik', 'Etkinlik Kayıtları']];
     if (!tabs.some(t => t[0] === dTab)) dTab = 'ozet';
     const head = `<div class="bmc-dhead"><div><a class="bmc-back" href="#customers">${I('back')} Müşteri Listesi</a><h1>${k.label} Detayı / ${esc(a.name)} <small>(#${esc(String(a.id).replace('law:', '').slice(0, 6))})</small></h1>
@@ -281,7 +287,7 @@
           <a class="btn" href="mailto:${esc(a.email)}">${I('mail')} E-posta yaz</a></div></section>
         <section class="panel"><header class="panel-head">${I('note')}<h2>Son notlar</h2><button class="bmc-link" data-dtab="not">Tümü</button></header><div id="bmc-lastnotes" class="bmc-notes sm"><small class="muted">Yükleniyor…</small></div></section></div>`;
     if (dTab === 'profil') body = profileHTML(a);
-    if (dTab === 'musteri') { const cs = D.accounts.filter(x => kindOf(x) === 'customer' && x.advisor === a.id); body = `<section class="panel"><header class="panel-head">${I('users')}<h2>${esc(a.name)} müşterileri (${cs.length})</h2><a class="bmc-link" href="#yeni">${I('plus')} Yeni müşteri</a></header>${cs.length ? `<div class="bmc-table"><table><thead><tr><th>Ad Soyad</th><th>E-posta / Telefon</th><th>Grup</th><th>Ülke / Şehir</th><th>Kayıt</th><th>Giriş</th><th>Durum</th></tr></thead><tbody>${cs.map(c => `<tr data-go="${esc(c.id)}"><td><div class="bmc-who"><span class="bmc-av">${esc(initials(c.name))}</span><b>${esc(c.name)}</b></div></td><td><span class="bmc-ct">${esc(c.email)}</span>${c.phone ? `<small class="bmc-ct">${esc(c.phone)}</small>` : ''}</td><td>${groupChip(groupOf(c))}</td><td>${esc([c.country, c.city].filter(Boolean).join(' / ') || '—')}</td><td>${day(c.created)}</td><td>${loginChip(c)}</td><td>${statusChip(c)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="bmc-empty sm">${I('users')}<b>Bu ${kd === 'partner' ? 'partnere' : 'danışmana'} atanmış müşteri yok.</b><span>Yeni müşteriler konuma göre en yakın danışmana otomatik atanır; müşteri detayındaki “Düzenle / danışman” ile elle de atayabilirsiniz.</span></div>`}</section>`; }
+    if (dTab === 'musteri') { const cs = D.accounts.filter(x => kindOf(x) === 'customer' && x.advisor === a.id); body = `<section class="panel"><header class="panel-head">${I('users')}<h2>${esc(a.name)} müşterileri (${cs.length})</h2><a class="bmc-link" href="#yeni">${I('plus')} Yeni müşteri</a></header>${cs.length ? `<div class="bmc-table"><table><thead><tr><th>Ad Soyad</th><th>E-posta / Telefon</th><th>Grup</th><th>Ülke / Şehir</th><th>Kayıt</th><th>Giriş</th><th>Durum</th></tr></thead><tbody>${cs.map(c => `<tr data-go="${esc(c.id)}"><td><div class="bmc-who"><span class="bmc-av">${esc(initials(c.name))}</span><b>${esc(c.name)}</b></div></td><td><span class="bmc-ct">${esc(c.email)}</span>${c.phone ? `<small class="bmc-ct">${esc(c.phone)}</small>` : ''}</td><td>${groupChip(groupOf(c))}</td><td>${esc([c.country, c.city].filter(Boolean).join(' / ') || '—')}</td><td>${day(c.created)}</td><td>${loginChip(c)}</td><td>${statusChip(c)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="bmc-empty sm">${I('users')}<b>Bu danışmana atanmış müşteri yok.</b><span>Yeni müşteriler konuma göre en yakın danışmana otomatik atanır; müşteri detayındaki “Düzenle / danışman” ile elle de atayabilirsiniz.</span></div>`}</section>`; }
     if (dTab === 'alt') { const subs = D.accounts.filter(x => x.manager === a.id && x.id !== a.id && x.role === 'employee'); body = `<div class="bmc-grid2"><section class="panel"><header class="panel-head">${I('users')}<h2>Alt hesaplar (${subs.length})</h2></header>${subs.length ? `<div class="bmc-notes">${subs.map(x => `<div class="bmc-sub" data-go="${esc(x.id)}"><span class="bmc-av">${esc(initials(x.name))}</span><div><b>${esc(x.name)}</b><small>${esc(x.email)} · ${esc(x.title || KIND[kindOf(x)].label)}</small></div>${loginChip(x)}${statusChip(x)}</div>`).join('')}</div>` : `<div class="bmc-empty sm">${I('users')}<b>Alt hesap yok.</b><span>Partnerin ekibi için (asistan, muhasebe, satış) ayrı giriş hesapları açın. Her alt hesap partnerin müşterilerini, verdiğiniz izinlerle görür.</span></div>`}</section>
       <section class="panel"><header class="panel-head">${I('plus')}<h2>Yeni alt hesap oluştur</h2></header><form class="bmc-form" id="bmc-sub"><label>Ad soyad<input class="bmc-in" name="name" required minlength="2"></label><label>E-posta<input class="bmc-in" name="email" type="email" required></label><label>Telefon<input class="bmc-in" name="phone"></label><label>Görev / unvan<input class="bmc-in" name="title" placeholder="ör. Asistan, Satış"></label><label class="full">Hesap türü<select class="bmc-in" name="type"><option value="other">Ekip üyesi (personel)</option><option value="accountant">Muhasebe</option></select></label><div class="full bmc-actions"><button class="btn primary">${I('plus')} Alt hesabı oluştur</button><small class="muted">Kişiye şifre belirleme bağlantısı gönderilir. İzinleri sonradan alt hesabın detayından değiştirebilirsiniz.</small></div></form></section></div>`; }
     if (dTab === 'kredi') body = `<section class="panel"><header class="panel-head">${I('shield')}<h2>KYC kredisi · bu ay</h2><a class="bmc-link" href="#krediler">Tüm partner kredileri</a></header><div id="bmc-kredi"><div class="loading" style="padding:30px">Yükleniyor…</div></div></section>`;
