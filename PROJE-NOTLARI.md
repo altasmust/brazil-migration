@@ -244,3 +244,9 @@
 - Kurdeleler: OAB (siyah-altın, terazi arması, "ADVOGADA REGISTRADA · OAB/SP 386.588 · ACG ADVOGADA · DRA. ANA CAROLINA", CNA linki) ve IusJud (lacivert-altın, kalkan "IJ", "IUSJUD VERIFIED · LEGAL PROCESS ASSURANCE"; link yok, kullanıcının kendi markası).
 - Mühürler: Didit KYC (mor, açıksa) · iyzico 3D Secure (kırmızı, açıksa) · SSL (yeşil) · KVKK & LGPD (turkuaz).
 - İçerik dürüst: "WINNER/ödül" ibaresi yok. CSS: style.css v=18 (.ft-awards, .aw, .aw-rib, .aw-ros).
+
+## Güvence rozetleri v4 — ÖNİZLEME (siteye eklenmedi, onay bekliyor)
+- Kaynak: scratchpad/awards/awards.mjs (acgRibbon, iusjudEmblem, kycShield, sslSeal, kvkkRosette) + build.mjs → guvence-rozetleri-onizleme.html.
+- Farklı şekiller: SSL altın tırtıklı mühür · KYC gümüş kalkan (devre + parmak izi, "Right Source" yazısı yok) · ACG lacivert-altın kurdele (ACG monogram, Ana Carolina de Almeida Garcia, OAB/SP 386.588, ortada, en uzun) · IusJud koyu amblem (kalem uçlu J, kurdele, yıldızlar) · KVKK & LGPD kurdeleli rozet (YÖKAK tarzı).
+- IusJud logosundaki "JUSTIÇA FEDERAL" yazısı resmî mahkeme adı olduğu için rozete konmadı; yerine "VERIFIED · yıl".
+- Onaylanınca: site.mjs applyTrust() bu fonksiyonlarla değiştirilecek, Cormorant Garamond fontu eklenecek, iyzico için uyumlu mühür eklenebilir.
