@@ -113,3 +113,20 @@ textarea.bmy-in{height:auto;padding:10px 12px;resize:vertical}.bmy-in.mono{font-
 .bmi-acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.bmi-acts .btn{margin:0;float:none;display:inline-flex;gap:5px;align-items:center;height:32px;font-size:12px;padding:0 10px}
 @media (max-width:800px){.bmi-stats{grid-template-columns:1fr}}
 .bmi-bar .bmi-in{width:auto!important;flex:0 0 auto}.bmi-bar #bmi-q{flex:1 1 320px;max-width:460px}
+
+/* Güvenlik Duvarı */
+.bmw{display:grid;gap:16px}
+.bmw-hero{display:flex;align-items:center;gap:16px;padding:18px 20px;border-radius:16px;background:#fff4f2;border:1px solid #f3d2cc}.bmw-hero.on{background:linear-gradient(120deg,#e9f6e8,#f7fbf6);border-color:#cfe6cc}
+.bmw-hero>div{flex:1;display:grid;gap:4px}.bmw-hero b{font-size:16px}.bmw-hero small{color:#5f6c63;line-height:1.5}
+.bmw-shield{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:#c62828;color:#fff;font-size:24px;flex:none}.bmw-hero.on .bmw-shield{background:#1b5e20}
+.bmw-sw{position:relative;width:48px;height:28px;flex:none}.bmw-sw input{opacity:0;width:0;height:0}.bmw-sw span{position:absolute;inset:0;border-radius:99px;background:#cfd6cf;cursor:pointer;transition:.2s}.bmw-sw span:before{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}.bmw-sw input:checked+span{background:#2e7d32}.bmw-sw input:checked+span:before{transform:translateX(20px)}
+.bmw-card{background:#fff;border:1px solid #e6ebe4;border-radius:14px;padding:16px 18px;display:grid;gap:10px}.bmw-card h3{margin:0;font-size:14.5px;display:flex;align-items:center;gap:8px}.bmw-card p{margin:0}.bmw-card code{background:#f1f4ef;padding:2px 7px;border-radius:6px;font-size:12.5px}
+.bmw-hint{color:#6b786f;line-height:1.5}
+.bmw-tags{display:flex;flex-wrap:wrap;gap:8px}.bmw-tags span{display:inline-flex;align-items:center;gap:6px;background:#e9f5e8;color:#1b5e20;border-radius:999px;padding:5px 6px 5px 12px;font-size:12.5px;font-family:ui-monospace,monospace}.bmw-tags span.env{background:#eef0f5;color:#3c4a6b;padding-right:12px}.bmw-tags button{border:0;background:#fff;border-radius:50%;width:20px;height:20px;cursor:pointer;line-height:1}
+.bmw-add{display:flex;gap:8px;max-width:420px}.bmw-add input{flex:1}
+.bmw-t{width:100%;border-collapse:collapse;font-size:12.5px}.bmw-t td,.bmw-t th{padding:8px 6px;border-top:1px solid #eef1ec;text-align:left;vertical-align:middle}.bmw-t th{color:#6b786f;font-weight:600;border-top:0}
+.bmw-p{max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,monospace;font-size:11.5px;color:#4b5a50}
+.bmw-ty{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;background:#fdecea;color:#b71c1c}.bmw-ty.t-rate-limit{background:#fff4e0;color:#9a5b00}.bmw-ty.t-probe{background:#eef0f5;color:#3c4a6b}.bmw-ty.t-ban{background:#b71c1c;color:#fff}
+[data-theme=dark] .bmw-card{background:#141c17;border-color:#26332a}[data-theme=dark] .bmw-hero{background:#2a1715;border-color:#4a2622}[data-theme=dark] .bmw-hero.on{background:#13251a;border-color:#2a4532}[data-theme=dark] .bmw-card code{background:#1e2a22}[data-theme=dark] .bmw-t td,[data-theme=dark] .bmw-t th{border-color:#223027}
+.bmw .bmi-stats{grid-template-columns:repeat(4,1fr)}.bmw-card>.btn{justify-self:start}
+@media (max-width:760px){.bmw .bmi-stats{grid-template-columns:1fr 1fr}.bmw-hero{flex-wrap:wrap}}

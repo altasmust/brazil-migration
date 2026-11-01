@@ -13,7 +13,7 @@
   const R = () => window.BMRoutes || {};
 
   // ---------- Genel Ayarlar / Güvenlik: yalnız çalışan sekmeler ----------
-  const PAGES = {general: {'Firma Bilgileri': 'company', 'E-posta (SMTP)': 'eposta', 'Google Meet': 'meet'}, security: {'KYC · Didit': 'kimlik'}};
+  const PAGES = {general: {'Firma Bilgileri': 'company', 'E-posta (SMTP)': 'eposta', 'Google Meet': 'meet'}, security: {'Güvenlik Duvarı': 'waf', 'KYC · Didit': 'kimlik'}};
   const OLD = {eposta: ['general', 'E-posta (SMTP)'], meet: ['general', 'Google Meet'], kimlik: ['security', 'KYC · Didit']};
   let pending = null;
   for (const page of Object.keys(PAGES)) {
@@ -21,7 +21,7 @@
       if (pending && pending[0] === page) { tab = pending[1]; pending = null; }
       const T = Object.keys(PAGES[page]); if (!T.includes(tab)) tab = T[0];
       const key = PAGES[page][tab];
-      const inner = key === 'company' ? companyPage() : R()[key] ? R()[key]() : '<div class="loading">Yükleniyor…</div>';
+      const inner = key === 'company' ? companyPage() : key === 'waf' ? wafPage() : R()[key] ? R()[key]() : '<div class="loading">Yükleniyor…</div>';
       return heading() + `<section class="panel settings-revision">${T.length > 1 ? tabs(T) : ''}<div class="settings bms-tabembed">${inner}</div></section>`;
     };
     if (page === 'general') general = fn; else security = fn;
@@ -33,6 +33,36 @@
     if (r === 'overview') return dashboard();
     return _ov();
   };
+
+  // ---------- Güvenlik Duvarı (WAF) ----------
+  const TYPES = {attack: 'Saldırı denemesi', probe: 'Tarama (açık arama)', scanner: 'Saldırı aracı', 'rate-limit': 'Aşırı istek', ban: 'IP engellendi', method: 'Yasak yöntem', 'url-too-long': 'Aşırı uzun adres'};
+  const ago = t => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'az önce' : m < 60 ? m + ' dk önce' : m < 1440 ? Math.round(m / 60) + ' sa önce' : new Date(t).toLocaleDateString('tr-TR'); };
+  function wafPage() {
+    setTimeout(async () => {
+      const root = $('#bmw-root'); if (!root) return;
+      let d; try { d = await A('security/waf'); } catch (e) { root.innerHTML = `<div class="bmc-err">${esc(e.message)}</div>`; return; }
+      const draw = () => {
+        const mine = d.panelTrusted.includes(d.yourIp) || d.envTrusted.includes(d.yourIp);
+        root.innerHTML = `<div class="bmw-hero ${d.enabled ? 'on' : ''}"><span class="bmw-shield">${ic('shield-check')}</span><div><b>${d.enabled ? 'Güvenlik duvarı aktif' : d.mode !== 'production' ? 'Geliştirme modunda kapalı' : 'Güvenlik duvarı kapalı'}</b><small>Saldırı kalıpları (SQL enjeksiyonu, XSS, dizin gezinme, komut enjeksiyonu), saldırı araçları, açık taraması ve aşırı istekler otomatik engellenir. 10 dakikada 5 ihlal yapan IP 1 saat engellenir.</small></div>
+          <label class="bmw-sw"><input type="checkbox" id="bmw-on" ${d.enabled || d.mode !== 'production' ? 'checked' : ''}><span></span></label></div>
+          <div class="bmi-stats"><div><small>İncelenen istek</small><b>${d.stats.requests.toLocaleString('tr-TR')}</b></div><div class="ok"><small>Engellenen saldırı</small><b>${d.stats.blocked.toLocaleString('tr-TR')}</b></div><div><small>Hız sınırı</small><b>${d.stats.limited.toLocaleString('tr-TR')}</b></div><div><small>Engellenen IP</small><b>${d.bans.length}</b></div></div>
+          <section class="bmw-card"><h3>${ic('user')} Sizin bağlantınız</h3><p>IP adresiniz: <code>${esc(d.yourIp)}</code> ${mine ? '<span class="bmy-pill on">Güvenilir — kurallara takılmaz</span>' : '<span class="bmy-pill">Standart kurallar</span>'}</p>${mine ? '' : `<button class="btn primary small" id="bmw-me">${ic('plus')} Bu IP'yi güvenilir listeye ekle</button>`}<small class="bmw-hint">Güvenilir IP'ler hiçbir kurala takılmaz. Ev/ofis internetinizin IP'si değişebilir; değişirse buradan yeniden ekleyin. Yerel bilgisayarınızda geliştirme yaparken güvenlik duvarı zaten devre dışıdır.</small></section>
+          <section class="bmw-card"><h3>${ic('check')} Güvenilir IP'ler</h3><div class="bmw-tags">${d.panelTrusted.map(ip => `<span>${esc(ip)} <button data-rm="${esc(ip)}" title="Kaldır">×</button></span>`).join('')}${d.envTrusted.map(ip => `<span class="env" title="Sunucu ayarı (WAF_TRUSTED_IPS)">${esc(ip)}</span>`).join('')}${!d.panelTrusted.length && !d.envTrusted.length ? '<small>Henüz yok.</small>' : ''}</div><div class="bmw-add"><input class="bmi-in" id="bmw-ip" placeholder="IP adresi ekle (ör. 85.105.12.34)"><button class="btn small" id="bmw-addb">Ekle</button></div></section>
+          <section class="bmw-card"><h3>${ic('lock')} Engellenen IP'ler</h3>${d.bans.length ? `<table class="bmw-t"><tbody>${d.bans.map(x => `<tr><td><code>${esc(x.ip)}</code></td><td>${esc(TYPES[x.reason] || x.reason)}</td><td>${ago(x.at)}</td><td>bitiş ${new Date(x.until).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})}</td><td><button class="btn small" data-unban="${esc(x.ip)}">Engeli kaldır</button></td></tr>`).join('')}</tbody></table>` : '<small>Şu an engellenen IP yok.</small>'}</section>
+          <section class="bmw-card"><h3>${ic('clock')} Son olaylar <button class="btn small" id="bmw-clear" style="margin-left:auto">Temizle</button><button class="btn small" id="bmw-ref">Yenile</button></h3>${d.events.length ? `<table class="bmw-t"><thead><tr><th>Zaman</th><th>Tür</th><th>IP</th><th>İstek</th></tr></thead><tbody>${d.events.map(e => `<tr><td>${ago(e.t)}</td><td><span class="bmw-ty t-${esc(e.type)}">${esc(TYPES[e.type] || e.type)}</span></td><td><code>${esc(e.ip)}</code></td><td class="bmw-p" title="${esc(e.ua)}">${esc(e.path)}</td></tr>`).join('')}</tbody></table>` : '<small>Henüz olay yok. Sunucu her yeniden başladığında liste sıfırlanır.</small>'}</section>
+          <div class="info">Uygulama içi koruma; ağ seviyesindeki büyük DDoS saldırıları için alan adınızı ücretsiz <b>Cloudflare</b> arkasına almanız önerilir (bu sistem Cloudflare'in gerçek ziyaretçi IP başlığını tanır).</div>`;
+        const save = async body => { try { d = await A('security/waf', 'POST', body); draw(); say('Kaydedildi.'); } catch (e) { say(e.message); } };
+        $('#bmw-on').onchange = e => save({enabled: e.target.checked});
+        const me = $('#bmw-me'); if (me) me.onclick = () => save({trusted: [...d.panelTrusted, d.yourIp]});
+        $('#bmw-addb').onclick = () => { const v = $('#bmw-ip').value.trim(); if (!/^[0-9a-f.:]{3,64}$/i.test(v)) return say('Geçerli bir IP adresi girin.'); save({trusted: [...d.panelTrusted, v]}); };
+        $('#bmw-ref').onclick = async () => { d = await A('security/waf'); draw(); };
+        $('#bmw-clear').onclick = () => save({action: 'clear'});
+        root.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.rm) save({trusted: d.panelTrusted.filter(x => x !== b.dataset.rm)}); if (b.dataset.unban) save({action: 'unban', ip: b.dataset.unban}); };
+      };
+      draw();
+    }, 0);
+    return '<div id="bmw-root" class="bmw"><div class="loading">Yükleniyor…</div></div>';
+  }
 
   // ---------- Firma Bilgileri (sitede footer, İletişim, yasal metinler, WhatsApp) ----------
   function companyPage() {

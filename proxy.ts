@@ -1,4 +1,6 @@
 import {NextResponse, type NextRequest} from 'next/server';
+// @ts-ignore - plain JS module
+import {inspect} from './server/waf.mjs';
 
 // Host routing: the admin panel lives on its own (sub)domain (ADMIN_HOST),
 // everything else (site + customer/advisor/lawyer/staff panels) on the main domain.
@@ -10,10 +12,12 @@ const SHARED = /^\/(brazil-migration-logo\.png|theme\.js|style\.css|page-visuals
 export function proxy(req: NextRequest) {
   const url = req.nextUrl;
   let path = url.pathname;
-  if (path.startsWith('/api/') || path.startsWith('/_next/') || path.startsWith('/r/')) return NextResponse.next();
   const host = (req.headers.get('x-forwarded-host') || req.headers.get('host') || '').split(':')[0].toLowerCase();
   const hosts = adminHosts();
   const onAdmin = hosts.includes(host);
+  const block = inspect({method: req.method, pathname: path, search: url.search, headers: req.headers, adminHost: onAdmin});
+  if (block) return new NextResponse(block.status === 429 ? 'Çok fazla istek. Lütfen biraz sonra tekrar deneyin.' : block.status === 404 ? 'Not found' : 'Erişim engellendi.', {status: block.status, headers: {'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store', ...(block.retry ? {'retry-after': String(block.retry)} : {})}});
+  if (path.startsWith('/api/') || path.startsWith('/_next/') || path.startsWith('/r/')) return NextResponse.next();
   const isAdminPath = path === '/admin' || path.startsWith('/admin/');
 
   if (hosts.length) {

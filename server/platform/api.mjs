@@ -6,6 +6,7 @@ import {
 } from './auth.mjs';
 import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
 import {applyConfig} from './config.mjs';
+import {wafState, unban, clearEvents, cleanIps, clientIp} from '../waf.mjs';
 import {cleanPost, readMinutes} from './blog.mjs';
 import {loadPayments, publicView as paymentsView, savePayment, enabledMethods} from './payments.mjs';
 import {startCheckout, finishCheckout} from './iyzico.mjs';
@@ -956,6 +957,16 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     if (!data.apiKey) delete process.env.ANTHROPIC_API_KEY;
     applyConfig('config-ai', data);
     return json({ok: true, ready: verifierConfigured()});
+  }
+  if (route === 'security/waf' && req.method === 'GET') return json(wafState(clientIp(req.headers)));
+  if (route === 'security/waf' && req.method === 'POST') {
+    if (b.action === 'unban') { unban(clean(b.ip, 64)); await audit(db, actor, 'waf.unban', clean(b.ip, 64)).run(); return json(wafState(clientIp(req.headers))); }
+    if (b.action === 'clear') { clearEvents(); return json(wafState(clientIp(req.headers))); }
+    const old = (await getItem(db, 'config-waf'))?.data || {};
+    const data = {enabled: 'enabled' in b ? !!b.enabled : old.enabled !== false, trusted: 'trusted' in b ? cleanIps(b.trusted) : old.trusted || [], updated: now()};
+    await db.batch([putItem(db, 'config-waf', 'config', 'owner', data), audit(db, actor, 'settings.waf', data.enabled ? 'on' : 'off')]);
+    applyConfig('config-waf', data); for (const ip of data.trusted) unban(ip);
+    return json(wafState(clientIp(req.headers)));
   }
   if (route === 'settings/didit' && req.method === 'POST') {
     const old = (await getItem(db, 'config-didit'))?.data || {};
