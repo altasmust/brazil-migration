@@ -140,10 +140,14 @@
     const a = D.accounts.find(x => x.id === btn.dataset.menu); if (!a) return;
     const m = document.createElement('div'); m.className = 'bmc-menu';
     m.innerHTML = [['manage', 'key', 'Hesabı yönet (panele gir)'], ['open', 'person', 'Detayı aç'], ['edit', 'lock', kindOf(a) === 'customer' ? 'Düzenle / danışman ata' : 'Düzenle / izinler'], ['invite', 'send', 'Giriş bağlantısı gönder'], ['toggle', 'shield', a.status === 'active' ? 'Pasif yap (giriş kapat)' : 'Aktif yap'], ['delete', 'trash', 'Hesabı sil']].map(([k, i, l]) => `<button data-mi="${k}" data-id="${esc(a.id)}">${I(i)}${l}</button>`).join('');
-    btn.parentElement.style.position = 'relative'; btn.parentElement.appendChild(m);
-    const box = btn.closest('.bmc-table'), rb = m.getBoundingClientRect(), cb = box ? box.getBoundingClientRect() : {bottom: innerHeight};
-    if (rb.bottom > Math.min(cb.bottom, innerHeight) - 4) m.classList.add('up');
-    setTimeout(() => document.addEventListener('click', () => m.remove(), {once: true}), 0);
+    // Menü gövdeye sabit konumla eklenir: tablo kaydırma alanı kesmez, ekrana sığacak yöne açılır.
+    m.classList.add('fixed'); document.body.appendChild(m);
+    const r = btn.getBoundingClientRect(), h = m.offsetHeight, w = m.offsetWidth, gap = 6;
+    const top = r.bottom + gap + h > innerHeight - 8 && r.top - gap - h > 8 ? r.top - gap - h : Math.min(r.bottom + gap, innerHeight - h - 8);
+    m.style.top = Math.max(8, top) + 'px'; m.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + 'px';
+    m.onclick = e => { const mi = e.target.closest('[data-mi]'); if (mi) { e.stopPropagation(); close(); rowAction(mi.dataset.mi, mi.dataset.id); } };
+    const close = () => { m.remove(); removeEventListener('scroll', close, true); removeEventListener('resize', close); document.removeEventListener('click', close); };
+    setTimeout(() => { if (!m.isConnected) return; addEventListener('scroll', close, true); addEventListener('resize', close); document.addEventListener('click', close); }, 150);
   }
   async function rowAction(k, id) {
     const a = D.accounts.find(x => x.id === id); if (!a) return;

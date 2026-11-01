@@ -196,3 +196,4 @@ table.bmc-mini{width:100%;border-collapse:collapse;font-size:13px}.bmc-mini th{t
 .bmc-table td .btn{margin:0;float:none;font-size:12px}
 .bmc-menu button[data-mi=delete]{color:#c62828;border-top:1px solid #f0e2e0;margin-top:4px}.bmc-menu button[data-mi=delete]:hover{background:#fdecea}
 .bmc-menu.up{top:auto;bottom:36px}
+.bmc-menu.fixed{position:fixed;right:auto;bottom:auto;z-index:1000}
