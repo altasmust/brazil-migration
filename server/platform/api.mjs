@@ -580,6 +580,10 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     return json({accounts: Number(n?.n || 0), items: Number(it?.n || 0), cleared: !!(await getItem(db, 'demo-cleared'))});
   }
   if (route === 'settings/company' && req.method === 'GET') return json({company: (await getItem(db, 'config-company'))?.data || {}});
+  if (route === 'invoices' && req.method === 'GET') {
+    const list = await rows(db, "SELECT i.id, i.owner, i.data, i.created, p.name, p.email, p.role FROM items i LEFT JOIN people p ON p.id=i.owner WHERE i.kind='invoice' ORDER BY i.created DESC LIMIT 1000");
+    return json({invoices: list.map(r => ({id: r.id, owner: r.owner, name: r.name || '—', email: r.email || '', role: r.role || '', created: r.created, ...parse(r.data)}))});
+  }
   if (route === 'payments' && req.method === 'GET') return json({modules: paymentsView(await loadPayments(db))});
   if (route === 'blog' && req.method === 'GET') {
     const st = await siteState(db);
@@ -842,6 +846,39 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const data = {brand: T('brand', 80) || 'Brazil Migration', legalName: T('legalName', 200), taxId: T('taxId', 80), address: T('address', 300), email: validEmail(T('email', 254)) ? T('email', 254) : '', phone: T('phone', 40), whatsapp: T('whatsapp', 40).replace(/[^\d+ ()-]/g, '').trim(), hours: T('hours', 120), showWhatsapp: !!b.showWhatsapp, socials: {instagram: url('instagram'), linkedin: url('linkedin'), facebook: url('facebook'), youtube: url('youtube'), x: url('x')}, updated: now()};
     await db.batch([putItem(db, 'config-company', 'config', 'owner', data), audit(db, actor, 'settings.company', data.legalName || data.brand)]); invalidateSite();
     return json({ok: true, company: data});
+  }
+  if (route === 'invoices/create' && req.method === 'POST') {
+    const owner = clean(b.owner, 80), p = await one(db, "SELECT id, name, email, role, advisor FROM people WHERE id=? AND role IN ('customer','advisor')", owner);
+    if (!p) fail(400, 'Fatura kesilecek hesabı seçin.');
+    const lines = (Array.isArray(b.lines) ? b.lines : []).slice(0, 50).map(l => ({name: clean(l.name, 200), qty: Math.max(1, Math.min(10000, Math.round(Number(l.qty) || 1))), price: Math.max(0, Math.round((Number(l.price) || 0) * 100))})).filter(l => l.name);
+    if (!lines.length) fail(400, 'En az bir fatura kalemi girin.');
+    const discount = Math.max(0, Math.min(100, Number(b.discount) || 0)), sub = lines.reduce((n, l) => n + l.qty * l.price, 0), amount = Math.round(sub * (1 - discount / 100));
+    if (amount < 100) fail(400, 'Fatura tutarı en az 1,00 olmalı.');
+    const currency = ['USD', 'BRL', 'EUR', 'TRY'].includes(b.currency) ? b.currency : 'USD', number = clean(b.number, 40) || 'BM-' + String(now()).slice(-6);
+    const status = ['Ödenmedi', 'Ödendi', 'İptal'].includes(b.status) ? b.status : 'Ödenmedi', id = 'inv-' + uuid().slice(0, 16);
+    const advisor = p.role === 'customer' && p.advisor && p.advisor !== 'owner' ? p.advisor : null;
+    const data = {title: clean(b.title, 160) || `Fatura ${number}`, number, amount, currency, status, issued: clean(b.issued, 10), due: clean(b.due, 10), lines, discount, notes: clean(b.notes, 2000), advisor, rate: Math.max(0, Math.min(100, Number(b.rate) || 0)), createdBy: 'admin', ...(status === 'Ödendi' ? {reference: clean(b.reference, 200) || 'Yönetim kaydı', paidAt: now(), confirmedBy: actor} : {})};
+    const ops = [putItem(db, id, 'invoice', p.id, data), notice(db, p.id, `Yeni faturanız var: ${data.title}`, 'finance'), audit(db, actor, 'invoice.create', id)];
+    if (status === 'Ödendi' && advisor) ops.push(q(db, 'INSERT OR IGNORE INTO ledger VALUES(?,?,?,?,?,?,?)', uuid(), id, p.id, advisor, amount, Math.round(amount * data.rate / 100), now()));
+    await db.batch(ops);
+    let mailed = false;
+    if (b.notify && p.email) { const site = (process.env.SITE_URL || new URL(req.url).origin).replace(/\/$/, ''); const m = await sendMail({to: p.email, subject: `Yeni faturanız: ${data.title}`, title: 'Yeni faturanız hazır', text: `Merhaba ${p.name || ''}, ${data.title} için ${(amount / 100).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${currency} tutarında faturanız oluşturuldu.${data.due ? ' Son ödeme tarihi: ' + data.due + '.' : ''} Faturanızı panelinizden görüntüleyip ödeyebilirsiniz.`, link: site + (p.role === 'advisor' ? '/partner/' : '/panel/') + '#finance', button: 'Faturayı görüntüle'}); mailed = !!m.sent; }
+    return json({ok: true, id, mailed});
+  }
+  if (route === 'invoices/status' && req.method === 'POST') {
+    const inv = await getItem(db, clean(b.id, 80)); if (!inv || inv.kind !== 'invoice') fail(404, 'Fatura bulunamadı.');
+    const status = ['Ödenmedi', 'Ödendi', 'İptal'].includes(b.status) ? b.status : fail(400, 'Geçersiz durum.'); const d = inv.data;
+    if (d.status === status) return json({ok: true});
+    if (d.status === 'Ödendi' && d.method === 'iyzico') fail(400, 'Kartla ödenmiş fatura buradan değiştirilemez; iade için iyzico panelini kullanın.');
+    const next = {...d, status, ...(status === 'Ödendi' ? {reference: clean(b.reference, 200) || 'Yönetim onayı', paidAt: now(), confirmedBy: actor, method: d.method || 'manual'} : {})};
+    const ops = [putItem(db, inv.id, 'invoice', inv.owner, next), audit(db, actor, 'invoice.status', inv.id + ':' + status)];
+    if (status === 'Ödendi') { ops.push(notice(db, inv.owner, 'Ödemeniz onaylandı. Teşekkür ederiz.', 'finance')); if (d.advisor) ops.push(q(db, 'INSERT OR IGNORE INTO ledger VALUES(?,?,?,?,?,?,?)', uuid(), inv.id, inv.owner, d.advisor, d.amount, Math.round(d.amount * (d.rate || 0) / 100), now())); }
+    await db.batch(ops); return json({ok: true});
+  }
+  if (route === 'invoices/delete' && req.method === 'POST') {
+    const inv = await getItem(db, clean(b.id, 80)); if (!inv || inv.kind !== 'invoice') fail(404, 'Fatura bulunamadı.');
+    if (inv.data.status === 'Ödendi') fail(400, 'Ödenmiş fatura silinemez; önce durumunu değiştirin.');
+    await db.batch([q(db, "DELETE FROM items WHERE id=? AND kind='invoice'", inv.id), audit(db, actor, 'invoice.delete', inv.id)]); return json({ok: true});
   }
   if (route === 'payments/save' && req.method === 'POST') {
     const next = savePayment(await loadPayments(db), clean(b.id, 30), b);

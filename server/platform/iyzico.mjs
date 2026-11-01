@@ -33,7 +33,7 @@ async function call(cfg, path, payload) {
 
 // Müşteri: fatura için iyzico ödeme sayfası oluştur.
 export async function startCheckout({db, req, person, invoiceId, putItem, getItem, ip}) {
-  if (!person || person.role !== 'customer') throw err(403, 'Bu işlem için müşteri hesabıyla giriş yapın.');
+  if (!person || !['customer', 'advisor'].includes(person.role)) throw err(403, 'Bu işlem için müşteri veya partner hesabıyla giriş yapın.');
   const cfg = await iyzicoConfig(db); if (!cfg) throw err(400, 'Kartla ödeme şu an kullanılamıyor.');
   const inv = await getItem(db, invoiceId);
   if (!inv || inv.kind !== 'invoice' || inv.owner !== person.id) throw err(404, 'Fatura bulunamadı.');

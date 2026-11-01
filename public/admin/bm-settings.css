@@ -104,3 +104,12 @@ textarea.bmy-in{height:auto;padding:10px 12px;resize:vertical}.bmy-in.mono{font-
 .nav summary::after{content:''!important;display:inline-block;width:11px;height:11px;margin-left:7px;background-color:currentColor;-webkit-mask:var(--ic-chevron-down) center/contain no-repeat;mask:var(--ic-chevron-down) center/contain no-repeat;opacity:.65;vertical-align:-1px;transition:transform .2s}
 .nav details[open] summary::after{transform:rotate(180deg)}
 @media (max-width:1300px){.bmd-row2,.bmd-row2.b{grid-template-columns:1fr}}
+/* faturalar */
+.bmi-f{display:grid;gap:6px;font-size:12.5px;font-weight:600;color:#4d5f53;margin-bottom:12px}.bmi-f small{font-weight:400;color:#68776b;font-size:11.5px}
+.bmi-f select,.bmi-f input,.bmi-in{height:40px;border:1px solid var(--line);border-radius:9px;padding:0 12px;font:inherit;font-size:13.5px;background:#fff;color:#183b2c}
+.bmi-cb{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0 12px}
+.bmi-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}.bmi-stats div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px}.bmi-stats small{display:block;font-size:12px;color:#68776b}.bmi-stats b{font-size:20px;color:#183b2c}.bmi-stats .ok b{color:#1b5e20}
+.bmi-bar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}.bmi-bar #bmi-q{min-width:280px}.bmi-bar .sp{flex:1}.bmi-bar .btn{margin:0;float:none;display:inline-flex;gap:6px;align-items:center}
+.bmi-acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.bmi-acts .btn{margin:0;float:none;display:inline-flex;gap:5px;align-items:center;height:32px;font-size:12px;padding:0 10px}
+@media (max-width:800px){.bmi-stats{grid-template-columns:1fr}}
+.bmi-bar .bmi-in{width:auto!important;flex:0 0 auto}.bmi-bar #bmi-q{flex:1 1 320px;max-width:460px}

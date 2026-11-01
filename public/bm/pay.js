@@ -39,7 +39,7 @@
     } catch (e) { b.disabled = false; b.textContent = t; alert(e.message); }
   }
   async function enhance() {
-    const els = [...document.querySelectorAll('[data-bm-pay]:not([data-done])')]; if (!els.length) return;
+    const els = [...document.querySelectorAll('[data-bm-pay]:not([data-done]):not([data-no-pay])')]; if (!els.length) return;
     els.forEach(e => e.dataset.done = '1');
     const ms = await load(), havale = ms.find(m => m.id === 'havale'), iyzico = ms.find(m => m.id === 'iyzico');
     if (!havale && !iyzico) return;
