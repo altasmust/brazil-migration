@@ -547,6 +547,11 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const custom = Object.values(st.custom).map(c => ({id: c.id, path: c.path, title: c.title, type: 'custom', published: !!c.published, seo: c.seo || {}, blocks: c.blocks || [], updated: c.updated || null}));
     return json({pages, custom, menuSaved: !!st.menu});
   }
+  if (route === 'demo' && req.method === 'GET') {
+    const n = await one(db, "SELECT COUNT(*) AS n FROM people WHERE id IN ('demo-partner','demo-customer')");
+    const it = await one(db, "SELECT COUNT(*) AS n FROM items WHERE owner IN ('demo-partner','demo-customer')");
+    return json({accounts: Number(n?.n || 0), items: Number(it?.n || 0), cleared: !!(await getItem(db, 'demo-cleared'))});
+  }
   if (route === 'payments' && req.method === 'GET') return json({modules: paymentsView(await loadPayments(db))});
   if (route === 'blog' && req.method === 'GET') {
     const st = await siteState(db);
@@ -789,6 +794,20 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     if (route === 'site/custom/delete') { const id = clean(b.id, 80); if (!/^sitecustom-/.test(id)) fail(400, 'Geçersiz sayfa.'); await db.batch([q(db, "DELETE FROM items WHERE id=? AND kind='site_custom'", id), audit(db, actor, 'site.custom.delete', id)]); invalidateSite(); return json({ok: true}); }
     if (route === 'site/preview') { const r = await renderPage(db, '/onizleme/', {preview: {title: clean(b.title, 120) || 'Önizleme', blocks: Array.isArray(b.blocks) ? b.blocks.slice(0, 40) : [], seo: {}}}); return json({html: r.html}); }
     fail(404, 'İşlem bulunamadı.');
+  }
+  if (route === 'demo/clear' && req.method === 'POST') {
+    const P = ['demo-partner', 'demo-customer'], U = ['demo-partner-login', 'demo-customer-login'], in_ = a => a.map(() => '?').join(',');
+    await db.batch([
+      q(db, `UPDATE people SET advisor='owner' WHERE advisor IN (${in_(P)}) AND id NOT IN (${in_(P)})`, ...P, ...P),
+      q(db, `DELETE FROM items WHERE owner IN (${in_(P)}) OR id IN ('kyccredit-demo-partner')`, ...P),
+      q(db, `DELETE FROM auth_sessions WHERE user IN (${in_(U)})`, ...U),
+      q(db, `DELETE FROM auth_tokens WHERE user IN (${in_(U)})`, ...U),
+      q(db, `DELETE FROM people WHERE id IN (${in_(P)})`, ...P),
+      q(db, `DELETE FROM auth_users WHERE id IN (${in_(U)}) OR email IN ('partner@demo.bm','musteri@demo.bm')`, ...U),
+      putItem(db, 'demo-cleared', 'config', 'owner', {at: now()}),
+      audit(db, actor, 'demo.clear', 'demo-partner,demo-customer'),
+    ]);
+    return json({ok: true});
   }
   if (route === 'payments/save' && req.method === 'POST') {
     const next = savePayment(await loadPayments(db), clean(b.id, 30), b);

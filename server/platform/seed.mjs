@@ -39,6 +39,7 @@ export async function seedDemo(client) {
   const owner = await one('SELECT id, hash FROM auth_users WHERE email=?', [OWNER()]);
   if (!owner) await client.execute({sql: 'INSERT INTO auth_users VALUES(?,?,?,?,?,?,?,?)', args: ['demo-owner', OWNER(), ADMIN.hash, ADMIN.salt, 1, 0, 0, now]});
   else if (!owner[1]) await client.execute({sql: 'UPDATE auth_users SET hash=?, salt=?, verified=1 WHERE email=?', args: [ADMIN.hash, ADMIN.salt, OWNER()]});
+  if (await one("SELECT id FROM items WHERE id='demo-cleared'", [])) return; // admin removed demo data
   const email = 'partner@demo.bm';
   if (await one('SELECT id FROM auth_users WHERE email=?', [email])) return seedCustomer(client, one, now);
   const uid = 'demo-partner-login', pid = 'demo-partner';

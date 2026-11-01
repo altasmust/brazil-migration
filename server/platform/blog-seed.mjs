@@ -146,3 +146,22 @@ export async function migrateMenuV3(client) {
   }
   await client.execute({sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('migration-menu-v3','migration','owner','{}',?,?)", args: [now, now]});
 }
+
+// One-time: legal page links in the footer bottom row of a menu saved in the admin.
+export async function migrateMenuV4(client) {
+  const done = await client.execute({sql: "SELECT id FROM items WHERE id='migration-menu-v4'", args: []});
+  if (done.rows.length) return;
+  const now = Date.now();
+  const m = (await client.execute({sql: "SELECT data FROM items WHERE id='site-menu'", args: []})).rows[0];
+  if (m) {
+    try {
+      const menu = JSON.parse(m[0] ?? m.data), bl = menu.footer?.bottom?.links;
+      if (Array.isArray(bl)) {
+        const add = [['Gizlilik', '/gizlilik-politikasi/'], ['KVKK', '/kvkk-aydinlatma-metni/'], ['Çerezler', '/cerez-politikasi/'], ['Kullanım koşulları', '/kullanim-kosullari/']].filter(([, h]) => !bl.some(l => l.href === h)).map(([label, href]) => ({label, href}));
+        const k = bl.findIndex(l => /kaynaklar/.test(l.href)); bl.splice(k > -1 ? k + 1 : bl.length, 0, ...add);
+        await client.execute({sql: "UPDATE items SET data=?, updated=? WHERE id='site-menu'", args: [JSON.stringify(menu), now]});
+      }
+    } catch {}
+  }
+  await client.execute({sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('migration-menu-v4','migration','owner','{}',?,?)", args: [now, now]});
+}

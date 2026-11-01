@@ -487,6 +487,15 @@
       <div class="bmc-note"><p><b>Sunucu süresi</b></p><small>“Açık” süresi sık sık sıfırlanıyorsa uygulama yeniden başlıyor demektir; bu sırada sayfalarda “Sunucuya ulaşılamadı” görülebilir.</small></div>
       <div class="bmc-note"><p><b>Durum</b></p><small>E-posta: ${h.mail === 'smtp' ? 'SMTP' : h.mail === 'resend' ? 'Resend' : 'test modu'} · Didit: ${h.didit ? 'etkin' : 'kapalı'} · Otomatik belge kontrolü: ${h.ai ? 'etkin' : 'kapalı'}</small></div></div></section>`;
   });
+  // demo hesaplar ve örnek veriler
+  const _durum = routes.durum;
+  routes.durum = () => { setTimeout(async () => {
+    let d; try { d = await A('demo'); } catch { return; }
+    for (let i = 0; i < 30 && !$('#bmc-root .bmc-notes'); i++) await new Promise(r => setTimeout(r, 150));
+    const root = $('#bmc-root'); if (!root || !d.accounts) return;
+    root.insertAdjacentHTML('beforeend', `<section class="panel" style="margin-top:16px"><header class="panel-head">${I('shield')}<h2>Demo hesaplar ve örnek veriler</h2></header><div class="bmc-notes"><div class="bmc-note"><p><b>${d.accounts} demo hesap · ${d.items} örnek kayıt</b></p><small>Kurulum sırasında eklenen <code>partner@demo.bm</code> ve <code>musteri@demo.bm</code> hesapları ile onlara ait örnek başvuru, belge, fatura ve KYC kayıtları. Gerçek müşterilerinizden önce silin. Demo partnere atanmış gerçek müşteri varsa merkeze (size) aktarılır. Bu işlem geri alınamaz.</small><div style="margin-top:12px"><button class="btn danger" id="bmc-demo-clear">${I('x')} Demo verilerini sil</button></div></div></div></section>`);
+    $('#bmc-demo-clear').onclick = async () => { if (!confirm('Demo partner ve demo müşteri hesapları ile tüm örnek kayıtları kalıcı olarak silinsin mi?')) return; try { await A('demo/clear', 'POST', {}); say('Demo veriler silindi.'); render(); } catch (e) { say(e.message); } };
+  }, 0); return _durum(); };
   Object.assign(names, {durum: 'Sistem Durumu'});
 
   setTimeout(() => A('kyc-credits').then(d => { const n = d.requests.filter(r => r.status === 'pending').length; if (!n) return; const a = document.querySelector('#navigation a[href="#krediler"]'); if (a) a.insertAdjacentHTML('beforeend', ` <span class="bmc-count">${n}</span>`); }).catch(() => {}), 900);

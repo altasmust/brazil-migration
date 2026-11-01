@@ -54,3 +54,4 @@ body{font-family:'Poppins',Arial,sans-serif;font-size:16px;line-height:1.75}h1,h
 /* yığın etiketi: arka katmanlar ortalı */
 .stack-label:before{inset:5px -12px;left:-12px;right:-12px}
 .stack-label:after{inset:10px -24px;left:-24px;right:-24px}
+.footer-bottom{justify-content:flex-start}.footer-bottom a[href="#main"]{margin-left:auto}

@@ -1,0 +1,17 @@
+/* Yasal metin sayfaları */
+.lg-page{display:grid;grid-template-columns:240px minmax(0,1fr);gap:48px;align-items:start;padding-top:36px;padding-bottom:80px}
+.lg-nav{position:sticky;top:120px;display:grid;gap:4px;border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--lg-card,#fff)}
+.lg-nav b{font-size:13px;margin-bottom:6px;color:var(--ink)}
+.lg-nav a{font-size:14px;color:var(--muted);text-decoration:none;padding:8px 10px;border-radius:10px}
+.lg-nav a:hover,.lg-nav a[aria-current]{background:color-mix(in srgb,var(--forest) 10%,transparent);color:var(--ink)}
+.lg-body{max-width:800px;color:var(--ink)}
+.lg-body h1{font-size:clamp(30px,4vw,44px);margin:10px 0 14px;line-height:1.15}
+.lg-lead{font-size:17px;line-height:1.7;color:var(--muted);margin:0 0 6px}.lg-upd{font-size:13px;color:var(--muted);margin:0 0 30px}
+.lg-body h2{font-size:21px;margin:34px 0 10px}
+.lg-body p,.lg-body li{font-size:15.5px;line-height:1.8}.lg-body ul{padding-left:22px}.lg-body li{margin:6px 0}
+.lg-body a{color:var(--forest);text-underline-offset:3px}
+.lg-body table{width:100%;border-collapse:collapse;font-size:14px;margin:12px 0 20px;display:block;overflow-x:auto}
+.lg-body th,.lg-body td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}.lg-body th{background:color-mix(in srgb,var(--forest) 8%,transparent)}
+.lg-body code{font-size:12.5px;background:color-mix(in srgb,var(--forest) 8%,transparent);padding:2px 6px;border-radius:6px}
+[data-theme=dark] .lg-nav{--lg-card:#14241c}[data-theme=dark] .lg-body a{color:#8fcf8a}
+@media (max-width:900px){.lg-page{grid-template-columns:1fr;gap:20px;padding-top:20px}.lg-nav{position:static;grid-template-columns:1fr 1fr}.lg-nav b{grid-column:1/-1}}

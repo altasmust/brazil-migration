@@ -6,6 +6,9 @@ const picker=document.createElement('select');picker.id='region-language';picker
 const originalRender=render;
 const originalAct=act;
 let extraPage='';
+const LIVE={overview:'overview',services:'services',support:'livesupport',documents:'documents',finance:'finance'};
+const liveWait=f=>f?.failed?`<article class="card card-pad" style="margin-top:24px"><h2>Hesap bilgileriniz yüklenemedi</h2><p>${String(f.failed).replace(/[<>&]/g,'')}</p><p class="subtle">Sayfayı yenileyin. Sorun sürerse çıkış yapıp tekrar giriş yapın.</p></article>`:`<div class="card card-pad" style="margin-top:24px;display:flex;gap:12px;align-items:center;color:var(--muted,#6b786f)"><span class="bm-spin"></span>Hesap bilgileriniz yükleniyor…</div>`;
+
 function extraButtons(){const f=window.BMFeatures;const root=document.getElementById('content');if(root.querySelector('.extension-actions'))return;const bar=document.createElement('div');bar.className='extension-actions';const links=partner?[['team','Ekip & Yetkiler'],['livecustomers','Kayıtlı Müşteriler'],['applications','Kayıtlı Başvurular'],['liveaffiliate','Referans Takibi'],['liveaudit','İşlem Geçmişi']]:[['liveprofile','Profilimi Düzenle'],['livesupport','Destek']];bar.innerHTML=links.map(([id,t])=>`<button class="btn secondary small" data-extra="${id}">${t}</button>`).join('');if((location.hash||'#overview')==='#overview')root.querySelector('.page-heading')?.insertAdjacentElement('afterend',bar);}
 render=function(){
  const h=location.hash.slice(1)||'overview';
@@ -15,9 +18,9 @@ render=function(){
  if(h.startsWith('extra-'))extraPage=h.slice(6);
  if(extraPage&&!['documents','finance','services','livesupport','liveprofile'].includes(extraPage))extraPage='';
  if(extraPage&&f?.ready){document.getElementById('content').innerHTML=`<div class="extension-back"><button class="text-button" data-extra="back">← Genel bakışa dön</button></div>`+f.view(extraPage);document.querySelectorAll('[data-page]').forEach(a=>a.classList.remove('active'));}
- else if(f?.ready&&['documents','finance'].includes(h)){document.getElementById('content').innerHTML=f.view(h);}
+ else if(LIVE[h]){document.getElementById('content').innerHTML=f?.ready?f.view(LIVE[h]):liveWait(f);}
  extraButtons();
- if(f?.ready&&!extraPage){const actions={finance:['finance','Faturalarım'],services:['services','Kayıtlı Hizmetlerim'],support:['livesupport','Destek'],documents:['documents','Gelen / Giden Belgeler']};const next=actions[h];if(next&&!['documents','finance'].includes(h))document.querySelector('#content .page-heading .heading-actions')?.insertAdjacentHTML('beforeend',`<button class="btn secondary small" data-extra="${next[0]}">${next[1]}</button>`);}
+ if(f?.ready&&!extraPage){const actions={finance:['finance','Faturalarım'],services:['services','Kayıtlı Hizmetlerim'],support:['livesupport','Destek'],documents:['documents','Gelen / Giden Belgeler']};const next=actions[h];if(next&&!LIVE[h])document.querySelector('#content .page-heading .heading-actions')?.insertAdjacentHTML('beforeend',`<button class="btn secondary small" data-extra="${next[0]}">${next[1]}</button>`);}
  if(f?.ready)f.animate();
 };
 act=function(action){const f=window.BMFeatures;
