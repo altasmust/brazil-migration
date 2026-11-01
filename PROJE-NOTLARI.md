@@ -250,3 +250,4 @@
 - Farklı şekiller: SSL altın tırtıklı mühür · KYC gümüş kalkan (devre + parmak izi, "Right Source" yazısı yok) · ACG lacivert-altın kurdele (ACG monogram, Ana Carolina de Almeida Garcia, OAB/SP 386.588, ortada, en uzun) · IusJud koyu amblem (kalem uçlu J, kurdele, yıldızlar) · KVKK & LGPD kurdeleli rozet (YÖKAK tarzı).
 - IusJud logosundaki "JUSTIÇA FEDERAL" yazısı resmî mahkeme adı olduğu için rozete konmadı; yerine "VERIFIED · yıl".
 - Onaylanınca: site.mjs applyTrust() bu fonksiyonlarla değiştirilecek, Cormorant Garamond fontu eklenecek, iyzico için uyumlu mühür eklenebilir.
+- v4.1 önizleme: kullanıcı "logoları bozmuşsun, çok büyük" dedi → ACG (kartvizitten kırpılmış plaka + OAB/SP 386.588), IusJud (orijinal logo, daire kesim) ve SSL (orijinal mühür) ORİJİNAL görsellerden kırpıldı: scratchpad/logos/*.webp. KYC kalkanı ve KVKK rozeti SVG (KYC Right Source'un logosu kullanılmadı). Boyutlar küçük: ~62–78px, ACG 150px. Hâlâ onay bekliyor.
