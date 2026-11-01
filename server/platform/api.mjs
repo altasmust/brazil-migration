@@ -963,7 +963,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     if (data.enabled && (!data.apiKey || !data.workflowId)) fail(400, 'Etkinleştirmek için API anahtarı ve Workflow ID gerekli.');
     await db.batch([putItem(db, 'config-didit', 'config', 'owner', data), audit(db, actor, 'settings.didit', data.enabled ? 'on' : 'off')]);
     applyConfig('config-didit', data);
-    return json({ok: true, ready: diditReady(process.env)});
+    invalidateSite(); return json({ok: true, ready: diditReady(process.env)});
   }
   if (route === 'profile' && req.method === 'POST') {
     const name = clean(b.name, 100), email = clean(b.email, 254).toLowerCase();

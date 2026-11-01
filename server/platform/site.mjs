@@ -50,7 +50,7 @@ let state = null, stateAt = 0;
 export function invalidateSite() { stateAt = 0; renderCache.clear(); }
 export async function siteState(db) {
   if (state && Date.now() - stateAt < 15000) return state;
-  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post') OR id IN ('config-company','config-payments')").all()).results || [];
+  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post') OR id IN ('config-company','config-payments','config-didit')").all()).results || [];
   const s = {menu: null, pages: {}, custom: {}, blog: {}, company: null, stamp: ''};
   let stamp = rows.length;
   for (const r of rows) {
@@ -61,6 +61,7 @@ export async function siteState(db) {
     if (r.kind === 'blog_post' && d.slug) s.blog[d.slug] = {...d, id: r.id};
     if (r.id === 'config-company') s.company = d;
     if (r.id === 'config-payments') s.payments = d;
+    if (r.id === 'config-didit') s.didit = d;
   }
   s.stamp = hash(stamp);
   if (state?.stamp !== s.stamp) renderCache.clear();
@@ -225,12 +226,28 @@ function applyCompany(root, co) {
 
 // ---------- footer güven şeridi (her sayfada, footer alt satırının üstünde) ----------
 const LAW = {firm: 'ACG Advogada', lawyer: 'Dra. Ana Carolina', oab: 'OAB/SP 386.588', verify: 'https://cna.oab.org.br/'};
+// Mühür: tırtıklı rozet şekli içinde ikon veya kısa metin.
+const SEAL_PATH = (() => { const n = 24, pts = []; for (let i = 0; i < n * 2; i++) { const r = i % 2 ? 44 : 48, t = Math.PI * i / n; pts.push((50 + r * Math.sin(t)).toFixed(2) + ',' + (50 - r * Math.cos(t)).toFixed(2)); } return 'M' + pts.join('L') + 'Z'; })();
+function seal({tone, icon, mono, title, sub, href}) {
+  const inner = mono ? `<text x="50" y="${mono.length > 2 ? 57 : 59}" text-anchor="middle" font-size="${mono.length > 2 ? 22 : 27}" font-weight="800" letter-spacing=".5" fill="currentColor">${mono}</text>` : '';
+  const ico = icon ? `<bm-i class="ic ic-${icon}" aria-hidden="true"></bm-i>` : '';
+  const tag = href ? 'a' : 'div', attr = href ? ` href="${href}" target="_blank" rel="noopener"` : '';
+  return `<${tag} class="ft-seal t-${tone}"${attr}><span class="ft-emb"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="${SEAL_PATH}" class="s1"/><circle cx="50" cy="50" r="36" class="s2"/><circle cx="50" cy="50" r="31" class="s3"/>${inner}</svg>${ico}</span><span class="ft-txt"><b>${title}</b><small>${sub}</small></span><bm-i class="ic ic-check ft-ok" aria-hidden="true"></bm-i></${tag}>`;
+}
 function applyTrust(root, st) {
   const f = root.querySelector('footer.site-footer'), fb = f?.querySelector('.footer-bottom'); if (!f || !fb || f.querySelector('.footer-trust')) return;
   const ic = n => `<bm-i class="ic ic-${n}" aria-hidden="true"></bm-i>`;
-  const iyzico = !!st?.payments?.iyzico?.enabled, didit = process.env.DIDIT_ENABLED === 'true' && !!process.env.DIDIT_API_KEY;
-  const items = [['lock', 'SSL güvenli bağlantı'], iyzico && ['credit-card', 'iyzico ile 3D Secure ödeme'], didit && ['shield-check', 'Didit ile kimlik doğrulama'], ['doc', 'KVKK &amp; LGPD uyumlu'], ['scale', 'OAB kayıtlı avukat']].filter(Boolean);
-  fb.insertAdjacentHTML('beforebegin', `<div class="footer-trust"><div class="ft-badges">${items.map(([i, t]) => `<span>${ic(i)}${t}</span>`).join('')}</div><p class="ft-legal">${ic('shield-check')}<span>Başvurularınız Polícia Federal ve Ministério da Justiça nezdinde, resmî kanallardan yürütülür. Hukuki işlemler <b>${LAW.firm} · ${LAW.lawyer} (${LAW.oab})</b> tarafından yürütülür. <a href="${LAW.verify}" target="_blank" rel="noopener">OAB kaydını doğrula</a></span></p></div>`);
+  const iyzico = !!st?.payments?.iyzico?.enabled;
+  const dd = st?.didit || {}, didit = (dd.enabled ?? process.env.DIDIT_ENABLED === 'true') && !!(dd.apiKey || process.env.DIDIT_API_KEY);
+  const seals = [
+    {tone: 'gold', mono: 'OAB', title: 'OAB kayıtlı avukat', sub: LAW.oab, href: LAW.verify},
+    {tone: 'navy', mono: 'IJ', title: 'IusJud Verified', sub: 'Hukuk süreç güvencesi'},
+    didit && {tone: 'violet', icon: 'shield-check', title: 'Didit kimlik doğrulama', sub: 'Biyometrik KYC'},
+    iyzico && {tone: 'blue', icon: 'credit-card', title: 'iyzico 3D Secure', sub: 'Güvenli kartla ödeme'},
+    {tone: 'green', icon: 'lock', title: 'SSL şifreli bağlantı', sub: '256-bit TLS'},
+    {tone: 'teal', icon: 'doc', title: 'KVKK & LGPD', sub: 'Veri koruma uyumlu'},
+  ].filter(Boolean);
+  fb.insertAdjacentHTML('beforebegin', `<div class="footer-trust"><div class="ft-head"><span class="kicker">Güvenceler</span><span class="ft-line"></span></div><div class="ft-seals">${seals.map(seal).join('')}</div><p class="ft-legal">${ic('scale')}<span>Başvurularınız Polícia Federal ve Ministério da Justiça nezdinde, resmî kanallardan yürütülür. Hukuki işlemler <b>${LAW.firm} · ${LAW.lawyer} (${LAW.oab})</b> tarafından yürütülür. <a href="${LAW.verify}" target="_blank" rel="noopener">OAB kaydını doğrula</a></span></p></div>`);
 }
 
 // ---------- SEO ----------

@@ -231,3 +231,9 @@
 - siteState artık config-payments de yükler (s.payments); payments/save → invalidateSite().
 - `scale` ikonu eklendi (icons v=4). CSS: style.css v=16 (.footer-trust, .ft-badges, .ft-legal + dark).
 - Resmî kurum logoları (PF, MJ), Didit/Jusbrasil logoları sertifika gibi KULLANILMAZ.
+
+## Footer güvence mühürleri (v2)
+- Düz rozetler yerine "Güvenceler" başlıklı mühür kartları (tırtıklı SVG mühür + ikon/monogram, renkli tonlar, açık/koyu tema). Mobilde 2 sütun.
+- Mühürler: OAB kayıtlı avukat (OAB/SP 386.588, CNA linki) · IusJud Verified (kullanıcının kendi markası, monogram "IJ", şimdilik linksiz) · Didit (açıksa) · iyzico 3D Secure (açıksa) · SSL · KVKK & LGPD.
+- Didit tespiti artık DB'deki config-didit'i de okur (siteState → s.didit); settings/didit kaydı invalidateSite() yapar.
+- style.css v=17.
