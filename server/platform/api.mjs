@@ -7,7 +7,7 @@ import {
 import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
 import {applyConfig} from './config.mjs';
 import {cleanPost, readMinutes} from './blog.mjs';
-import {loadPayments, publicView as paymentsView, savePayment} from './payments.mjs';
+import {loadPayments, publicView as paymentsView, savePayment, enabledMethods} from './payments.mjs';
 import {staticPages, siteState, invalidateSite, editorHTML, readStatic, buildOverrides, extractMenu, renderPage, hash as shash, PANEL} from './site.mjs';
 import {creditState, creditRecord, saveCredit, monthKey, monthStart as creditMonthStart, DEFAULT_MONTHLY} from './credits.mjs';
 import {CITIES, locate, fromRequest, distanceKm} from './geo.mjs';
@@ -106,6 +106,7 @@ export async function handleAuth(req, env, route) {
   const db = env.DB;
   route = route.replace(/^admin\//, '');
   if (req.method !== 'GET') sameOrigin(req);
+  if (route === 'payment-methods' && req.method === 'GET') return json({methods: enabledMethods(await loadPayments(db)).map(m => m.id === 'havale' ? m : {id: m.id, name: m.name})});
   if (route === 'cities' && req.method === 'GET') return json({countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES});
   if (route === 'config' && req.method === 'GET') return json({mail: mailConfigured(), verifier: verifierConfigured(), adminSeparate: adminHosts().length > 0, whatsapp: (process.env.WHATSAPP_NUMBER || '').replace(/\D/g, '') || null});
 
