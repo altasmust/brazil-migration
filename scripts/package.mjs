@@ -33,7 +33,10 @@ for (const f of walk(join(tmp, 'public'))) {
 }
 // Sunucu kodu: yorumlar ve boşluklar silinir; adlar korunur (hata ayıklama ve dinamik import güvenliği için).
 for (const f of walk(join(tmp, 'server'))) if (f.endsWith('.mjs')) await min(f, 'js', {format: 'esm', minifyIdentifiers: false, target: 'node20'});
-for (const f of [join(tmp, 'proxy.ts'), join(tmp, 'next.config.ts'), ...walk(join(tmp, 'app')).filter(f => /\.tsx?$/.test(f))]) await min(f, f.endsWith('x') ? 'tsx' : 'ts', {format: 'esm', minifyIdentifiers: false, minifySyntax: false, target: 'node20', jsx: 'preserve'});
+// Next.js dosyaları (route config dışa aktarımları bozulmasın diye küçültülmez): yalnız tam satır yorumlar silinir.
+for (const f of [join(tmp, 'proxy.ts'), join(tmp, 'next.config.ts'), ...walk(join(tmp, 'app')).filter(f => /\.tsx?$/.test(f))]) {
+  const s = readFileSync(f, 'utf8'); writeFileSync(f, s.split('\n').filter(l => !/^\s*\/\/(?!\s*@ts-)/.test(l)).join('\n'));
+}
 if (!existsSync(dirname(out))) mkdirSync(dirname(out), {recursive: true});
 rmSync(out, {force: true});
 execSync(`cd "${tmp}" && zip -qr -X "${out}" .`);
