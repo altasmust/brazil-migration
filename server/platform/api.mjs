@@ -521,10 +521,11 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   if (route === 'meta' && req.method === 'GET') return json({types: ACCOUNT_TYPES, perms: PERMS, permLabels: PERM_LABELS, defaults: DEFAULT_PERMS, panels: PANELS, countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES, mail: mailConfigured(), verifier: verifierConfigured()});
 
   if (route === 'accounts' && req.method === 'GET') {
-    const [people, metaRows, partnerRows, authRows, lastRows, law, groupItem] = await Promise.all([
+    const [people, metaRows, partnerRows, kycRows, authRows, lastRows, law, groupItem] = await Promise.all([
       rows(db, "SELECT * FROM people WHERE role!='owner' ORDER BY created DESC"),
       rows(db, "SELECT owner,data FROM items WHERE kind='account_meta'"),
       rows(db, "SELECT owner,data FROM items WHERE kind='partner'"),
+      rows(db, "SELECT owner,data FROM items WHERE kind='kyc_session'"),
       rows(db, 'SELECT id,verified,hash FROM auth_users'),
       rows(db, "SELECT user, MAX(created) AS t FROM auth_sessions WHERE scope='site' GROUP BY user"),
       rows(db, "SELECT * FROM law_accounts WHERE role!='owner' ORDER BY created DESC"),
@@ -532,13 +533,14 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     ]);
     const metas = Object.fromEntries(metaRows.map(r => [r.owner, parse(r.data)]));
     const partners = Object.fromEntries(partnerRows.map(r => [r.owner, parse(r.data)]));
+    const kycOk = new Set(kycRows.filter(r => parse(r.data).status === 'Approved').map(r => r.owner));
     const authed = Object.fromEntries(authRows.map(r => [r.id, r]));
     const lastIn = Object.fromEntries(lastRows.map(r => [r.user, r.t]));
     const names = Object.fromEntries(people.map(p => [p.id, p.name]));
     const list = people.map(p => {
       const meta = metas[p.id] || {}, a = authed[p.uid];
       const type = p.role === 'customer' ? 'customer' : meta.type || (p.role === 'advisor' ? 'advisor' : 'other');
-      return {id: p.id, name: p.name, email: p.email, type, role: p.role, status: p.status, permissions: parse(p.permissions), scope: parse(p.scope), advisor: p.advisor, advisorName: p.advisor === 'owner' ? 'Merkez ofis' : names[p.advisor] || '', city: meta.city, country: meta.country, company: meta.company, phone: meta.phone, assignedBy: meta.assignedBy, title: meta.title, partner: partners[p.id] ? {status: partners[p.id].status} : null, manager: p.manager, extra: meta.extra || {}, lastLogin: lastIn[p.uid] || null, login: a ? (a.hash ? (a.verified ? 'Aktif' : 'Doğrulama bekliyor') : 'Şifre bekleniyor') : 'Giriş yok', created: p.created};
+      return {id: p.id, name: p.name, email: p.email, type, role: p.role, status: p.status, permissions: parse(p.permissions), scope: parse(p.scope), advisor: p.advisor, advisorName: p.advisor === 'owner' ? 'Merkez ofis' : names[p.advisor] || '', city: meta.city, country: meta.country, company: meta.company, phone: meta.phone, assignedBy: meta.assignedBy, title: meta.title, partner: partners[p.id] ? {status: partners[p.id].status} : null, verified: kycOk.has(p.id) || partners[p.id]?.kyc?.status === 'Approved', manager: p.manager, extra: meta.extra || {}, lastLogin: lastIn[p.uid] || null, login: a ? (a.hash ? (a.verified ? 'Aktif' : 'Doğrulama bekliyor') : 'Şifre bekleniyor') : 'Giriş yok', created: p.created};
     });
     for (const a of law) { const d = parse(a.data); const au = a.uid ? authed[a.uid] : null; list.push({id: 'law:' + a.id, name: d.profile?.name || a.email, email: a.email, type: 'lawyer', role: a.role, status: a.status === 'active' ? 'active' : 'disabled', permissions: {}, login: au ? (au.hash ? 'Aktif' : 'Şifre bekleniyor') : 'Giriş yok', created: a.created}); }
     const G = groupItem?.data || {groups: [], assign: {}};

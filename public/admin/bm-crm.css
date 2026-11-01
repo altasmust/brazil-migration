@@ -197,3 +197,6 @@ table.bmc-mini{width:100%;border-collapse:collapse;font-size:13px}.bmc-mini th{t
 .bmc-menu button[data-mi=delete]{color:#c62828;border-top:1px solid #f0e2e0;margin-top:4px}.bmc-menu button[data-mi=delete]:hover{background:#fdecea}
 .bmc-menu.up{top:auto;bottom:36px}
 .bmc-menu.fixed{position:fixed;right:auto;bottom:auto;z-index:1000}
+.bmc-vb{display:inline-block;vertical-align:-4px;margin-inline-start:6px;filter:drop-shadow(0 1px 1px rgba(160,100,0,.25))}
+.bmc-vtag{display:flex;width:max-content;align-items:center;gap:5px;margin:4px 0 2px;padding:3px 9px 3px 6px;border-radius:999px;background:#fff6dc;color:#8a5a00;font-size:11.5px;font-weight:700;border:1px solid #f3dc9b}
+.bmc-place{display:inline-flex;align-items:center;white-space:nowrap}

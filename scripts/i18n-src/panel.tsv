@@ -1080,3 +1080,30 @@ belgeleri inceleme bekliyor.	documents are awaiting review.	اسناد در ان
 kazanç onaylandı	earnings approved	درآمد تأیید شد
 
 KYC kredisi:	KYC credits:	اعتبار KYC:
+Referans bağlantısını düzenle	Edit referral link	ویرایش لینک ارجاع
+Bağlantı adresi değişmez; yalnızca kampanya adı güncellenir.	The link address stays the same; only the campaign name changes.	آدرس لینک تغییر نمی‌کند؛ فقط نام کمپین به‌روزرسانی می‌شود.
+Banner setleri (Google Ads ölçüleri)	Banner sets (Google Ads sizes)	مجموعه بنرها (اندازه‌های Google Ads)
+Banner setleri	Banner sets	مجموعه بنرها
+Google Ads ve Görüntülü Reklam Ağı standart ölçüleri. PNG’yi Google Ads’e yükleyin (hedef URL: referans bağlantınız) veya HTML kodunu kendi sitenize ekleyin; tıklamalar size yazılır.	Standard Google Ads and Display Network sizes. Upload the PNG to Google Ads (final URL: your referral link) or add the HTML code to your site; clicks are credited to you.	اندازه‌های استاندارد Google Ads و شبکه نمایش. فایل PNG را در Google Ads بارگذاری کنید (آدرس مقصد: لینک ارجاع شما) یا کد HTML را به سایت خود اضافه کنید؛ کلیک‌ها به نام شما ثبت می‌شود.
+Hedef URL’yi kopyala	Copy final URL	کپی آدرس مقصد
+Tüm seti indir (ZIP)	Download full set (ZIP)	دانلود کل مجموعه (ZIP)
+HTML kodu	HTML code	کد HTML
+Banner kodu kopyalandı.	Banner code copied.	کد بنر کپی شد.
+Banner listesi yüklenemedi.	The banner list could not be loaded.	فهرست بنرها بارگذاری نشد.
+Referans bağlantısı bulunamadı.	Referral link not found.	لینک ارجاع یافت نشد.
+Doğrulanmış	Verified	تأییدشده
+Kimliği doğrulanmış	Identity verified	هویت تأییدشده
+Orta dikdörtgen	Medium rectangle	مستطیل متوسط
+Büyük dikdörtgen	Large rectangle	مستطیل بزرگ
+Kare	Square	مربع
+Küçük kare	Small square	مربع کوچک
+Büyük leaderboard	Large leaderboard	لیدربورد بزرگ
+Mobil banner	Mobile banner	بنر موبایل
+Büyük mobil banner	Large mobile banner	بنر موبایل بزرگ
+Yarım sayfa	Half page	نیم‌صفحه
+Geniş skyscraper	Wide skyscraper	اسکای‌اسکریپر پهن
+Sosyal medya (yatay)	Social media (landscape)	شبکه اجتماعی (افقی)
+Sosyal medya (kare)	Social media (square)	شبکه اجتماعی (مربع)
+Genel	General	عمومی
+Şirket kurulumu	Company formation	ثبت شرکت
+Sil	Delete	حذف
