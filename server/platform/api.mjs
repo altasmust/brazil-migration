@@ -8,6 +8,7 @@ import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
 import {applyConfig} from './config.mjs';
 import {cleanPost, readMinutes} from './blog.mjs';
 import {loadPayments, publicView as paymentsView, savePayment, enabledMethods} from './payments.mjs';
+import {startCheckout, finishCheckout} from './iyzico.mjs';
 import {staticPages, siteState, invalidateSite, editorHTML, readStatic, buildOverrides, extractMenu, renderPage, hash as shash, PANEL} from './site.mjs';
 import {creditState, creditRecord, saveCredit, monthKey, monthStart as creditMonthStart, DEFAULT_MONTHLY} from './credits.mjs';
 import {CITIES, locate, fromRequest, distanceKm} from './geo.mjs';
@@ -404,6 +405,11 @@ export async function handlePlatform(req, env, route, ctx = {}) {
     return json({modules: list.map(m => ({id: m.id, title: m.title, icon: m.icon, type: m.type, content: m.content, url: m.url, order: m.order})), hidden: builtins.hidden || []});
   }
   const {u, person} = await memberContext(db, req);
+  if (route === 'pay/iyzico/start' && req.method === 'POST') {
+    const b = await body(req);
+    const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('x-real-ip') || '';
+    return json(await startCheckout({db, req, person, invoiceId: clean(b.invoice, 80), putItem, getItem, ip}));
+  }
   if (route.startsWith('partner/kyc-credit')) {
     const pid = person?.role === 'advisor' ? person.id : person?.role === 'employee' && person.manager && person.manager !== 'owner' ? person.manager : null;
     if (!pid) fail(403, 'Partner hesabı gerekli.');
@@ -1049,4 +1055,10 @@ export async function partnerGate(db, req, user, area, route) {
   const st = await partnerState(db, p.id); if (!st || st.status === 'approved') return;
   const allowed = area === 'workspace' && ((route === 'bootstrap' && req.method === 'GET') || (route === 'profile' && req.method === 'POST') || (route === 'notices' && req.method === 'POST'));
   if (!allowed) fail(403, 'Partner hesabınız onay bekliyor. Belgeleriniz onaylanana kadar yalnızca profilinizi düzenleyebilirsiniz.', {limited: true});
+}
+
+
+// iyzico ödeme dönüşü (iyzico ödeme sayfasından tarayıcıyla POST; oturum gerekmez, sonuç iyzico'dan doğrulanır).
+export async function iyzicoCallback(env, token) {
+  return finishCheckout({db: env.DB, token, q, putItem, getItem, notice, audit, rows});
 }

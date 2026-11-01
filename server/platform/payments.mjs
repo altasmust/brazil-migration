@@ -5,7 +5,7 @@ export const PROVIDERS = [
   {id: 'iyzico', name: 'iyzico', category: 'Kredi kartı', region: 'Türkiye', icon: 'credit-card', color: '#1e64ff',
     desc: 'Kredi ve banka kartıyla tek çekim / taksitli ödeme. 3D Secure destekli.',
     fields: [{k: 'apiKey', label: 'API Anahtarı', req: true}, {k: 'secretKey', label: 'Gizli Anahtar (Secret Key)', secret: true, req: true}],
-    modes: true, help: 'iyzico Merchant Panel → Ayarlar → Firma Ayarları bölümünden API anahtarlarınızı alın. Test için sandbox-merchant.iyzipay.com hesabını kullanın.'},
+    modes: true, help: 'iyzico Merchant Panel → Ayarlar → Firma Ayarları bölümünden API anahtarlarınızı alın. Önce Test modunda sandbox-merchant.iyzipay.com hesabının anahtarlarıyla deneyin, sonra canlı anahtarları girip Canlı moda geçin. Etkinleştirdiğinizde müşteriler panelde ödenmemiş faturalarını “Kartla öde” ile ödeyebilir; ödeme onaylanınca fatura otomatik “Ödendi” olur.'},
   {id: 'paytr', name: 'PayTR', category: 'Sanal POS', region: 'Türkiye', icon: 'credit-card', color: '#0f9bd7',
     desc: 'iFrame ile kartla ödeme, taksit ve havale/EFT seçenekleri.',
     fields: [{k: 'merchantId', label: 'Mağaza No (Merchant ID)', req: true}, {k: 'merchantKey', label: 'Merchant Key', secret: true, req: true}, {k: 'merchantSalt', label: 'Merchant Salt', secret: true, req: true}],

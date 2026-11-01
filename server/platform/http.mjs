@@ -4,7 +4,7 @@ import {refreshConfig} from './config.mjs';
 import {renderPage, readStatic, sitemapXML} from './site.mjs';
 import {getBucket} from './storage.mjs';
 import {withIdentity, isAdminRequest, onAdminHost, adminHosts} from './auth.mjs';
-import {handleAuth, handlePlatform, handlePlatformAdmin, partnerGate, maybeVerifyCustomerUpload} from './api.mjs';
+import {handleAuth, handlePlatform, handlePlatformAdmin, partnerGate, maybeVerifyCustomerUpload, iyzicoCallback} from './api.mjs';
 
 export function getEnv() {
   return {...process.env, DB: getDatabase(), BUCKET: getBucket()};
@@ -89,5 +89,23 @@ export function site() {
       if (route === 'page') { const html = await readStatic(req.headers.get('x-bm-path') || url.searchParams.get('p') || '/'); if (html) return new Response(html, {headers: htmlHeaders}); }
       return new Response('Hata', {status: 500});
     }
+  };
+}
+
+// /api/pay/iyzico/callback — iyzico'nun ödeme sonrası yönlendirmesi.
+export function pay() {
+  return async (req, ctx) => {
+    const params = ctx?.params ? await ctx.params : {};
+    const route = (params.path || []).join('/');
+    const back = (ok, msg) => new Response(null, {status: 303, headers: {Location: '/panel/?odeme=' + (ok ? 'basarili' : 'hata') + (msg ? '&mesaj=' + encodeURIComponent(String(msg).slice(0, 160)) : '') + '#finance', 'Cache-Control': 'no-store'}});
+    if (route !== 'iyzico/callback') return new Response('Not found', {status: 404});
+    try {
+      await getDatabase().ready(); await refreshConfig(getDatabase().client, 30000);
+      let token = '';
+      if (req.method === 'POST') { const ct = req.headers.get('content-type') || ''; if (/json/.test(ct)) token = (await req.json().catch(() => ({}))).token; else token = (await req.formData().catch(() => null))?.get('token'); }
+      else token = new URL(req.url).searchParams.get('token');
+      const r = await iyzicoCallback(getEnv(), String(token || ''));
+      return back(r.ok, r.ok ? '' : r.reason);
+    } catch (e) { console.error('[iyzico]', e); return back(false, 'Ödeme doğrulanamadı.'); }
   };
 }
