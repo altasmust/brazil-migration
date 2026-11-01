@@ -17,7 +17,7 @@ const js = `'use strict';
   const isMath = (s, i, len) => { const p = s.slice(0, i).trimEnd().slice(-1), n = s.slice(i + len).trimStart()[0] || ''; return /[\\p{L}\\d)]/u.test(p) && /[\\d(]/.test(n); };
   const icon = name => { const e = document.createElement('bm-i'); e.className = 'ic ic-' + name; e.setAttribute('aria-hidden', 'true'); return e; };
   function swap(t) {
-    const s = t.nodeValue; if (!s || !TEST.test(s)) return;
+    const s = t.nodeValue; if (!s || !t.parentNode || !TEST.test(s)) return;
     for (let p = t.parentNode; p && p !== document.body; p = p.parentNode) if (p.nodeType === 1 && (SKIP.test(p.nodeName.toUpperCase()) || p.isContentEditable || p.hasAttribute('data-no-icons'))) return;
     const f = document.createDocumentFragment(); let last = 0, hit = false;
     s.replace(RE, (m, g, i) => { if (g === '×' && isMath(s, i, m.length)) return m; hit = true; if (i > last) f.appendChild(document.createTextNode(s.slice(last, i))); f.appendChild(icon(G[g])); last = i + m.length; return m; });

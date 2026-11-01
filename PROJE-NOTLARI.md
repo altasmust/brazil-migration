@@ -276,3 +276,11 @@
 - Danışman görünümü (workspace.mjs snapshot): owner/customer dışındaki roller için müşteri faturaları advisorView ile maskelenir (amount = danışman payı, lines/discount/rate/split/notes/paymentUrl/reference/dosya gizli, shareOnly:true); ledger satırlarında amount = commission; başkasının fatura dosyası 403. Panelde "Kazancınız: $X". Panel fatura formundan komisyon % alanı kaldırıldı, oran hizmetten otomatik; hizmetlere "Vatandaşlık" eklendi (features.js v=7, customer-features.js v=6).
 - Test: 1000 USD oturum faturası → danışman panelinde 250 USD, ödenince ledger 250; geçici hesap silindi.
 - 2026-11-01: Satır menüsü kayıyordu/kesiliyordu (tablo kaydırma alanı kırpıyordu) → menü artık body'ye position:fixed eklenir, butona göre konumlanır, sığmazsa yukarı açılır; kaydırma/yeniden boyutlandırmada kapanır (bm-crm.js v=14, css v=8).
+
+## Panel dilleri: English + فارسی (2026-11-01)
+- Kullanıcı: "müşteri ve danışman paneline İngilizce ve Farsça ekle, web sitesi ana sayfasını elleme". Web sitesi sayfalarına dokunulmadı (yalnız /panel/ ve /partner/ index.html'e script eklendi).
+- `public/bm/i18n.js` (ÜRETİLEN dosya; elle düzenleme): kaynak `scripts/i18n-src/runtime.js` + sözlük `scripts/i18n-src/panel.tsv` (tr<TAB>en<TAB>fa, ~1080 ifade: panel arayüzü, bildirimler, sunucu hata mesajları). Üretim: `node scripts/build-i18n.mjs`. Panellerde head'de ilk script (defer yok).
+- Çalışma: dil localStorage 'bm-lang' (tr/en/fa); Türkçe'de hiçbir şey yapmaz. Diğer dillerde MutationObserver metin düğümlerini + placeholder/title/aria-label/alt çevirir (tam eşleşme, yoksa ≥4 harfli ifadeleri kelime sınırıyla değiştirir). alert/confirm/prompt metinleri, tarih/sayı biçimleri (tr-TR → en-GB / fa-IR latin rakam, Farsça'da Hicri şemsi tarih) çevrilir. Farsça: dir=rtl, Vazirmatn yazı tipi, tablo sağa hizalı. Ad/avatar (.profile strong, .avatar, .bm-name, [data-no-i18n]) çevrilmez.
+- Dil seçici: üst çubukta (.topbar .account başına) "TR · Türkçe / EN · English / FA · فارسی"; değişince sayfa yenilenir.
+- Yeni metin eklenirse panel.tsv'ye satır ekleyip build-i18n çalıştır; çevrilmeyen Türkçe metin olduğu gibi görünür.
+- icons.js: koparılmış metin düğümünde replaceChild hatası düzeltildi (scripts/build-icons.mjs swap'ta parentNode kontrolü). Panellerde icons v=5; site sayfaları v=4'te bırakıldı (dosya aynı).
