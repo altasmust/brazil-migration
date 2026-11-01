@@ -252,3 +252,8 @@
 - Onaylanınca: site.mjs applyTrust() bu fonksiyonlarla değiştirilecek, Cormorant Garamond fontu eklenecek, iyzico için uyumlu mühür eklenebilir.
 - v4.1 önizleme: kullanıcı "logoları bozmuşsun, çok büyük" dedi → ACG (kartvizitten kırpılmış plaka + OAB/SP 386.588), IusJud (orijinal logo, daire kesim) ve SSL (orijinal mühür) ORİJİNAL görsellerden kırpıldı: scratchpad/logos/*.webp. KYC kalkanı ve KVKK rozeti SVG (KYC Right Source'un logosu kullanılmadı). Boyutlar küçük: ~62–78px, ACG 150px. Hâlâ onay bekliyor.
 - IusJud logosu "LEGAL INTELLIGENCE" versiyonuyla değiştirildi (attachments/93a4e730-image.jpg → scratchpad/logos/iusjud.webp). "Justiça Federal" sorunu çözüldü. Önizleme onay bekliyor.
+
+## Güvence rozetleri — CANLIYA ALINDI (v4.1)
+- Footer'da küçük rozet sırası: SSL (orijinal görsel) · KYC kalkanı (SVG, yalnız Didit açıksa) · ACG plakası (kartvizitten, altında OAB/SP 386.588, CNA linki) · IusJud Legal Intelligence (orijinal logo) · KVKK & LGPD kurdeleli rozet (SVG).
+- Dosyalar: public/bm/trust/{ssl,acg,iusjud}.webp (?v=1), server/platform/trust-badges.mjs (kycShield, kvkkRosette; diğer fonksiyonlar kullanılmıyor). site.mjs applyTrust yeniden yazıldı, eski ribbon/rosette kaldırıldı.
+- CSS style.css v=19 (.ft-awards, .aw, .a-ssl/.a-kyc/.a-acg/.a-ius/.a-kv). Mobilde ACG üstte tam satır, diğer 4 altta.

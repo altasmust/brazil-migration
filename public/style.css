@@ -67,13 +67,14 @@ body{font-family:'Poppins',Arial,sans-serif;font-size:16px;line-height:1.75}h1,h
 /* footer güven şeridi */
 .footer-trust{border-top:1px solid var(--line);margin-top:30px;padding-top:26px;display:grid;gap:22px}
 .ft-head{display:flex;align-items:center;gap:14px}.ft-head .kicker{margin:0;white-space:nowrap}.ft-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line))}.ft-head .ft-line:last-child{background:linear-gradient(90deg,var(--line),transparent)}
-.ft-awards{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:26px 30px;padding:4px 0 6px}
-.aw{display:block;flex:none;transition:transform .25s ease,filter .25s ease;filter:drop-shadow(0 10px 16px rgba(0,0,0,.22))}
-.aw:hover{transform:translateY(-4px) scale(1.03);filter:drop-shadow(0 16px 22px rgba(0,0,0,.3))}
-.aw svg{display:block;width:100%;height:auto;font-family:inherit}
-.aw-rib{width:112px}.aw-ros{width:132px}
-[data-theme=dark] .aw{filter:drop-shadow(0 10px 18px rgba(0,0,0,.6))}[data-theme=dark] .aw-rib svg>path:first-of-type{stroke:#3a3a3a;stroke-width:1}
-@media (max-width:640px){.ft-awards{gap:18px 16px}.aw-rib{width:92px}.aw-ros{width:104px}}
+.ft-awards{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:26px;padding:2px 0 4px}
+.aw{display:block;flex:none;transition:transform .25s ease;filter:drop-shadow(0 6px 9px rgba(0,0,0,.2));text-decoration:none}
+.aw:hover{transform:translateY(-3px) scale(1.05)}
+[data-theme=dark] .aw{filter:drop-shadow(0 6px 12px rgba(0,0,0,.6))}
+.aw img,.aw svg{display:block;width:100%;height:auto;font-family:inherit}
+.a-ssl,.a-ius{width:78px}.a-kyc{width:62px}.a-kv{width:64px}
+.a-acg{width:150px;display:grid;gap:4px;justify-items:center}.a-acg img{border-radius:8px}.a-acg small{font-size:10px;font-weight:700;letter-spacing:1.5px;color:#b8862b}[data-theme=dark] .a-acg small{color:#e2c36d}
+@media (max-width:640px){.ft-awards{gap:14px 18px}.a-acg{order:-1;flex:0 0 100%;width:100%;margin:0 0 4px}.a-acg img{width:160px}.a-ssl,.a-ius{width:66px}.a-kyc{width:54px}.a-kv{width:56px}}
 .ft-legal{display:flex;gap:10px;align-items:flex-start;margin:0;font-size:13px;line-height:1.65;color:var(--muted)}.ft-legal>bm-i{color:var(--forest);font-size:17px;margin-top:2px;flex:none}
 .ft-legal b{color:var(--ink);font-weight:600}.ft-legal a{color:var(--forest);font-weight:600;white-space:nowrap}
 .footer-trust+.footer-bottom{margin-top:18px}
