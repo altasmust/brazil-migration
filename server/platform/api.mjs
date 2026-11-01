@@ -558,7 +558,14 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const upcoming = (await rows(db, "SELECT id, data, created FROM items WHERE kind='booking' ORDER BY created DESC LIMIT 6")).map(r => { const d = parse(r.data); return {id: r.id, name: d.name, email: d.email, service: d.service, start: d.start, status: d.status || 'Planlandı', created: r.created}; });
     const newest = (await rows(db, "SELECT id, name, email, role, created FROM people WHERE role IN ('customer','advisor') ORDER BY created DESC LIMIT 6")).map(r => ({id: r.id, name: r.name, email: r.email, role: r.role, created: r.created}));
     const review = (await rows(db, "SELECT owner, data, updated FROM items WHERE kind='partner' AND json_extract(data,'$.status')='review' ORDER BY updated DESC LIMIT 5")).map(r => { const d = parse(r.data); return {id: r.owner, company: d.company, name: d.name, updated: r.updated}; });
-    return json({customers, customers30, partnersActive, partnersReview, bookings7, bookingsOpen, leads30, credReq, kyc: {used: poolUsed, limit: Number(process.env.DIDIT_MONTHLY_LIMIT || 30)}, upcoming, newest, review});
+    const d14 = t - 14 * 864e5, day = x => new Date(x - 3 * 36e5).toISOString().slice(0, 10); // São Paulo günü
+    const days = Array.from({length: 14}, (_, i) => day(t - (13 - i) * 864e5)), z = () => Object.fromEntries(days.map(d => [d, 0]));
+    const series = {bookings: z(), signups: z(), leads: z()};
+    for (const r of await rows(db, "SELECT kind, created, updated FROM items WHERE kind IN ('booking','lead') AND created>?", d14)) { const k = r.kind === 'booking' ? 'bookings' : 'leads'; const d = day(r.created); if (d in series[k]) series[k][d]++; }
+    for (const r of await rows(db, "SELECT created FROM people WHERE role IN ('customer','advisor') AND created>?", d14)) { const d = day(r.created); if (d in series.signups) series.signups[d]++; }
+    const [leadsAll, bookingsAll] = await Promise.all([n("SELECT COUNT(*) AS n FROM items WHERE kind='lead'"), n("SELECT COUNT(*) AS n FROM items WHERE kind='booking'")]);
+    const docsPending = await n("SELECT COUNT(*) AS n FROM items WHERE kind='document' AND json_extract(data,'$.status') IN ('Yüklendi','İncelemede') AND COALESCE(json_extract(data,'$.direction'),'out')='out'");
+    return json({customers, customers30, partnersActive, partnersReview, bookings7, bookingsOpen, leads30, credReq, docsPending, kyc: {used: poolUsed, limit: Number(process.env.DIDIT_MONTHLY_LIMIT || 30)}, upcoming, newest, review, days, series, funnel: {leads: leadsAll, bookings: bookingsAll, customers}, system: {mail: mailProvider(), didit: diditReady(process.env), db: db.mode || 'direct'}});
   }
   if (route === 'demo' && req.method === 'GET') {
     const n = await one(db, "SELECT COUNT(*) AS n FROM people WHERE id IN ('demo-partner','demo-customer')");

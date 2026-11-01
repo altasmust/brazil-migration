@@ -1,5 +1,5 @@
 const DAY=86400000,ACTIVE=300000;
-const paths=new Set(['/','/index.html','/brezilyada-sirket-kurma/','/brezilya-oturum-izni/','/iletisim/','/giris/','/icerik-plani/','/brezilya-vatandasligi/','/degerlendirme/','/kaynaklar/','/portekizce/','/turkiye-brezilya/','/partner-ol/']);
+const paths=new Set(['/','/index.html','/brezilyada-sirket-kurma/','/brezilya-oturum-izni/','/iletisim/','/giris/','/hakkimizda/','/blog/','/gizlilik-politikasi/','/kvkk-aydinlatma-metni/','/cerez-politikasi/','/kullanim-kosullari/','/brezilya-vatandasligi/','/degerlendirme/','/kaynaklar/','/portekizce/','/turkiye-brezilya/','/partner-ol/']);
 const response=(data,status=200,headers={})=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}});
 export async function heartbeat(req,env){
  try{
@@ -9,7 +9,7 @@ export async function heartbeat(req,env){
   if(Number(req.headers.get('content-length')||0)>2048)return response({error:'İstek çok büyük.'},413);
   const raw=await req.text();if(raw.length>2048)return response({error:'İstek çok büyük.'},413);
   let b;try{b=JSON.parse(raw)}catch{return response({error:'Geçersiz veri.'},400)}
-  if(!paths.has(b.path))return response({error:'Sayfa izlenmiyor.'},400);
+  if(!(paths.has(b.path)||/^\/blog\/[a-z0-9-]{2,90}\/$/.test(b.path||'')))return response({error:'Sayfa izlenmiyor.'},400);
   const cookie=req.headers.get('cookie')||'',match=cookie.match(/(?:^|;\s*)bm_visit=([a-f0-9-]{36})(?:;|$)/),sid=match?.[1]||crypto.randomUUID(),id='visit:'+sid,now=Date.now();
   const existing=await env.DB.prepare("SELECT updated FROM items WHERE id=? AND kind='visitor_session' AND owner='site'").bind(id).first();
   if(existing&&now-existing.updated<25000)return response({tracked:true});
