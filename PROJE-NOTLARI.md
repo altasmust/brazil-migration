@@ -223,3 +223,11 @@
 - 2026-11-01 (12): Kullanıcı: Yeni Fatura'da müşteri listesi boş, partner de seçilebilmeli. Sebep: eski admin faturaları ayrı `admin_record` sistemindeydi (records('customer')), müşteri paneline hiç gitmiyordu.
   - `public/admin/bm-invoice.js`: Yeni Fatura formu gerçek hesapları listeler (Müşteriler / Partnerler gruplu, API `accounts`), fatura başlığı, e-posta bildirimi, partner komisyon oranı. Gönderim → API `invoices/create` (item kind `invoice`, owner = kişi, tutar kuruş, lines, advisor = müşterinin partneri, rate). Faturalar listesi gerçek faturalar: özet (ödenmemiş/tahsil edilen), arama, durum filtresi, Ödendi (referans) / İptal / Sil / Geri al. API `invoices` GET, `invoices/status`, `invoices/delete` (iyzico ile ödenmiş fatura değiştirilemez). Ödendi'de ledger komisyonu + bildirim.
   - Partnerler kendi adlarına kesilen faturaları partner panelinde görür (workspace snapshot: invoice.owner === kendisi) ve öder (pay.js partner paneline eklendi; iyzico start partner rolüne de açık; kendi faturasında "Ödemeyi Teyit Et" gizli). Dosyası olmayan faturalarda Önizle/İndir gizli.
+
+## Footer güven şeridi (OAB / resmî kanal ibaresi)
+- Yeni sayfa YOK; sadece footer. `server/platform/site.mjs` → `applyTrust()` (LAW sabiti: ACG Advogada · Dra. Ana Carolina · OAB/SP 386.588), `renderPage` ve `notFound` içinde `applyCompany` yanında çağrılır.
+- Rozetler: SSL · iyzico 3D Secure (yalnız iyzico etkinse) · Didit kimlik doğrulama (yalnız DIDIT_ENABLED+API key) · KVKK & LGPD · OAB kayıtlı avukat.
+- Hukuki satır: "Başvurularınız Polícia Federal ve Ministério da Justiça nezdinde, resmî kanallardan yürütülür. Hukuki işlemler ACG Advogada … tarafından yürütülür." + OAB CNA doğrulama linki (https://cna.oab.org.br/).
+- siteState artık config-payments de yükler (s.payments); payments/save → invalidateSite().
+- `scale` ikonu eklendi (icons v=4). CSS: style.css v=16 (.footer-trust, .ft-badges, .ft-legal + dark).
+- Resmî kurum logoları (PF, MJ), Didit/Jusbrasil logoları sertifika gibi KULLANILMAZ.

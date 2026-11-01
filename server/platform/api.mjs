@@ -882,7 +882,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   }
   if (route === 'payments/save' && req.method === 'POST') {
     const next = savePayment(await loadPayments(db), clean(b.id, 30), b);
-    await db.batch([putItem(db, 'config-payments', 'config', 'owner', next), audit(db, actor, 'payments.save', clean(b.id, 30) + ':' + (next[clean(b.id, 30)].enabled ? 'on' : 'off'))]);
+    await db.batch([putItem(db, 'config-payments', 'config', 'owner', next), audit(db, actor, 'payments.save', clean(b.id, 30) + ':' + (next[clean(b.id, 30)].enabled ? 'on' : 'off'))]); invalidateSite();
     return json({ok: true, modules: paymentsView(next)});
   }
   if (route.startsWith('blog/') && req.method === 'POST') {

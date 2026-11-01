@@ -64,3 +64,13 @@ body{font-family:'Poppins',Arial,sans-serif;font-size:16px;line-height:1.75}h1,h
 .bm-wa bm-i{font-size:20px}.bm-wa:hover{background:#178a48}
 @media (max-width:640px){.bm-wa span{display:none}.bm-wa{padding:14px;right:14px;bottom:14px}}
 [data-theme=dark] .co-row bm-i{color:#8fcf8a}
+/* footer güven şeridi */
+.footer-trust{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;display:grid;gap:14px}
+.ft-badges{display:flex;flex-wrap:wrap;gap:10px}
+.ft-badges span{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink);background:color-mix(in srgb,var(--forest) 7%,transparent);border:1px solid var(--line);border-radius:999px;padding:7px 13px}
+.ft-badges bm-i{color:var(--forest);font-size:15px}
+.ft-legal{display:flex;gap:10px;align-items:flex-start;margin:0;font-size:13px;line-height:1.65;color:var(--muted)}.ft-legal>bm-i{color:var(--forest);font-size:17px;margin-top:2px;flex:none}
+.ft-legal b{color:var(--ink);font-weight:600}.ft-legal a{color:var(--forest);font-weight:600;white-space:nowrap}
+.footer-trust+.footer-bottom{margin-top:18px}
+[data-theme=dark] .ft-badges bm-i,[data-theme=dark] .ft-legal>bm-i,[data-theme=dark] .ft-legal a{color:#8fcf8a}
+@media (max-width:640px){.ft-badges span{font-size:12px;padding:6px 11px}}

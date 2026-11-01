@@ -50,7 +50,7 @@ let state = null, stateAt = 0;
 export function invalidateSite() { stateAt = 0; renderCache.clear(); }
 export async function siteState(db) {
   if (state && Date.now() - stateAt < 15000) return state;
-  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post') OR id='config-company'").all()).results || [];
+  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post') OR id IN ('config-company','config-payments')").all()).results || [];
   const s = {menu: null, pages: {}, custom: {}, blog: {}, company: null, stamp: ''};
   let stamp = rows.length;
   for (const r of rows) {
@@ -60,6 +60,7 @@ export async function siteState(db) {
     if (r.kind === 'site_custom' && d.path) s.custom[d.path] = {...d, id: r.id};
     if (r.kind === 'blog_post' && d.slug) s.blog[d.slug] = {...d, id: r.id};
     if (r.id === 'config-company') s.company = d;
+    if (r.id === 'config-payments') s.payments = d;
   }
   s.stamp = hash(stamp);
   if (state?.stamp !== s.stamp) renderCache.clear();
@@ -222,6 +223,16 @@ function applyCompany(root, co) {
   if (head && root.querySelector('body')?.getAttribute('data-page') !== 'blog') head.insertAdjacentHTML('beforeend', `<script type="application/ld+json">${JSON.stringify({'@context': 'https://schema.org', '@type': 'ProfessionalService', name: brand, legalName: co.legalName || undefined, url: siteUrl() || undefined, logo: (siteUrl() || '') + '/brazil-migration-logo.png', email: co.email || undefined, telephone: co.phone || undefined, address: co.address ? {'@type': 'PostalAddress', streetAddress: co.address} : undefined, areaServed: ['BR', 'TR'], sameAs: socials.map(([, v]) => v)}).replace(/</g, '\\u003c')}</script>`);
 }
 
+// ---------- footer güven şeridi (her sayfada, footer alt satırının üstünde) ----------
+const LAW = {firm: 'ACG Advogada', lawyer: 'Dra. Ana Carolina', oab: 'OAB/SP 386.588', verify: 'https://cna.oab.org.br/'};
+function applyTrust(root, st) {
+  const f = root.querySelector('footer.site-footer'), fb = f?.querySelector('.footer-bottom'); if (!f || !fb || f.querySelector('.footer-trust')) return;
+  const ic = n => `<bm-i class="ic ic-${n}" aria-hidden="true"></bm-i>`;
+  const iyzico = !!st?.payments?.iyzico?.enabled, didit = process.env.DIDIT_ENABLED === 'true' && !!process.env.DIDIT_API_KEY;
+  const items = [['lock', 'SSL güvenli bağlantı'], iyzico && ['credit-card', 'iyzico ile 3D Secure ödeme'], didit && ['shield-check', 'Didit ile kimlik doğrulama'], ['doc', 'KVKK &amp; LGPD uyumlu'], ['scale', 'OAB kayıtlı avukat']].filter(Boolean);
+  fb.insertAdjacentHTML('beforebegin', `<div class="footer-trust"><div class="ft-badges">${items.map(([i, t]) => `<span>${ic(i)}${t}</span>`).join('')}</div><p class="ft-legal">${ic('shield-check')}<span>Başvurularınız Polícia Federal ve Ministério da Justiça nezdinde, resmî kanallardan yürütülür. Hukuki işlemler <b>${LAW.firm} · ${LAW.lawyer} (${LAW.oab})</b> tarafından yürütülür. <a href="${LAW.verify}" target="_blank" rel="noopener">OAB kaydını doğrula</a></span></p></div>`);
+}
+
 // ---------- SEO ----------
 function setMeta(head, attr, key, value) {
   let m = head.querySelector(`meta[${attr}="${key}"]`);
@@ -294,8 +305,8 @@ async function renderBlog(path, st, preview) {
 // ---------- icons: text glyphs (↗ ✓ ⌄ × …) → icon library (/bm/icons.css, see server/platform/icons.mjs) ----------
 export function arrowize(html) {
   html = iconizeHTML(html);
-  if (!html.includes('/bm/icons.css')) html = html.replace('</head>', '<link rel="stylesheet" href="/bm/icons.css?v=3"></head>');
-  if (!html.includes('/bm/icons.js')) html = html.replace(/<\/body>(?![\s\S]*<\/body>)/, '<script src="/bm/icons.js?v=3" defer></script></body>');
+  if (!html.includes('/bm/icons.css')) html = html.replace('</head>', '<link rel="stylesheet" href="/bm/icons.css?v=4"></head>');
+  if (!html.includes('/bm/icons.js')) html = html.replace(/<\/body>(?![\s\S]*<\/body>)/, '<script src="/bm/icons.js?v=4" defer></script></body>');
   return html;
 }
 
@@ -320,7 +331,7 @@ export async function renderPage(db, path, {editor = false, preview = null} = {}
   else return {status: 404, html: await notFound(db)};
   if (!root) return {status: 404, html: await notFound(db)};
   if (st?.menu || preview) applyMenu(root, (st || await siteState(db)).menu);
-  try { applyCompany(root, (st || await siteState(db)).company); } catch {}
+  try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); } catch {}
   let html = '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
   if (siteUrl()) html = html.replace(OLD_HOSTS, siteUrl());
   html = arrowize(html);
@@ -333,7 +344,7 @@ async function notFound(db) {
   const root = parseHTML(sh);
   root.querySelector('main#main')?.set_content('<section class="wrap" style="padding:90px 0 110px;text-align:center"><div class="kicker">404</div><h1 style="margin:10px 0 14px">Aradığınız sayfa bulunamadı.</h1><p style="color:var(--muted)">Sayfa taşınmış veya kaldırılmış olabilir.</p><p><a class="btn" href="/">Ana sayfaya dön ↗</a></p></section>');
   const t = root.querySelector('title'); if (t) t.set_content('Sayfa bulunamadı | Brazil Migration');
-  try { const st = await siteState(db); if (st.menu) applyMenu(root, st.menu); applyCompany(root, st.company); } catch {}
+  try { const st = await siteState(db); if (st.menu) applyMenu(root, st.menu); applyCompany(root, st.company); applyTrust(root, st); } catch {}
   return arrowize('<!doctype html>' + root.toString().replace(/^<!doctype html>/i, ''));
 }
 

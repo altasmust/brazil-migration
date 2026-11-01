@@ -72,6 +72,7 @@ export const ICONS = {
   power: '<path d="M12 3v8M6.4 6.6a8 8 0 1 0 11.2 0"/>',
   eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   bell: '<path d="M18 8.5a6 6 0 0 0-12 0c0 6.5-3 7.5-3 7.5h18s-3-1-3-7.5M10 20a2 2 0 0 0 4 0"/>',
+  scale: '<path d="M12 3v18M5 21h14M6 7h12M6 7l-3 7a3 3 0 0 0 6 0zM18 7l-3 7a3 3 0 0 0 6 0z"/>',
   play: {fill: true, d: '<path d="M8 5v14l11-7z"/>'},
   pause: {fill: true, d: '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>'},
 };
