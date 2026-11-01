@@ -251,3 +251,4 @@
 - IusJud logosundaki "JUSTIÇA FEDERAL" yazısı resmî mahkeme adı olduğu için rozete konmadı; yerine "VERIFIED · yıl".
 - Onaylanınca: site.mjs applyTrust() bu fonksiyonlarla değiştirilecek, Cormorant Garamond fontu eklenecek, iyzico için uyumlu mühür eklenebilir.
 - v4.1 önizleme: kullanıcı "logoları bozmuşsun, çok büyük" dedi → ACG (kartvizitten kırpılmış plaka + OAB/SP 386.588), IusJud (orijinal logo, daire kesim) ve SSL (orijinal mühür) ORİJİNAL görsellerden kırpıldı: scratchpad/logos/*.webp. KYC kalkanı ve KVKK rozeti SVG (KYC Right Source'un logosu kullanılmadı). Boyutlar küçük: ~62–78px, ACG 150px. Hâlâ onay bekliyor.
+- IusJud logosu "LEGAL INTELLIGENCE" versiyonuyla değiştirildi (attachments/93a4e730-image.jpg → scratchpad/logos/iusjud.webp). "Justiça Federal" sorunu çözüldü. Önizleme onay bekliyor.
