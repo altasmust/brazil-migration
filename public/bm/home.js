@@ -63,12 +63,14 @@
     <div>${ico('shield')}<span><b>Güvenli panel</b><small>Belgeler, süreç ve bildirimler</small></span></div></div></section>`);
 })();
 
-// Ülke çiplerine bayrak
+// Ülke şeridi: fareyle sürükleyerek kaydırma (dokunmatikte doğal kaydırma)
 (() => {
-  const F = {'Brezilya': 'br', 'Türkiye': 'tr', 'Azerbaycan': 'az', 'Kuzey Makedonya': 'mk', 'Rusya': 'ru', 'İspanya': 'es', 'İran': 'ir', 'Suudi Arabistan': 'sa', 'Türkmenistan': 'tm', 'Özbekistan': 'uz', 'Kırgızistan': 'kg', 'Endonezya': 'id'};
-  const run = () => document.querySelectorAll('.country-strip button').forEach(b => {
-    if (b.querySelector('img')) return; const c = F[b.querySelector('span')?.textContent.trim()]; if (!c) return;
-    const i = document.createElement('img'); i.src = '/bm/flags/' + c + '.svg'; i.alt = ''; i.width = 20; i.height = 15; i.loading = 'lazy'; b.prepend(i);
-  });
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+  const init = () => { const el = document.querySelector('.country-strip'); if (!el) return;
+    let down = false, sx = 0, sl = 0, moved = false;
+    el.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') return; down = true; moved = false; sx = e.clientX; sl = el.scrollLeft; });
+    addEventListener('pointermove', e => { if (!down) return; const dx = e.clientX - sx; if (Math.abs(dx) > 4) { moved = true; el.classList.add('dragging'); } el.scrollLeft = sl - dx; });
+    addEventListener('pointerup', () => { if (!down) return; down = false; setTimeout(() => el.classList.remove('dragging'), 0); });
+    el.addEventListener('click', e => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

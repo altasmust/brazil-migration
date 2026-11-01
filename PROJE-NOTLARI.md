@@ -300,3 +300,4 @@
 - `.stack-label` (SINIRLARIN ÖTESİNDE vb.): pseudo katmanlar kaldırıldı, box-shadow ile arka katman; yazı beyaz ve önde.
 - Ana sayfa ülke saatleri: kaydırma çubuğu kaldırıldı → bayraklı çip ızgarası (home.css v=7; bayraklar bm/home.js v=3 ile /bm/flags/ den).
 - Ana sayfa: "Blogdan son yazılar" bölümü (NEDEN BİZİ SEÇMELİSİNİZ bölümünün hemen altı), en yeni 3 yayımlanmış yazı tarihe göre (yeni yazı başa düşer). site.mjs renderPage path '/' → blog.mjs homeBlogHTML; /bm/blog.css?v=1 eklenir; home.css'te .home-blog stilleri.
+- 2026-11-01: Kullanıcı bayraklı çipleri beğenmedi → ülke şeridi eski tek satır haline döndü, bayraklar kaldırıldı; kaydırma çubuğu gizli (kenarlarda solma), dokunmatikte parmakla, masaüstünde fareyle sürükleyerek kaydırılır (home.js v=4 pointer drag, sürüklemede tıklama engellenir; tekerlek yakalanmaz). home.css v=8.
