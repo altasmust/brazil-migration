@@ -95,6 +95,13 @@ function card(p, big) {
 }
 const sortPosts = posts => [...posts].sort((a, b) => (b.featured - a.featured) || String(b.date).localeCompare(String(a.date)));
 
+// Ana sayfa: en yeni 3 yazı (yeni eklenen başa düşer).
+export function homeBlogHTML(posts) {
+  const list = [...posts].sort((a, b) => String(b.date).localeCompare(String(a.date)) || (b.created || 0) - (a.created || 0)).slice(0, 3);
+  if (!list.length) return '';
+  return `<section class="home-blog" id="blogdan"><div class="wrap"><div class="hb-head"><div><div class="kicker">BLOG · BRASIL REHBERİ</div><h2>Blogdan son yazılar</h2></div><a class="hb-all" href="/blog/">Tüm yazılar ↗</a></div><div class="bl-grid3">${list.map(p => card(p)).join('')}</div></div></section>`;
+}
+
 export function blogIndexHTML(posts) {
   const list = sortPosts(posts);
   const cats = [...new Set(list.map(p => p.category))];

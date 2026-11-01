@@ -79,3 +79,20 @@ body{font-family:'Poppins',Arial,sans-serif;font-size:16px;line-height:1.75}h1,h
 .ft-legal b{color:var(--ink);font-weight:600}.ft-legal a{color:var(--forest);font-weight:600;white-space:nowrap}
 .footer-trust+.footer-bottom{margin-top:18px}
 [data-theme=dark] .ft-legal>bm-i,[data-theme=dark] .ft-legal a{color:#8fcf8a}
+/* Mega menü: tanıtım kutusunda şeffaf illüstrasyon, bağlantılar ince çerçeveli */
+.mega-intro{position:relative;overflow:hidden;isolation:isolate}
+.mega-intro:after{content:"";position:absolute;right:-14px;bottom:-18px;width:62%;max-width:230px;aspect-ratio:6/5;background:url(/bm/mega/rehber.svg) no-repeat right bottom/contain;opacity:.2;z-index:-1;pointer-events:none;transition:transform .5s ease,opacity .5s ease}
+.nav-group:nth-of-type(1) .mega-intro:after{background-image:url(/bm/mega/bireysel.svg)}
+.nav-group:nth-of-type(2) .mega-intro:after{background-image:url(/bm/mega/kurumsal.svg)}
+.nav-group:nth-of-type(3) .mega-intro:after{background-image:url(/bm/mega/rehber.svg)}
+.nav-group[open] .mega-intro:after{transform:translate(-4px,-4px);opacity:.26}
+.mega-intro>*{position:relative}
+.mega-links{align-content:start}
+.mega-links>a{border:1px solid #dfe8da;border-radius:10px;transition:border-color .2s,background .2s,transform .2s}
+.mega-links>a:hover{border-color:#a9c79b;transform:translateY(-1px)}
+[data-theme=dark] .mega-links>a{border-color:#34503b}[data-theme=dark] .mega-links>a:hover{border-color:#6f9a64}
+[data-theme=dark] .mega-intro:after{filter:invert(1) hue-rotate(180deg) brightness(1.4);opacity:.16}
+/* Yığın etiket (SINIRLARIN ÖTESİNDE vb.): yazı en önde, beyaz ve net */
+.stack-label{background:#1f6b3a!important;color:#fff!important;text-shadow:0 1px 0 rgba(0,0,0,.18);box-shadow:-12px 0 0 -5px rgba(144,183,114,.55),-24px 0 0 -10px rgba(184,205,154,.35);z-index:0}
+.stack-label:before,.stack-label:after{display:none!important}
+[data-theme=dark] .stack-label{background:#2e7d47!important;box-shadow:-12px 0 0 -5px rgba(110,160,100,.45),-24px 0 0 -10px rgba(80,120,80,.3)}

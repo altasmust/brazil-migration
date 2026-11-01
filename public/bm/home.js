@@ -62,3 +62,13 @@
     <div>${ico('scale')}<span><b>Avukat koordinasyonu</b><small>Dosyanıza özel hukuki kontrol</small></span></div>
     <div>${ico('shield')}<span><b>Güvenli panel</b><small>Belgeler, süreç ve bildirimler</small></span></div></div></section>`);
 })();
+
+// Ülke çiplerine bayrak
+(() => {
+  const F = {'Brezilya': 'br', 'Türkiye': 'tr', 'Azerbaycan': 'az', 'Kuzey Makedonya': 'mk', 'Rusya': 'ru', 'İspanya': 'es', 'İran': 'ir', 'Suudi Arabistan': 'sa', 'Türkmenistan': 'tm', 'Özbekistan': 'uz', 'Kırgızistan': 'kg', 'Endonezya': 'id'};
+  const run = () => document.querySelectorAll('.country-strip button').forEach(b => {
+    if (b.querySelector('img')) return; const c = F[b.querySelector('span')?.textContent.trim()]; if (!c) return;
+    const i = document.createElement('img'); i.src = '/bm/flags/' + c + '.svg'; i.alt = ''; i.width = 20; i.height = 15; i.loading = 'lazy'; b.prepend(i);
+  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+})();

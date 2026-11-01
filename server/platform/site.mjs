@@ -7,7 +7,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {parse} from 'node-html-parser';
 import {iconizeHTML} from './icons.mjs';
-import {BLOG_POST, blogIndexHTML, blogPostHTML, blogJsonLd} from './blog.mjs';
+import {BLOG_POST, blogIndexHTML, blogPostHTML, blogJsonLd, homeBlogHTML} from './blog.mjs';
 
 const PUBLIC = () => join(/* turbopackIgnore: true */ process.cwd(), 'public');
 export const PANEL = /^\/(admin|panel|partner|avukat|kyc)(\/|$)/;
@@ -342,6 +342,7 @@ export async function renderPage(db, path, {editor = false, preview = null} = {}
   if (!root) return {status: 404, html: await notFound(db)};
   if (st?.menu || preview) applyMenu(root, (st || await siteState(db)).menu);
   try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); } catch {}
+  if (path === '/' && !editor && st) { const why = root.querySelector('section.why'); const hb = homeBlogHTML(Object.values(st.blog || {}).filter(p => p.published)); if (why && hb) { why.insertAdjacentHTML('afterend', hb); root.querySelector('head')?.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/blog.css?v=1">'); } }
   let html = '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
   if (siteUrl()) html = html.replace(OLD_HOSTS, siteUrl());
   html = arrowize(html);

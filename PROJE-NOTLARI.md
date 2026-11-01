@@ -292,3 +292,11 @@
 - Bayraklar: `public/bm/flags.js` (BMFlag.code/img; TR+EN ülke adı → ISO) + `public/bm/flags/*.svg` (flag-icons MIT, 77 ülke, LICENSE.txt). Admin müşteri listesi Ülke/Şehir sütunu ve kişi detayı Konum satırı. admin/index.html'de flags.js.
 - Doğrulanmış: `public/bm/verified.svg` (altın rozet + onay). Kural: müşterinin kyc_session durumu Approved (danışmanda partner.kyc Approved). admin `accounts` → verified; workspace snapshot customers[].verified. Admin listede ad yanında rozet, detayda rozet + "Doğrulanmış kullanıcı" etiketi (bm-crm.js v=15, css v=10); danışman panelinde Müşteriler tablosunda ad yanında rozet.
 - Çeviri sözlüğüne yeni metinler eklendi (i18n.js v=2). additions.css v=3.
+
+## Görsel düzeltmeler (2026-11-01, gece)
+- Panel KYC kartı: eski nokta-oval canvas animasyonu kaldırıldı → şeffaf cam tasarım (`.kyc-vis`: buzlu kimlik kartı + tarama ışını, dönen halkalı yüz dairesi + onay, "1 Belge · 2 Selfie · 3 Yüz eşleşmesi" çipleri). features.js v=9, customer-features.js v=7, additions.css v=4. animate() #scan-canvas yoksa çıkıyor.
+- Panel profilindeki "Dil tercihi" kartı kaldırıldı (dil artık üst çubuktaki seçiciden).
+- Site mega menü: sol yeşil tanıtım kutusuna şeffaf çizgi illüstrasyon (`public/bm/mega/{bireysel,kurumsal,rehber}.svg`, .nav-group:nth-of-type(1/2/3) sırasıyla; menü sırası değişirse resim sıraya göre gider); sağdaki bağlantılar ince çerçeveli kart. style.css v=20 (sonuna eklendi).
+- `.stack-label` (SINIRLARIN ÖTESİNDE vb.): pseudo katmanlar kaldırıldı, box-shadow ile arka katman; yazı beyaz ve önde.
+- Ana sayfa ülke saatleri: kaydırma çubuğu kaldırıldı → bayraklı çip ızgarası (home.css v=7; bayraklar bm/home.js v=3 ile /bm/flags/ den).
+- Ana sayfa: "Blogdan son yazılar" bölümü (NEDEN BİZİ SEÇMELİSİNİZ bölümünün hemen altı), en yeni 3 yayımlanmış yazı tarihe göre (yeni yazı başa düşer). site.mjs renderPage path '/' → blog.mjs homeBlogHTML; /bm/blog.css?v=1 eklenir; home.css'te .home-blog stilleri.

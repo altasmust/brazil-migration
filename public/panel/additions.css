@@ -13,3 +13,27 @@ dialog#modal.bm-wide{width:min(1080px,96vw);max-width:none}
 .bm-bs figcaption span{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.bm-bs figcaption a,.bm-bs figcaption button{font:inherit;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid #cfe0cc;background:#f3f8f1;color:#1b5e20;text-decoration:none;cursor:pointer}
 .bm-vb{display:inline-block;vertical-align:-4px;margin-inline-start:6px;filter:drop-shadow(0 1px 1px rgba(160,100,0,.25))}
 .btn.bm-danger{color:#c62828;border-color:#f1c9c5}.btn.bm-danger:hover{background:#fdecea}
+/* KYC görseli: şeffaf cam kart + yüz eşleşmesi */
+.kyc-vis{position:relative;height:300px;border-radius:18px;overflow:hidden;margin:6px 0 16px;background:linear-gradient(145deg,rgba(232,244,228,.85),rgba(214,236,222,.55));border:1px solid rgba(27,94,32,.14);display:grid;place-items:center;isolation:isolate}
+.kyc-vis:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(27,94,32,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(27,94,32,.06) 1px,transparent 1px);background-size:22px 22px;mask-image:radial-gradient(circle at 50% 45%,#000 30%,transparent 75%);z-index:-1}
+.kv-glow{position:absolute;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(129,199,132,.45),transparent 65%);filter:blur(8px);z-index:-1;animation:kvpulse 4s ease-in-out infinite}
+.kv-card{position:absolute;left:50%;top:50%;width:230px;height:144px;transform:translate(-62%,-56%) rotate(-6deg);border-radius:14px;background:rgba(255,255,255,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.8);box-shadow:0 18px 40px -18px rgba(16,60,30,.45),inset 0 1px 0 #fff;display:flex;gap:14px;padding:18px;overflow:hidden}
+.kv-photo{width:58px;height:70px;border-radius:9px;background:rgba(27,94,32,.1);color:#2e7d32;display:grid;place-items:center;flex:none}.kv-photo svg{width:34px}
+.kv-lines{flex:1;display:grid;gap:8px;align-content:start;padding-top:4px}.kv-lines i{display:block;height:7px;border-radius:4px;background:rgba(27,94,32,.18)}
+.kv-lines i.mrz{height:5px;background:repeating-linear-gradient(90deg,rgba(27,94,32,.3) 0 6px,transparent 6px 9px);margin-top:2px}
+.kv-lines i.mrz:first-of-type{margin-top:14px}
+.kv-beam{position:absolute;left:0;right:0;top:0;height:46px;background:linear-gradient(180deg,transparent,rgba(102,187,106,.35),transparent);border-bottom:2px solid rgba(76,175,80,.85);animation:kvscan 2.8s cubic-bezier(.6,0,.4,1) infinite}
+.kv-face{position:absolute;left:50%;top:50%;width:112px;height:112px;transform:translate(46%,-8%);border-radius:50%;background:rgba(255,255,255,.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.85);box-shadow:0 16px 34px -16px rgba(16,60,30,.5);color:#1b5e20;display:grid;place-items:center}
+.kv-face>svg{width:86px}.kv-ring{transform-origin:40px 40px;animation:kvspin 9s linear infinite}
+.kv-ok{position:absolute;right:2px;bottom:4px;width:30px;height:30px;border-radius:50%;background:#2e7d32;color:#fff;display:grid;place-items:center;box-shadow:0 4px 10px rgba(46,125,50,.45)}.kv-ok svg{width:16px}
+.kv-steps{position:absolute;left:0;right:0;bottom:14px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.kv-steps span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:#1f4d2a;background:rgba(255,255,255,.7);border:1px solid rgba(27,94,32,.15);padding:5px 10px 5px 5px;border-radius:999px;backdrop-filter:blur(6px)}
+.kv-steps em{font-style:normal;width:18px;height:18px;border-radius:50%;background:#e3f1df;color:#1b5e20;display:grid;place-items:center;font-size:10px}
+.kyc-vis.running .kv-beam{animation-duration:1.1s}.kyc-vis.running .kv-ring{animation-duration:2.5s}
+@keyframes kvscan{0%{transform:translateY(-50px)}50%{transform:translateY(150px)}100%{transform:translateY(-50px)}}
+@keyframes kvspin{to{transform:rotate(360deg)}}
+@keyframes kvpulse{50%{transform:scale(1.12);opacity:.7}}
+@media (prefers-reduced-motion:reduce){.kv-beam,.kv-ring,.kv-glow{animation:none}}
+@media (max-width:520px){.kyc-vis{height:260px}.kv-card{width:190px;height:122px;padding:14px}.kv-photo{width:46px;height:56px}.kv-face{width:92px;height:92px}.kv-face>svg{width:70px}}
+[data-theme=dark] .kyc-vis{background:linear-gradient(145deg,rgba(30,52,38,.9),rgba(18,36,26,.7));border-color:#2c4636}
+[data-theme=dark] .kv-card,[data-theme=dark] .kv-face,[data-theme=dark] .kv-steps span{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);color:#cfe8d2}
