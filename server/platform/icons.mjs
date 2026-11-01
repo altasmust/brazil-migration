@@ -70,6 +70,8 @@ export const ICONS = {
   transfer: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/>',
   power: '<path d="M12 3v8M6.4 6.6a8 8 0 1 0 11.2 0"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  bell: '<path d="M18 8.5a6 6 0 0 0-12 0c0 6.5-3 7.5-3 7.5h18s-3-1-3-7.5M10 20a2 2 0 0 0 4 0"/>',
   play: {fill: true, d: '<path d="M8 5v14l11-7z"/>'},
   pause: {fill: true, d: '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>'},
 };

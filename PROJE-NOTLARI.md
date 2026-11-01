@@ -198,3 +198,10 @@
   - Ön görüşme formuna KVKK/Gizlilik notu (app.js?v=2), kayıt formundaki onay kutusuna metin bağlantıları.
   - /icerik-plani/ yayından kaldırıldı → docs/icerik-plani.html.
   - Kullanıcıya kalan: Hostinger'da DEMO_SEED=off ve EMAIL_TEST_MODE=off, admin'den "Demo verilerini sil", Vercel projesini kapatma/ayırma, yasal metinleri avukata kontrol ettirme.
+- 2026-11-01 (6): Admin sadeleştirme + firma bilgileri (değerlendirme raporunun 2. maddesi).
+  - Admin menüsü yeni sıra: Müşteriler · Destek (Ön görüşmeler, Destek talepleri) · Faturalandırma (Faturalar, Ödeme altyapıları) · Site Yönetimi (Sayfalar, Blog, Menü, İkonlar) · Analytics · Araçlar · Ayarlar (Genel, Güvenlik ve KYC, Personel, Yetkilendirme, Panel modülleri, Sistem durumu). Kaldırılanlar (menüden; route'lar duruyor): Tema Ayarları, Dil Ayarları, Para Birimleri, Bildirim Şablonları, Siparişler, Ürün & Hizmetler.
+  - Genel Ayarlar artık yalnız çalışan sekmeler: Firma Bilgileri · E-posta (SMTP) · Google Meet. Güvenlik ve KYC: yalnız KYC · Didit. Taslak sekmeler (SEO, Üyelik, Gelişmiş, Captcha, IP, Yedekleme vb.) gösterilmiyor.
+  - Firma Bilgileri: API GET/POST `settings/company`, item `config-company` {brand, legalName, taxId, address, email, phone, whatsapp, hours, showWhatsapp, socials}. site.mjs `applyCompany()`: İletişim sayfasında `[data-co-list]`, footer iletişim satırları + sosyal bağlantılar, yasal metinlerde `[data-co="controller"]` (unvan + adres), isteğe bağlı sağ alt WhatsApp butonu (`.bm-wa`), ProfessionalService JSON-LD. siteState config-company'yi de okur (önbellek damgası).
+  - Yeni Başlangıç ekranı (bm-settings.js v=2 `dashboard()`, API `dashboard`): ön görüşme (7 gün/planlanmış), müşteri (+30 gün), aktif/bekleyen partner, bu ay KYC/limit, ön değerlendirme (30 gün), yapılacaklar, son ön görüşmeler, son kayıtlar.
+  - Site: "TR" dil etiketi ve panellerdeki dil seçici kaldırıldı; İletişim ve Kaynaklar sayfalarındaki "prototip" yazıları ve app.js rapor notu düzeltildi; Kaynaklar sayfa başlığı "Brazil Migration".
+  - İkonlar: eye, bell eklendi (icons v=3). style.css v=15.

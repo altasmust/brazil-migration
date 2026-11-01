@@ -12,23 +12,17 @@
   const ic = (n, cls = '') => `<bm-i class="ic ic-${n} ${cls}" aria-hidden="true"></bm-i>`;
   const R = () => window.BMRoutes || {};
 
-  // ---------- sekmeye gömülü ayar sayfaları ----------
-  const EXTRA = {
-    general: {base: ['Temel', 'SEO', 'Yerelleştirme', 'Üyelik', 'Gelişmiş'], tabs: {'E-posta (SMTP)': 'eposta', 'Google Meet': 'meet'}},
-    security: {base: ['Ayarlar', 'Kimlik Doğrulama', 'Captcha Güvenlik', 'İşlem Kısıtlama', 'Spam Koruması', 'Yasak Listesi', 'Yedekleme'], tabs: {'KYC · Didit': 'kimlik'}},
-  };
+  // ---------- Genel Ayarlar / Güvenlik: yalnız çalışan sekmeler ----------
+  const PAGES = {general: {'Firma Bilgileri': 'company', 'E-posta (SMTP)': 'eposta', 'Google Meet': 'meet'}, security: {'KYC · Didit': 'kimlik'}};
   const OLD = {eposta: ['general', 'E-posta (SMTP)'], meet: ['general', 'Google Meet'], kimlik: ['security', 'KYC · Didit']};
   let pending = null;
-  const addTabs = (html, extra) => html.replace(/(<div class="tabs">[\s\S]*?)(<\/div>)/, (m, a, b) => a + extra.map(t => `<button class="" data-tab="${esc(t)}">${esc(t)}</button>`).join('') + b);
-  for (const page of Object.keys(EXTRA)) {
-    const base = window[page] || (page === 'general' ? general : security), E = EXTRA[page], names2 = Object.keys(E.tabs);
+  for (const page of Object.keys(PAGES)) {
     const fn = function () {
       if (pending && pending[0] === page) { tab = pending[1]; pending = null; }
-      if (names2.includes(tab)) {
-        const inner = R()[E.tabs[tab]] ? R()[E.tabs[tab]]() : '<div class="loading">Yükleniyor…</div>';
-        return heading() + `<section class="panel settings-revision">${tabs([...E.base, ...names2])}<div class="settings bms-tabembed">${inner}</div></section>`;
-      }
-      return addTabs(base(), names2);
+      const T = Object.keys(PAGES[page]); if (!T.includes(tab)) tab = T[0];
+      const key = PAGES[page][tab];
+      const inner = key === 'company' ? companyPage() : R()[key] ? R()[key]() : '<div class="loading">Yükleniyor…</div>';
+      return heading() + `<section class="panel settings-revision">${T.length > 1 ? tabs(T) : ''}<div class="settings bms-tabembed">${inner}</div></section>`;
     };
     if (page === 'general') general = fn; else security = fn;
   }
@@ -36,8 +30,48 @@
   overview = function () {
     const r = route();
     if (OLD[r]) { pending = OLD[r]; setTimeout(() => location.replace('#' + OLD[r][0]), 0); return '<div class="loading">Yönlendiriliyor…</div>'; }
+    if (r === 'overview') return dashboard();
     return _ov();
   };
+
+  // ---------- Firma Bilgileri (sitede footer, İletişim, yasal metinler, WhatsApp) ----------
+  function companyPage() {
+    setTimeout(async () => {
+      const root = $('#bmco-root'); if (!root) return;
+      let c; try { c = (await A('settings/company')).company || {}; } catch (e) { root.innerHTML = `<div class="bmc-err">${esc(e.message)}</div>`; return; }
+      const so = c.socials || {};
+      const f = (k, l, v, ph = '', hint = '', type = 'text') => `<label class="bmy-f"><span>${l}</span><input class="bmy-in" name="${k}" type="${type}" value="${esc(v || '')}" placeholder="${esc(ph)}">${hint ? `<small>${hint}</small>` : ''}</label>`;
+      root.innerHTML = `<form class="bmco" id="bmco-form"><div class="bmco-grid">
+        <section><h3>${ic('building')} Firma</h3>${f('brand', 'Marka adı', c.brand || 'Brazil Migration')}${f('legalName', 'Resmî unvan', c.legalName, 'Ör. Brazil Migration Consultoria Ltda.', 'Gizlilik ve KVKK metinlerinde veri sorumlusu olarak görünür.')}${f('taxId', 'Vergi / şirket numarası', c.taxId, 'Ör. CNPJ 00.000.000/0001-00')}<label class="bmy-f"><span>Adres</span><textarea class="bmy-in" name="address" rows="2" placeholder="Cadde, numara, semt, şehir">${esc(c.address || '')}</textarea><small>İletişim sayfasında ve yasal metinlerde görünür.</small></label></section>
+        <section><h3>${ic('phone')} İletişim</h3>${f('email', 'E-posta', c.email, 'bilgi@brazilmigration.com', '', 'email')}${f('phone', 'Telefon', c.phone, '+55 11 0000 0000')}${f('whatsapp', 'WhatsApp numarası', c.whatsapp, '+55 11 90000 0000', 'Ülke koduyla yazın.')}<label class="bmco-cb"><input type="checkbox" name="showWhatsapp" ${c.showWhatsapp ? 'checked' : ''}> Sitenin sağ alt köşesinde WhatsApp butonu göster</label>${f('hours', 'Çalışma saatleri', c.hours, 'Hafta içi 09:00–18:00 (São Paulo)')}</section>
+        <section><h3>${ic('globe')} Sosyal medya</h3>${['instagram', 'linkedin', 'facebook', 'youtube', 'x'].map(k => f('s_' + k, {instagram: 'Instagram', linkedin: 'LinkedIn', facebook: 'Facebook', youtube: 'YouTube', x: 'X (Twitter)'}[k], so[k], 'https://')).join('')}<small class="bmco-note">Boş bırakılanlar sitede gösterilmez. Doldurulanlar footer’da ve Google için şirket bilgisinde (schema.org) yer alır.</small></section>
+      </div><div class="form-actions"><button class="btn primary" type="submit">${ic('check')} Kaydet</button><a class="btn" href="/iletisim/" target="_blank" rel="noopener">${ic('eye')} İletişim sayfasını gör</a>${c.updated ? `<small class="bmco-note">Son güncelleme: ${new Date(c.updated).toLocaleString('tr-TR')}</small>` : ''}</div></form>`;
+      $('#bmco-form').onsubmit = async e => {
+        e.preventDefault(); const fd = new FormData(e.target), v = Object.fromEntries(fd);
+        const body = {...v, showWhatsapp: !!fd.get('showWhatsapp'), socials: Object.fromEntries(['instagram', 'linkedin', 'facebook', 'youtube', 'x'].map(k => [k, v['s_' + k] || '']))};
+        try { await A('settings/company', 'POST', body); say('Firma bilgileri kaydedildi. Sitede birkaç saniye içinde görünür.'); render(); } catch (err) { say(err.message); }
+      };
+    }, 0);
+    return '<div id="bmco-root"><div class="loading">Yükleniyor…</div></div>';
+  }
+
+  // ---------- Başlangıç (gösterge paneli) ----------
+  function dashboard() {
+    setTimeout(async () => {
+      const root = $('#bmd-root'); if (!root) return;
+      let d; try { d = await A('dashboard'); } catch (e) { root.innerHTML = `<div class="bmc-err">${esc(e.message)}</div>`; return; }
+      const card = (icn, label, val, sub, href, warn) => `<a class="bmd-card ${warn ? 'warn' : ''}" href="${href}"><span class="bmd-ic">${ic(icn)}</span><span><small>${label}</small><b>${val}</b><em>${sub}</em></span></a>`;
+      const dt = t => t ? new Date(t).toLocaleString('tr-TR', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'}) : '—';
+      const todo = [d.partnersReview && [`${d.partnersReview} partner başvurusu onay bekliyor`, '#partnerler'], d.credReq && [`${d.credReq} KYC kredi talebi bekliyor`, '#krediler'], d.bookingsOpen && [`${d.bookingsOpen} planlanmış ön görüşme`, '#gorusmeler']].filter(Boolean);
+      const name = (state?.user?.name || document.getElementById('user-name')?.textContent || '').split(' ')[0];
+      root.innerHTML = `<div class="bmd-hello"><h1>Merhaba${name && name !== 'Yönetici' ? ', ' + esc(name) : ''}</h1><span>${new Date().toLocaleDateString('tr-TR', {weekday: 'long', day: 'numeric', month: 'long'})}</span></div>
+        <div class="bmd-cards">${card('calendar', 'Ön görüşme (7 gün)', d.bookings7, d.bookingsOpen + ' planlanmış', '#gorusmeler')}${card('users', 'Müşteriler', d.customers, '+' + d.customers30 + ' son 30 gün', '#customers')}${card('briefcase', 'Aktif partnerler', d.partnersActive, d.partnersReview ? d.partnersReview + ' başvuru bekliyor' : 'Bekleyen başvuru yok', '#partnerler', d.partnersReview)}${card('shield-check', 'KYC bu ay', d.kyc.used + ' / ' + d.kyc.limit, d.credReq ? d.credReq + ' kredi talebi' : 'Didit aylık limit', '#krediler', d.credReq)}${card('target', 'Ön değerlendirme (30 gün)', d.leads30, 'Tamamlanan testler', '#degerlendirmeler')}</div>
+        <div class="bmd-cols"><section class="panel"><header class="panel-head"><h2>${ic('bell')} Yapılacaklar</h2></header><div class="bmd-list">${todo.length ? todo.map(([t, h]) => `<a class="bmd-row" href="${h}"><span>${esc(t)}</span>${ic('arrow-right')}</a>`).join('') : `<p class="bmd-empty">${ic('check')} Bekleyen iş yok.</p>`}</div></section>
+        <section class="panel"><header class="panel-head"><h2>${ic('calendar')} Son ön görüşme talepleri</h2><a class="bmd-more" href="#gorusmeler">Tümü</a></header><div class="bmd-list">${d.upcoming.length ? d.upcoming.map(b => `<a class="bmd-row" href="#gorusmeler"><span><b>${esc(b.name || '—')}</b><small>${esc(b.service || 'Ön görüşme')} · ${dt(b.start || b.created)}</small></span><span class="bmy-pill ${b.status === 'Planlandı' ? 'on' : ''}">${esc(b.status)}</span></a>`).join('') : '<p class="bmd-empty">Henüz ön görüşme talebi yok.</p>'}</div></section>
+        <section class="panel"><header class="panel-head"><h2>${ic('user')} Son kayıtlar</h2><a class="bmd-more" href="#customers">Tümü</a></header><div class="bmd-list">${d.newest.length ? d.newest.map(p => `<a class="bmd-row" href="#account/${encodeURIComponent(p.id)}"><span><b>${esc(p.name || p.email)}</b><small>${p.role === 'advisor' ? 'Partner' : 'Müşteri'} · ${dt(p.created)}</small></span>${ic('arrow-right')}</a>`).join('') : '<p class="bmd-empty">Henüz kayıt yok.</p>'}</div></section></div>`;
+    }, 0);
+    return `<div id="bmd-root" class="bmd"><div class="loading">Yükleniyor…</div></div>`;
+  }
 
   // ---------- YETKİLENDİRME: gruplar ----------
   const PERMS = {
@@ -45,18 +79,16 @@
     'Müşteriler': ['Listeleme', 'Görüntüleme', 'Oluşturma', 'Düzenleme', 'Silme', 'Hesabı yönet (giriş yap)', 'Dosyalar'],
     'Partnerler': ['Başvuruları görüntüleme', 'Onay / red', 'KYC kredileri'],
     'Ön görüşmeler': ['Görüntüleme', 'Düzenleme'],
-    'Faturalandırma': ['Faturalar', 'Ödemeler', 'Ödeme altyapıları', 'Para birimleri'],
-    'Siparişler': ['Görüntüleme', 'Oluşturma', 'Düzenleme'],
-    'Ürün & hizmetler': ['Görüntüleme', 'Düzenleme'],
-    'Destek': ['Talepleri görüntüleme', 'Yanıtlama', 'Bildirim şablonları'],
-    'Site yönetimi': ['Sayfalar', 'Blog yazıları', 'Menü', 'Tema'],
+    'Faturalandırma': ['Faturalar', 'Ödemeler', 'Ödeme altyapıları'],
+    'Destek': ['Talepleri görüntüleme', 'Yanıtlama'],
+    'Site yönetimi': ['Sayfalar', 'Blog yazıları', 'Menü'],
     'Ayarlar': ['Genel ayarlar', 'E-posta ve Meet', 'Güvenlik ve KYC', 'Personel', 'Yetkilendirme', 'Sistem durumu'],
   };
   const ALL = Object.entries(PERMS).flatMap(([g, ps]) => ps.map(p => g + ' / ' + p));
   const DEFAULT_GROUPS = [
     {id: 'g-admin', name: 'Yöneticiler', desc: 'Tüm yetkiler', perms: ALL, members: []},
     {id: 'g-advisor', name: 'Danışmanlar', desc: 'Müşteri dosyaları ve ön görüşmeler', perms: ALL.filter(x => /^(Müşteriler|Ön görüşmeler|Destek)/.test(x) && !/Silme/.test(x)), members: []},
-    {id: 'g-finance', name: 'Muhasebe', desc: 'Fatura ve ödemeler', perms: ALL.filter(x => /^(Faturalandırma|Siparişler)/.test(x) || x === 'Müşteriler / Görüntüleme'), members: []},
+    {id: 'g-finance', name: 'Muhasebe', desc: 'Fatura ve ödemeler', perms: ALL.filter(x => /^Faturalandırma/.test(x) || x === 'Müşteriler / Görüntüleme'), members: []},
   ];
   let G = null, sel = null;
   const loadGroups = () => { try { const d = JSON.parse(state.config['permission-groups']?.data || 'null'); return Array.isArray(d) && d.length ? d : JSON.parse(JSON.stringify(DEFAULT_GROUPS)); } catch { return JSON.parse(JSON.stringify(DEFAULT_GROUPS)); } };
@@ -175,5 +207,5 @@
   document.addEventListener('change', e => { const t = e.target; if (t.dataset?.bmyTog) toggle(t.dataset.bmyTog, t.checked, t); });
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('.bmy-card')) openModule(e.target.dataset.bmyOpen); });
 
-  Object.assign(names, {general: 'Genel Ayarlar', security: 'Güvenlik Ayarları', permissions: 'Yetkilendirme', payments: 'Ödeme Altyapıları'});
+  Object.assign(names, {overview: 'Başlangıç', general: 'Genel Ayarlar', security: 'Güvenlik ve KYC', permissions: 'Yetkilendirme', payments: 'Ödeme Altyapıları'});
 })();

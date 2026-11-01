@@ -42,7 +42,7 @@ label{display:grid;gap:7px;font-size:12.5px;font-weight:600;color:#40564a}
 .foot{margin-top:22px;font-size:12px;color:#9aa69e;display:flex;justify-content:space-between;gap:10px}.foot a{color:inherit}
 [hidden]{display:none!important}
 @media(max-width:900px){.wrap{grid-template-columns:1fr}.side{display:none}.card .mlogo{display:block}.main{padding:36px 20px}}
-</style><link rel="stylesheet" href="/bm/icons.css?v=2"></head>
+</style><link rel="stylesheet" href="/bm/icons.css?v=3"></head>
 <body><div class="wrap">
 <aside class="side">
   <a class="logo" href="/" aria-label="Brazil Migration ana sayfa"><img src="/brazil-migration-logo.png" alt="Brazil Migration"></a>
@@ -88,4 +88,4 @@ $('#forgot').onsubmit=async e=>{e.preventDefault();try{const d=await api('forgot
 $('#reset').onsubmit=async e=>{e.preventDefault();const f=e.target;if(f.password.value!==f.password2.value)return say('err','Şifreler eşleşmiyor.');try{await api('reset',{token:p.get('sifre'),password:f.password.value});history.replaceState(null,'','/admin/giris/');show('login');$('#t').textContent='Tekrar hoş geldiniz';say('ok','Şifre kaydedildi, giriş yapabilirsiniz.')}catch(err){say('err',esc(err.message))}};
 (async()=>{if(p.get('sifre')){show('reset');$('#t').textContent='Yeni şifre belirleyin';$('#s').textContent='Yönetici hesabınız için yeni bir şifre oluşturun.';return}const me=await api('me').catch(()=>({}));if(me.user)return go();const st=await api('status').catch(()=>null);if(st?.setupNeeded){show('setup');$('#t').textContent='İlk kurulum';$('#s').textContent='Yönetici şifresini belirleyin. Sunucu ortam değişkenlerine girdiğiniz ADMIN_SETUP_KEY değerini kullanın.';if(!st.setupKeyConfigured)say('info','ADMIN_SETUP_KEY ortam değişkeni tanımlı değil. Barındırma panelinde ortam değişkenlerine ekleyip yeniden dağıtın.')}})();
 })();
-</script><script src="/bm/icons.js?v=2" defer></script></body></html>
+</script><script src="/bm/icons.js?v=3" defer></script></body></html>

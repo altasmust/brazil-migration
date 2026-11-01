@@ -547,11 +547,25 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const custom = Object.values(st.custom).map(c => ({id: c.id, path: c.path, title: c.title, type: 'custom', published: !!c.published, seo: c.seo || {}, blocks: c.blocks || [], updated: c.updated || null}));
     return json({pages, custom, menuSaved: !!st.menu});
   }
+  if (route === 'dashboard' && req.method === 'GET') {
+    const t = now(), d7 = t - 7 * 864e5, d30 = t - 30 * 864e5, n = async (sql, ...v) => Number((await one(db, sql, ...v))?.n || 0);
+    const [customers, customers30, partnersActive, partnersReview, bookings7, bookingsOpen, leads30, credReq, poolUsed] = await Promise.all([
+      n("SELECT COUNT(*) AS n FROM people WHERE role='customer'"), n("SELECT COUNT(*) AS n FROM people WHERE role='customer' AND created>?", d30),
+      n("SELECT COUNT(*) AS n FROM items WHERE kind='partner' AND json_extract(data,'$.status')='approved'"), n("SELECT COUNT(*) AS n FROM items WHERE kind='partner' AND json_extract(data,'$.status')='review'"),
+      n("SELECT COUNT(*) AS n FROM items WHERE kind='booking' AND created>?", d7), n("SELECT COUNT(*) AS n FROM items WHERE kind='booking' AND COALESCE(json_extract(data,'$.status'),'Planlandı')='Planlandı'"),
+      n("SELECT COUNT(*) AS n FROM items WHERE kind='lead' AND updated>?", d30), n("SELECT COUNT(*) AS n FROM items WHERE kind='kyc_credit_req' AND json_extract(data,'$.status')='pending'"),
+      n("SELECT COUNT(*) AS n FROM items WHERE kind='kyc_session' AND created>=?", creditMonthStart())]);
+    const upcoming = (await rows(db, "SELECT id, data, created FROM items WHERE kind='booking' ORDER BY created DESC LIMIT 6")).map(r => { const d = parse(r.data); return {id: r.id, name: d.name, email: d.email, service: d.service, start: d.start, status: d.status || 'Planlandı', created: r.created}; });
+    const newest = (await rows(db, "SELECT id, name, email, role, created FROM people WHERE role IN ('customer','advisor') ORDER BY created DESC LIMIT 6")).map(r => ({id: r.id, name: r.name, email: r.email, role: r.role, created: r.created}));
+    const review = (await rows(db, "SELECT owner, data, updated FROM items WHERE kind='partner' AND json_extract(data,'$.status')='review' ORDER BY updated DESC LIMIT 5")).map(r => { const d = parse(r.data); return {id: r.owner, company: d.company, name: d.name, updated: r.updated}; });
+    return json({customers, customers30, partnersActive, partnersReview, bookings7, bookingsOpen, leads30, credReq, kyc: {used: poolUsed, limit: Number(process.env.DIDIT_MONTHLY_LIMIT || 30)}, upcoming, newest, review});
+  }
   if (route === 'demo' && req.method === 'GET') {
     const n = await one(db, "SELECT COUNT(*) AS n FROM people WHERE id IN ('demo-partner','demo-customer')");
     const it = await one(db, "SELECT COUNT(*) AS n FROM items WHERE owner IN ('demo-partner','demo-customer')");
     return json({accounts: Number(n?.n || 0), items: Number(it?.n || 0), cleared: !!(await getItem(db, 'demo-cleared'))});
   }
+  if (route === 'settings/company' && req.method === 'GET') return json({company: (await getItem(db, 'config-company'))?.data || {}});
   if (route === 'payments' && req.method === 'GET') return json({modules: paymentsView(await loadPayments(db))});
   if (route === 'blog' && req.method === 'GET') {
     const st = await siteState(db);
@@ -808,6 +822,12 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
       audit(db, actor, 'demo.clear', 'demo-partner,demo-customer'),
     ]);
     return json({ok: true});
+  }
+  if (route === 'settings/company' && req.method === 'POST') {
+    const T = (k, n = 200) => clean(b[k], n), url = k => { const v = clean(b.socials?.[k], 300); return /^https:\/\//.test(v) ? v : ''; };
+    const data = {brand: T('brand', 80) || 'Brazil Migration', legalName: T('legalName', 200), taxId: T('taxId', 80), address: T('address', 300), email: validEmail(T('email', 254)) ? T('email', 254) : '', phone: T('phone', 40), whatsapp: T('whatsapp', 40).replace(/[^\d+ ()-]/g, '').trim(), hours: T('hours', 120), showWhatsapp: !!b.showWhatsapp, socials: {instagram: url('instagram'), linkedin: url('linkedin'), facebook: url('facebook'), youtube: url('youtube'), x: url('x')}, updated: now()};
+    await db.batch([putItem(db, 'config-company', 'config', 'owner', data), audit(db, actor, 'settings.company', data.legalName || data.brand)]); invalidateSite();
+    return json({ok: true, company: data});
   }
   if (route === 'payments/save' && req.method === 'POST') {
     const next = savePayment(await loadPayments(db), clean(b.id, 30), b);

@@ -50,8 +50,8 @@ let state = null, stateAt = 0;
 export function invalidateSite() { stateAt = 0; renderCache.clear(); }
 export async function siteState(db) {
   if (state && Date.now() - stateAt < 15000) return state;
-  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post')").all()).results || [];
-  const s = {menu: null, pages: {}, custom: {}, blog: {}, stamp: ''};
+  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post') OR id='config-company'").all()).results || [];
+  const s = {menu: null, pages: {}, custom: {}, blog: {}, company: null, stamp: ''};
   let stamp = rows.length;
   for (const r of rows) {
     const d = parseJSON(r.data); stamp += ':' + r.updated;
@@ -59,6 +59,7 @@ export async function siteState(db) {
     if (r.kind === 'site_page' && d.path) s.pages[d.path] = d;
     if (r.kind === 'site_custom' && d.path) s.custom[d.path] = {...d, id: r.id};
     if (r.kind === 'blog_post' && d.slug) s.blog[d.slug] = {...d, id: r.id};
+    if (r.id === 'config-company') s.company = d;
   }
   s.stamp = hash(stamp);
   if (state?.stamp !== s.stamp) renderCache.clear();
@@ -200,6 +201,27 @@ function applyMenu(root, m) {
   }
 }
 
+// ---------- company details (admin → Genel Ayarlar → Firma Bilgileri) ----------
+const SOC = {instagram: 'Instagram', linkedin: 'LinkedIn', facebook: 'Facebook', youtube: 'YouTube', x: 'X'};
+const telHref = p => 'tel:' + String(p).replace(/[^\d+]/g, '');
+const waHref = (w, text = '') => 'https://wa.me/' + String(w).replace(/\D/g, '') + (text ? '?text=' + encodeURIComponent(text) : '');
+function applyCompany(root, co) {
+  if (!co) return;
+  const brand = co.brand || 'Brazil Migration';
+  root.querySelectorAll('[data-co="controller"]').forEach(el => { if (co.legalName || co.address) el.set_content(esc([co.legalName || brand, co.address].filter(Boolean).join(', ')) + (co.taxId ? ' (' + esc(co.taxId) + ')' : '')); });
+  const rows = [co.address && ['map-pin', esc(co.address)], co.phone && ['phone', `<a href="${esc(telHref(co.phone))}">${esc(co.phone)}</a>`], co.whatsapp && ['chat', `<a href="${esc(waHref(co.whatsapp))}" target="_blank" rel="noopener">WhatsApp: ${esc(co.whatsapp)}</a>`], co.email && ['mail', `<a href="mailto:${esc(co.email)}">${esc(co.email)}</a>`], co.hours && ['clock', esc(co.hours)]].filter(Boolean);
+  const ic = n => `<bm-i class="ic ic-${n}" aria-hidden="true"></bm-i>`;
+  root.querySelectorAll('[data-co-list]').forEach(el => el.set_content(rows.map(([i, h]) => `<span class="co-row">${ic(i)}<span>${h}</span></span>`).join('')));
+  const fc = root.querySelector('footer.site-footer .footer-contact');
+  if (fc && rows.length) { const btn = fc.querySelector('a.btn'); const html = `<div class="footer-co">${rows.filter(r => r[0] !== 'map-pin').map(([i, h]) => `<span class="co-row">${ic(i)}<span>${h}</span></span>`).join('')}</div>`; if (btn) btn.insertAdjacentHTML('beforebegin', html); else fc.insertAdjacentHTML('beforeend', html); }
+  const socials = Object.entries(co.socials || {}).filter(([, v]) => v);
+  const fb = root.querySelector('footer.site-footer .footer-brand');
+  if (fb && socials.length) fb.insertAdjacentHTML('beforeend', `<div class="footer-social">${socials.map(([k, v]) => `<a href="${esc(v)}" target="_blank" rel="noopener" aria-label="${SOC[k]}">${SOC[k]}</a>`).join('')}</div>`);
+  if (co.whatsapp && co.showWhatsapp) root.querySelector('body')?.insertAdjacentHTML('beforeend', `<a class="bm-wa" href="${esc(waHref(co.whatsapp, 'Merhaba, Brezilya süreci hakkında bilgi almak istiyorum.'))}" target="_blank" rel="noopener" aria-label="WhatsApp ile yazın">${ic('chat')}<span>WhatsApp</span></a>`);
+  const head = root.querySelector('head');
+  if (head && root.querySelector('body')?.getAttribute('data-page') !== 'blog') head.insertAdjacentHTML('beforeend', `<script type="application/ld+json">${JSON.stringify({'@context': 'https://schema.org', '@type': 'ProfessionalService', name: brand, legalName: co.legalName || undefined, url: siteUrl() || undefined, logo: (siteUrl() || '') + '/brazil-migration-logo.png', email: co.email || undefined, telephone: co.phone || undefined, address: co.address ? {'@type': 'PostalAddress', streetAddress: co.address} : undefined, areaServed: ['BR', 'TR'], sameAs: socials.map(([, v]) => v)}).replace(/</g, '\\u003c')}</script>`);
+}
+
 // ---------- SEO ----------
 function setMeta(head, attr, key, value) {
   let m = head.querySelector(`meta[${attr}="${key}"]`);
@@ -272,8 +294,8 @@ async function renderBlog(path, st, preview) {
 // ---------- icons: text glyphs (↗ ✓ ⌄ × …) → icon library (/bm/icons.css, see server/platform/icons.mjs) ----------
 export function arrowize(html) {
   html = iconizeHTML(html);
-  if (!html.includes('/bm/icons.css')) html = html.replace('</head>', '<link rel="stylesheet" href="/bm/icons.css?v=2"></head>');
-  if (!html.includes('/bm/icons.js')) html = html.replace(/<\/body>(?![\s\S]*<\/body>)/, '<script src="/bm/icons.js?v=2" defer></script></body>');
+  if (!html.includes('/bm/icons.css')) html = html.replace('</head>', '<link rel="stylesheet" href="/bm/icons.css?v=3"></head>');
+  if (!html.includes('/bm/icons.js')) html = html.replace(/<\/body>(?![\s\S]*<\/body>)/, '<script src="/bm/icons.js?v=3" defer></script></body>');
   return html;
 }
 
@@ -298,6 +320,7 @@ export async function renderPage(db, path, {editor = false, preview = null} = {}
   else return {status: 404, html: await notFound(db)};
   if (!root) return {status: 404, html: await notFound(db)};
   if (st?.menu || preview) applyMenu(root, (st || await siteState(db)).menu);
+  try { applyCompany(root, (st || await siteState(db)).company); } catch {}
   let html = '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
   if (siteUrl()) html = html.replace(OLD_HOSTS, siteUrl());
   html = arrowize(html);
@@ -310,7 +333,7 @@ async function notFound(db) {
   const root = parseHTML(sh);
   root.querySelector('main#main')?.set_content('<section class="wrap" style="padding:90px 0 110px;text-align:center"><div class="kicker">404</div><h1 style="margin:10px 0 14px">Aradığınız sayfa bulunamadı.</h1><p style="color:var(--muted)">Sayfa taşınmış veya kaldırılmış olabilir.</p><p><a class="btn" href="/">Ana sayfaya dön ↗</a></p></section>');
   const t = root.querySelector('title'); if (t) t.set_content('Sayfa bulunamadı | Brazil Migration');
-  try { const st = await siteState(db); if (st.menu) applyMenu(root, st.menu); } catch {}
+  try { const st = await siteState(db); if (st.menu) applyMenu(root, st.menu); applyCompany(root, st.company); } catch {}
   return arrowize('<!doctype html>' + root.toString().replace(/^<!doctype html>/i, ''));
 }
 

@@ -55,3 +55,12 @@ body{font-family:'Poppins',Arial,sans-serif;font-size:16px;line-height:1.75}h1,h
 .stack-label:before{inset:5px -12px;left:-12px;right:-12px}
 .stack-label:after{inset:10px -24px;left:-24px;right:-24px}
 .footer-bottom{justify-content:flex-start}.footer-bottom a[href="#main"]{margin-left:auto}
+/* firma bilgileri (admin → Genel Ayarlar → Firma Bilgileri) */
+.co-row{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.6;color:var(--ink);margin:6px 0}.co-row bm-i{color:var(--forest);margin-top:4px;flex:none}.co-row a{color:inherit;text-decoration:none}.co-row a:hover{color:var(--forest);text-decoration:underline}
+.contact-local .co-list{margin-top:12px}
+.footer-co{margin:0 0 16px}.footer-co .co-row{font-size:13px;color:var(--muted)}
+.footer-social{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}.footer-social a{font-size:13px;color:var(--muted);text-decoration:none}.footer-social a:hover{color:var(--forest)}
+.bm-wa{position:fixed;right:18px;bottom:18px;z-index:900;display:flex;align-items:center;gap:8px;background:#1f9d55;color:#fff;border-radius:999px;padding:12px 18px 12px 14px;font-size:14px;font-weight:600;text-decoration:none;box-shadow:0 14px 34px rgba(16,60,30,.35)}
+.bm-wa bm-i{font-size:20px}.bm-wa:hover{background:#178a48}
+@media (max-width:640px){.bm-wa span{display:none}.bm-wa{padding:14px;right:14px;bottom:14px}}
+[data-theme=dark] .co-row bm-i{color:#8fcf8a}

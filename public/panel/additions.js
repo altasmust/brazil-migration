@@ -2,7 +2,6 @@
 (()=>{
 const partner=location.pathname.startsWith('/partner/');
 const languageOptions=[['pt-BR','Português'],['tr','Türkçe'],['az','Azərbaycanca'],['mk','Македонски'],['ru','Русский'],['es','Español'],['fa','فارسی'],['ar','العربية'],['tk','Türkmençe'],['uz','Oʻzbekcha'],['ky','Кыргызча'],['id','Bahasa Indonesia']];
-const picker=document.createElement('select');picker.id='region-language';picker.setAttribute('aria-label','Dil seçimi');picker.innerHTML=languageOptions.map(([v,t])=>`<option value="${v}">${t}</option>`).join('');picker.value=localStorage.getItem('bm-language-choice')||'tr';picker.onchange=()=>localStorage.setItem('bm-language-choice',picker.value);document.querySelector('.account').insertBefore(picker,document.getElementById('notifications-button'));
 const originalRender=render;
 const originalAct=act;
 let extraPage='';
