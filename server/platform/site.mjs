@@ -226,28 +226,52 @@ function applyCompany(root, co) {
 
 // ---------- footer güven şeridi (her sayfada, footer alt satırının üstünde) ----------
 const LAW = {firm: 'ACG Advogada', lawyer: 'Dra. Ana Carolina', oab: 'OAB/SP 386.588', verify: 'https://cna.oab.org.br/'};
-// Mühür: tırtıklı rozet şekli içinde ikon veya kısa metin.
-const SEAL_PATH = (() => { const n = 24, pts = []; for (let i = 0; i < n * 2; i++) { const r = i % 2 ? 44 : 48, t = Math.PI * i / n; pts.push((50 + r * Math.sin(t)).toFixed(2) + ',' + (50 - r * Math.cos(t)).toFixed(2)); } return 'M' + pts.join('L') + 'Z'; })();
-function seal({tone, icon, mono, title, sub, href}) {
-  const inner = mono ? `<text x="50" y="${mono.length > 2 ? 57 : 59}" text-anchor="middle" font-size="${mono.length > 2 ? 22 : 27}" font-weight="800" letter-spacing=".5" fill="currentColor">${mono}</text>` : '';
-  const ico = icon ? `<bm-i class="ic ic-${icon}" aria-hidden="true"></bm-i>` : '';
-  const tag = href ? 'a' : 'div', attr = href ? ` href="${href}" target="_blank" rel="noopener"` : '';
-  return `<${tag} class="ft-seal t-${tone}"${attr}><span class="ft-emb"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="${SEAL_PATH}" class="s1"/><circle cx="50" cy="50" r="36" class="s2"/><circle cx="50" cy="50" r="31" class="s3"/>${inner}</svg>${ico}</span><span class="ft-txt"><b>${title}</b><small>${sub}</small></span><bm-i class="ic ic-check ft-ok" aria-hidden="true"></bm-i></${tag}>`;
+// Güvence rozetleri (ödül/sertifika görünümünde, içerik gerçek bilgilerden oluşur).
+const YEAR = () => new Date().getFullYear();
+const scallop = (n, ro, ri, c = 70) => { const p = []; for (let i = 0; i < n * 2; i++) { const r = i % 2 ? ri : ro, t = Math.PI * i / n; p.push((c + r * Math.sin(t)).toFixed(2) + ',' + (c - r * Math.cos(t)).toFixed(2)); } return 'M' + p.join('L') + 'Z'; };
+const SCALLOP = scallop(30, 69, 64);
+const SCALE_ICON = (x, y, c) => `<g transform="translate(${x} ${y})" fill="none" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M0 -15V15M-9 15H9M-14 -9H14M0 -15l0 0"/><circle cx="0" cy="-16" r="1.8" fill="${c}"/><path d="M-14 -9l-6 12h12zM14 -9l-6 12h12z"/><path d="M-20 3a6 3 0 0 0 12 0M8 3a6 3 0 0 0 12 0" fill="${c}" fill-opacity=".25"/></g>`;
+function ribbon({id, bg1, bg2, gold, crest, lines, year, href, label}) {
+  let y = 92; const t = lines.map(([txt, size, weight, color, gap]) => { y += gap ?? size + 4; return `<text x="60" y="${y}" text-anchor="middle" font-size="${size}" font-weight="${weight}" fill="${color || '#fff'}" letter-spacing="${size < 8 ? 1.2 : .6}">${txt}</text>`; }).join('');
+  const svg = `<svg viewBox="0 0 120 236" role="img" aria-label="${label}"><defs><linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${bg1}"/><stop offset="1" stop-color="${bg2}"/></linearGradient><linearGradient id="${id}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7e3a1"/><stop offset=".5" stop-color="${gold}"/><stop offset="1" stop-color="#9a7120"/></linearGradient></defs>
+    <path d="M0 0H120V236L60 206L0 236Z" fill="url(#${id}g)"/><path d="M5 5H115V225L60 197L5 225Z" fill="none" stroke="url(#${id}a)" stroke-width="1"/><path d="M9 9H111V218L60 192L9 218Z" fill="none" stroke="url(#${id}a)" stroke-opacity=".35" stroke-width=".6"/>
+    ${crest(`url(#${id}a)`)}${t}
+    <path d="M30 ${y + 10}H90" stroke="url(#${id}a)" stroke-width=".8"/><text x="60" y="${y + 28}" text-anchor="middle" font-size="13" font-weight="800" fill="url(#${id}a)" letter-spacing="2">${year}</text></svg>`;
+  return href ? `<a class="aw aw-rib" href="${href}" target="_blank" rel="noopener" title="${label}">${svg}</a>` : `<span class="aw aw-rib" title="${label}">${svg}</span>`;
 }
+function rosette({id, c1, c2, ring, center, band, label}) {
+  const svg = `<svg viewBox="0 0 140 140" role="img" aria-label="${label}"><defs><radialGradient id="${id}r" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="${c2}"/><stop offset="1" stop-color="${c1}"/></radialGradient><path id="${id}p" d="M70,70 m-57,0 a57,57 0 1,1 114,0 a57,57 0 1,1 -114,0"/></defs>
+    <path d="${SCALLOP}" fill="url(#${id}r)"/><circle cx="70" cy="70" r="62" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".8"/>
+    <text font-size="8.6" font-weight="700" fill="#fff" letter-spacing="1.6"><textPath href="#${id}p" startOffset="0" textLength="350" lengthAdjust="spacing">${ring}</textPath></text>
+    <circle cx="70" cy="70" r="49" fill="#fff"/><circle cx="70" cy="70" r="45.5" fill="none" stroke="${c1}" stroke-width="1.2"/><circle cx="70" cy="70" r="43" fill="none" stroke="${c1}" stroke-opacity=".35" stroke-width=".6" stroke-dasharray="1.5 2"/>
+    ${center(c1)}
+    <path d="M24 88H116L111 97L116 106H24L29 97Z" fill="${c1}"/><path d="M24 88L31 83V88M116 88L109 83V88" fill="${c1}" opacity=".55"/><text x="70" y="100.5" text-anchor="middle" font-size="9.5" font-weight="800" fill="#fff" letter-spacing="1.8">${band}</text></svg>`;
+  return `<span class="aw aw-ros" title="${label}">${svg}</span>`;
+}
+const cText = (lines, c) => lines.map(([t, y, sz, w]) => `<text x="70" y="${y}" text-anchor="middle" font-size="${sz}" font-weight="${w || 800}" fill="${c}">${t}</text>`).join('');
 function applyTrust(root, st) {
   const f = root.querySelector('footer.site-footer'), fb = f?.querySelector('.footer-bottom'); if (!f || !fb || f.querySelector('.footer-trust')) return;
   const ic = n => `<bm-i class="ic ic-${n}" aria-hidden="true"></bm-i>`;
   const iyzico = !!st?.payments?.iyzico?.enabled;
   const dd = st?.didit || {}, didit = (dd.enabled ?? process.env.DIDIT_ENABLED === 'true') && !!(dd.apiKey || process.env.DIDIT_API_KEY);
+  const Y = YEAR();
+  const oab = ribbon({id: 'aw1', bg1: '#1d1d1f', bg2: '#050505', gold: '#d4af37', year: Y, href: LAW.verify, label: `${LAW.firm} · ${LAW.lawyer} · ${LAW.oab} — OAB kaydını doğrula`,
+    crest: g => `<circle cx="60" cy="42" r="23" fill="none" stroke="${g}" stroke-width="1.2"/><circle cx="60" cy="42" r="19.5" fill="none" stroke="${g}" stroke-width=".5"/>${SCALE_ICON(60, 44, g)}`,
+    lines: [['ADVOGADA', 12.5, 800, null, 0], ['REGISTRADA', 12.5, 800], ['OAB/SP 386.588', 9, 700, '#e9c46a', 15], ['ACG ADVOGADA', 6.6, 700, '#fff', 16], ['DRA. ANA CAROLINA', 6.2, 600, '#cfcfcf', 11], ['SÃO PAULO · BRASIL', 5.6, 600, '#9a9a9a', 13]]});
+  const ius = ribbon({id: 'aw2', bg1: '#14305e', bg2: '#08162e', gold: '#d4af37', year: Y, label: 'IusJud Verified',
+    crest: g => `<path d="M60 20l20 7v13c0 13-9 21-20 25-11-4-20-12-20-25V27z" fill="none" stroke="${g}" stroke-width="1.3"/><text x="60" y="50" text-anchor="middle" font-size="17" font-weight="800" fill="${g}" font-family="Georgia,serif">IJ</text>`,
+    lines: [['IUSJUD', 15, 800, null, 0], ['VERIFIED', 11, 700, '#e9c46a', 14], ['LEGAL PROCESS', 6.4, 700, '#fff', 19], ['ASSURANCE', 6.4, 700, '#fff', 10], ['TRUSTED PARTNER', 5.6, 600, '#a9b8d6', 14]]});
   const seals = [
-    {tone: 'gold', mono: 'OAB', title: 'OAB kayıtlı avukat', sub: LAW.oab, href: LAW.verify},
-    {tone: 'navy', mono: 'IJ', title: 'IusJud Verified', sub: 'Hukuk süreç güvencesi'},
-    didit && {tone: 'violet', icon: 'shield-check', title: 'Didit kimlik doğrulama', sub: 'Biyometrik KYC'},
-    iyzico && {tone: 'blue', icon: 'credit-card', title: 'iyzico 3D Secure', sub: 'Güvenli kartla ödeme'},
-    {tone: 'green', icon: 'lock', title: 'SSL şifreli bağlantı', sub: '256-bit TLS'},
-    {tone: 'teal', icon: 'doc', title: 'KVKK & LGPD', sub: 'Veri koruma uyumlu'},
+    didit && rosette({id: 'aw3', c1: '#4b2fc0', c2: '#8a74ff', label: 'Didit ile biyometrik kimlik doğrulama', ring: '• DIDIT • BIOMETRIC IDENTITY VERIFICATION ', band: 'VERIFIED',
+      center: c => cText([['Identity', 52, 12, 800], ['KYC', 75, 22, 900]], c)}),
+    iyzico && rosette({id: 'aw4', c1: '#c8102e', c2: '#ff5a6e', label: 'iyzico ile 3D Secure ödeme', ring: '• SECURE PAYMENT • IYZICO • 3D SECURE ', band: 'PROTECTED',
+      center: c => cText([['Payment', 52, 12, 800], ['3D Secure', 74, 17, 900]], c)}),
+    rosette({id: 'aw5', c1: '#16632a', c2: '#4caf50', label: 'SSL şifreli bağlantı', ring: '• SECURE CONNECTION • 256-BIT ENCRYPTION ', band: 'SECURED',
+      center: c => cText([['256-bit', 52, 12, 800], ['SSL', 77, 25, 900]], c)}),
+    rosette({id: 'aw6', c1: '#0b5d57', c2: '#2bb3a3', label: 'KVKK ve LGPD uyumlu veri koruma', ring: '• DATA PROTECTION • PRIVACY • KVKK • LGPD ', band: 'COMPLIANT',
+      center: c => cText([['KVKK', 56, 16, 900], ['& LGPD', 76, 15, 900]], c)}),
   ].filter(Boolean);
-  fb.insertAdjacentHTML('beforebegin', `<div class="footer-trust"><div class="ft-head"><span class="kicker">Güvenceler</span><span class="ft-line"></span></div><div class="ft-seals">${seals.map(seal).join('')}</div><p class="ft-legal">${ic('scale')}<span>Başvurularınız Polícia Federal ve Ministério da Justiça nezdinde, resmî kanallardan yürütülür. Hukuki işlemler <b>${LAW.firm} · ${LAW.lawyer} (${LAW.oab})</b> tarafından yürütülür. <a href="${LAW.verify}" target="_blank" rel="noopener">OAB kaydını doğrula</a></span></p></div>`);
+  fb.insertAdjacentHTML('beforebegin', `<div class="footer-trust"><div class="ft-head"><span class="ft-line"></span><span class="kicker">Güvenceler &amp; Sertifikalar</span><span class="ft-line"></span></div><div class="ft-awards">${oab}${seals.slice(0, Math.ceil(seals.length / 2)).join('')}${ius}${seals.slice(Math.ceil(seals.length / 2)).join('')}</div><p class="ft-legal">${ic('scale')}<span>Başvurularınız Polícia Federal ve Ministério da Justiça nezdinde, resmî kanallardan yürütülür. Hukuki işlemler <b>${LAW.firm} · ${LAW.lawyer} (${LAW.oab})</b> tarafından yürütülür. <a href="${LAW.verify}" target="_blank" rel="noopener">OAB kaydını doğrula</a></span></p></div>`);
 }
 
 // ---------- SEO ----------

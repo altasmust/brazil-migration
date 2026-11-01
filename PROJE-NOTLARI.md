@@ -237,3 +237,10 @@
 - Mühürler: OAB kayıtlı avukat (OAB/SP 386.588, CNA linki) · IusJud Verified (kullanıcının kendi markası, monogram "IJ", şimdilik linksiz) · Didit (açıksa) · iyzico 3D Secure (açıksa) · SSL · KVKK & LGPD.
 - Didit tespiti artık DB'deki config-didit'i de okur (siteState → s.didit); settings/didit kaydı invalidateSite() yapar.
 - style.css v=17.
+
+## Footer güvence rozetleri (v3 — ödül/sertifika tarzı)
+- Kullanıcı kartları "basit" buldu; ödül tarzı rozetlere geçildi (referans: European Property Awards kurdelesi + tırtıklı ödül mührü).
+- `applyTrust()` → `ribbon()` (dikey kurdele, altın çerçeve, alt çentik) ve `rosette()` (tırtıklı mühür, dairesel textPath yazı, beyaz merkez, şerit bant). Tümü inline SVG, yıl dinamik.
+- Kurdeleler: OAB (siyah-altın, terazi arması, "ADVOGADA REGISTRADA · OAB/SP 386.588 · ACG ADVOGADA · DRA. ANA CAROLINA", CNA linki) ve IusJud (lacivert-altın, kalkan "IJ", "IUSJUD VERIFIED · LEGAL PROCESS ASSURANCE"; link yok, kullanıcının kendi markası).
+- Mühürler: Didit KYC (mor, açıksa) · iyzico 3D Secure (kırmızı, açıksa) · SSL (yeşil) · KVKK & LGPD (turkuaz).
+- İçerik dürüst: "WINNER/ödül" ibaresi yok. CSS: style.css v=18 (.ft-awards, .aw, .aw-rib, .aw-ros).
