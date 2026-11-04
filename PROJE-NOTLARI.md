@@ -306,3 +306,14 @@
 ## Bekleyen fikir: Conta Azul entegrasyonu (2026-11-03)
 - Kullanıcı Conta Azul API ile Brezilya'da muhasebe entegrasyonu yapıp para kazanmak istiyor. Önerilen yol: sıfırdan muhasebe programı değil, kendi yazılımlarına (ACG Advogada/IusJud hukuk paneli + Brazil Migration) "Entegrasyonlar → Conta Azul" modülü (OAuth bağlan, ödenen fatura → müşteri + satış + tahsilat, danışman komisyonu gider, gece mutabakatı, NFS-e desteği teyit edilecek / gerekirse NFE.io-Focus NFe-eNotas). Gelir: abonelik, kurulum ücreti, muhasebeci ortaklığı, marketplace.
 - Kullanıcı: bu işi DİĞER çalışma alanında ACG Advogada için yapacak; "başla" deyince başlanacak. Burada (Brazil Migration) şimdilik bir şey yapılmadı.
+
+## Vize başvuru formu (2026-11-05)
+- Kullanıcı: MRE e-konsolosluk formunun (formulario-mre.serpro.gov.br) benzeri; önce "vatandaş olduğunuz ülke"; vize gerekmiyorsa muafiyet uyarısı, gerekiyorsa belge listesi (hepsi işaretlenmeden ilerlenemez); sonraki adımları demo doldurup görüp aynısını yap; sonra import/API.
+- Resmî forma sahte veriyle girilmedi (gerçek devlet sistemi; "Kaydet/Sıradaki" sunucuda taslak oluşturabilir). Adımlar konsolosluk rehberleri + kullanıcının ekran görüntülerine göre kuruldu.
+- Sayfa: `/panel/vize/` (index.html, vize.js, vize-data.js, vize.css). Müşteri panel menüsüne "Vize Formu" linki.
+  - Adım 0: ülke (Intl.DisplayNames ile tüm ISO ülkeler, bayrak) + vize türü (Ziyaret VIVIS, Aile birleşimi, Çalışma, Öğrenim, Emeklilik, Yatırımcı, Dijital göçebe). Ziyaret + muaf ülke → yeşil "vizeden muafsınız (N gün)" (Mercosur notu); ABD/Kanada/Avustralya → e-Visa uyarısı + resmî link; diğerleri → türe özel belge kontrol listesi, tümü işaretlenmeden "Forma başla" pasif.
+  - Adım 1 Genel Veriler (kimlik, doğum yeri, milliyet, ebeveyn 1-2, yasal temsilci "Bilgi verilmedi"), 2 Seyahat belgesi, 3 Adres-iletişim-meslek, 4 Seyahat ve vize (konsolosluk, giriş tarihi, kalış, Brezilya adresi/irtibat, önceki ziyaret/ret), 5 Fotoğraf ve belgeler (onay kutuları, Dosyalarım linki), 6 Özet + beyan + "Danışmana gönder". Zorunlu alan kontrolü, otomatik taslak kaydı.
+  - Muafiyet listesi `vize-data.js` (QGRV'ye göre, 2026-11; güncellenmeli).
+- API (workspace.mjs): `visa-form` GET (kendi formları; ?id= ile danışman/yetkili salt okunur), POST {id, form, submit} → item kind `visa_form` (gönderilen değiştirilemez; gönderimde danışman + owner bildirimi). snapshot kindPerm'e visa_form eklendi.
+- Danışman: Müşteriler tablosunda "Vize formu (✓)" butonu → `/panel/vize/?id=` danışman görünümü: resmî form sırasıyla özet, satır satır "Kopyala", JSON indir, Yazdır/PDF. Resmî sistemin herkese açık API'si yok → aktarım elle (kopyala-yapıştır).
+- features.js v=10. Çeviri sözlüğüne vize sayfası metinleri henüz eklenmedi.
