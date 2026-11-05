@@ -12,8 +12,8 @@ const CONFIG = {
 };
 
 const LANGS = {
-  tr: { code:'tr', sr:'tr-TR', tts:'tr-TR', short:'TR', label:'Türkçe', sw:'var(--tr)' },
-  pt: { code:'pt', sr:'pt-BR', tts:'pt-BR', short:'PT', label:'Português', sw:'var(--br)' }
+  tr: { code:'tr', sr:'tr-TR', tts:'tr-TR', short:'TR', label:'Türkçe', sw:'url(/bm/flags/tr.svg) center/cover' },
+  pt: { code:'pt', sr:'pt-BR', tts:'pt-BR', short:'PT', label:'Português', sw:'url(/bm/flags/br.svg) center/cover' }
 };
 
 const I18N = {

@@ -239,3 +239,48 @@ svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .bm-off{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--ink-1);color:var(--fg);padding:24px;text-align:center}
 .bm-off div{max-width:440px}.bm-off h2{font-family:Fraunces,Georgia,serif;font-weight:500;margin:14px 0 8px}.bm-off p{color:var(--fg-2)}.bm-off a{color:var(--brass-2);text-decoration:underline}
 .bm-off img{height:44px;filter:brightness(0) invert(1)}
+
+/* ---------- Brazil Migration teması: marka yeşilleri + şeffaf (cam) yüzeyler ---------- */
+:root{
+  --ink-0:#0a1c13; --ink-1:#0f2a1c; --ink-2:rgba(26,61,43,.42); --ink-3:rgba(76,175,80,.16);
+  --line:rgba(255,255,255,.12); --line-2:rgba(255,255,255,.22);
+  --fg:#f1f8f1; --fg-2:#c9dfca; --muted:#93b39a;
+  --brass:#4caf50; --brass-2:#66bb6a; --brass-ink:#fff;
+  --br:#4caf50; --ok:#4caf50;
+}
+body{background:radial-gradient(1200px 700px at 12% -10%,rgba(76,175,80,.28),transparent 60%),radial-gradient(900px 600px at 100% 110%,rgba(46,125,50,.30),transparent 60%),linear-gradient(160deg,#16392a,#0c2117 60%,#081a10)!important;background-attachment:fixed!important}
+#call,.tile{background:transparent}
+.join-card,.feat,.panel,.menu,.end-card,.stat,.topbar,.dock,.chip,.pairchip,.lang,.logo-mark,.linkbox,.input,select.input,.msg{background:rgba(255,255,255,.06)!important;border-color:rgba(255,255,255,.14)!important;-webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%)}
+.menu,.panel{background:rgba(14,40,27,.55)!important}
+.input:focus,select.input:focus{border-color:#66bb6a!important;box-shadow:0 0 0 3px rgba(76,175,80,.22)}
+select.input option{background:#123224;color:#f1f8f1}
+.lang[aria-pressed="true"]{background:rgba(76,175,80,.18)!important;border-color:#66bb6a!important}
+.btn-primary{box-shadow:0 8px 24px -10px rgba(76,175,80,.8)}
+.btn-ghost{background:rgba(255,255,255,.04)}
+.ctl{background:rgba(255,255,255,.08);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.swatch{width:20px;height:14px;border-radius:3px;box-shadow:0 0 0 1px rgba(255,255,255,.25)}
+.sw-tr{background:url(/bm/flags/tr.svg) center/cover} .sw-pt{background:url(/bm/flags/br.svg) center/cover}
+.bm-logo img{filter:brightness(0) invert(1)}
+.bm-off{background:linear-gradient(160deg,#16392a,#081a10)!important}
+
+/* ---------- Açılış introsu + yükleniyor ---------- */
+#bm-intro{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:radial-gradient(900px 600px at 50% 40%,#ffffff,#eef6ee);transition:opacity .6s ease,visibility .6s}
+#bm-intro.out{opacity:0;visibility:hidden}
+#bm-intro .in-wrap{display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center;padding:24px}
+#bm-intro .in-logo{width:min(360px,72vw);opacity:0;transform:translateY(14px) scale(.96);animation:bmIn 1s cubic-bezier(.2,.8,.2,1) .2s forwards}
+#bm-intro .in-line{height:3px;width:0;background:linear-gradient(90deg,#1a3d2b,#4caf50);border-radius:3px;animation:bmLine .9s ease 1s forwards}
+#bm-intro .in-tag{font:600 13px/1.4 var(--body);letter-spacing:.22em;text-transform:uppercase;color:#1a3d2b;opacity:0;animation:bmFade .7s ease 1.4s forwards}
+#bm-intro .in-load{display:none;flex-direction:column;align-items:center;gap:14px;margin-top:6px}
+#bm-intro.loading .in-load{display:flex;animation:bmFade .4s ease forwards}
+#bm-intro .in-ring{width:46px;height:46px;border-radius:50%;border:3px solid rgba(26,61,43,.12);border-top-color:#4caf50;animation:bmSpin .9s linear infinite}
+#bm-intro .in-bar{width:min(260px,60vw);height:6px;border-radius:6px;background:rgba(26,61,43,.10);overflow:hidden}
+#bm-intro .in-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#1a3d2b,#4caf50);border-radius:6px}
+#bm-intro.loading .in-bar i{animation:bmBar 3s linear forwards}
+#bm-intro .in-txt{font:500 14px/1.4 var(--body);color:#2c5a3f}
+#bm-intro .in-txt b{font-variant-numeric:tabular-nums}
+@keyframes bmIn{to{opacity:1;transform:none}}
+@keyframes bmLine{to{width:min(220px,50vw)}}
+@keyframes bmFade{from{opacity:0}to{opacity:1}}
+@keyframes bmSpin{to{transform:rotate(360deg)}}
+@keyframes bmBar{to{width:100%}}
+@media (prefers-reduced-motion:reduce){#bm-intro *{animation-duration:.01s!important;animation-delay:0s!important}}
