@@ -323,3 +323,17 @@ select.input option{background:#123224;color:#f1f8f1}
 @media (max-width:640px){#call #screenBtn{display:none}#call .dock{justify-content:center}#call .dock-center{flex:0 1 auto}}
 #call #tileRemote>.nameplate{top:calc(max(10px,env(safe-area-inset-top,0px)) + 58px);transition:top .3s ease}
 #call.ui-off #tileRemote>.nameplate{top:max(12px,env(safe-area-inset-top,0px))}
+/* Sinyal göstergesi */
+.chip.net{gap:6px}
+.chip.net .bars{display:inline-flex;align-items:flex-end;gap:2px;height:14px}
+.chip.net .bars i{width:3px;border-radius:1px;background:rgba(255,255,255,.25)}
+.chip.net .bars i:nth-child(1){height:4px}.chip.net .bars i:nth-child(2){height:7px}.chip.net .bars i:nth-child(3){height:10px}.chip.net .bars i:nth-child(4){height:14px}
+.chip.net[data-q="3"] .bars i{background:#4caf50}
+.chip.net[data-q="2"] .bars i:nth-child(-n+3){background:#f2c94c}
+.chip.net[data-q="1"] .bars i:nth-child(-n+2){background:#f2994a}
+.chip.net[data-q="0"] .bars i:nth-child(1){background:#e0473b}
+.chip.net .nl{max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip.net .nq{font-size:12px;color:var(--fg-2)}
+.chip.net[data-q="1"] .nq,.chip.net[data-q="0"] .nq{color:#ffb38a}
+@media (max-width:640px){#call .chip.net .nq{display:none}#call .chip.net .nl{max-width:56px}#call .tb-left .chip:first-child{display:none}#call .topbar{flex-wrap:nowrap}#call .tb-right{gap:5px}}
+#call .tile video.fit-contain{object-fit:contain}

@@ -5,7 +5,9 @@ const CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:global.stun.twilio.com:3478' }
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    // PeerJS'in kendi varsayılan TURN sunucuları: doğrudan bağlantı kurulamayan mobil/kurumsal ağlarda röle
+    { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' }
     // Add a TURN server here for strict corporate/mobile networks, e.g.:
     // { urls: 'turn:YOUR_HOST:3478', username: 'USER', credential: 'PASS' }
   ]
@@ -362,6 +364,9 @@ function onData(m){
     case 'chat':
       addMsg({ me:false, who, text:m.tr, orig:m.text });
       break;
+    case 'net':
+      if (window.bmNetPeer) window.bmNetPeer(m);
+      break;
     case 'bye':
       onPeerLeft();
       break;
@@ -396,16 +401,16 @@ function inviteLink(){
   return u.toString();
 }
 function wireConn(c){
-  if (S.conn && S.conn !== c){ try { S.conn.close(); } catch(e){} }
-  S.conn = c;
+  const oldC = S.conn; S.conn = c;
+  if (oldC && oldC !== c){ try { oldC.close(); } catch(e){} }
   c.on('open', () => { c.send({ type:'hello', name:S.name || t('speakerDefault'), lang:S.me }); sendState(); });
   c.on('data', onData);
   c.on('close', () => { if (S.conn === c) onPeerLeft(); });
   c.on('error', () => {});
 }
 function wireCall(c){
-  if (S.call && S.call !== c){ try { S.call.close(); } catch(e){} }
-  S.call = c;
+  const oldCall = S.call; S.call = c;
+  if (oldCall && oldCall !== c){ try { oldCall.close(); } catch(e){} }
   c.on('stream', rs => {
     $('vRemote').srcObject = rs;
     $('waiting').hidden = true;
@@ -420,7 +425,11 @@ function wireCall(c){
     const pc = c.peerConnection; if (!pc){ return; }
     const st = pc.iceConnectionState;
     if (st === 'disconnected') setConn('warn', t('reconnecting'));
-    else if (st === 'failed'){ setConn('bad', t('left')); clearInterval(pcWatch); }
+    else if (st === 'failed'){
+      setConn('bad', t('reconnecting')); clearInterval(pcWatch);
+      // ağ değişti / koptu: misafir taraf aramayı otomatik yeniler
+      if (S.role === 'guest' && S.call === c) setTimeout(() => { if (S.peer && !S.peer.destroyed && S.call === c){ S.call = null; connectToHost(); } }, 1000);
+    }
     else if (st === 'connected' || st === 'completed'){ if ($('connText').textContent !== t('connected')) setConn('ok', t('connected')); }
     if (S.call !== c) clearInterval(pcWatch);
   }, 1500);
@@ -738,4 +747,102 @@ window.addEventListener('beforeunload', () => send({ type:'bye' }));
     $('lobby').classList.toggle('rear', S.facing === 'environment');
     flip.disabled = false;
   };
+})();
+
+
+/* ---------- Bağlantı kalitesi: iki tarafın sinyali + zayıf ağda uyarlanan kalite ---------- */
+(function bmNet(){
+  const L = { tr:{ me:'Siz', q:['Kopuk','Zayıf','Orta','Güçlü'], weak:'Bağlantı zayıf: ses öncelikli, görüntü kalitesi düşürüldü', back:'Bağlantı düzeldi' },
+              pt:{ me:'Você', q:['Sem sinal','Fraco','Médio','Forte'], weak:'Conexão fraca: áudio priorizado, qualidade de vídeo reduzida', back:'Conexão restabelecida' } };
+  const tx = () => L[S.me] || L.tr;
+  const PROFILES = { 3:{ maxBitrate:1500000, scale:1, fps:30 }, 2:{ maxBitrate:600000, scale:1.5, fps:24 }, 1:{ maxBitrate:220000, scale:2.5, fps:15 }, 0:{ maxBitrate:120000, scale:4, fps:10 } };
+  let prev = null, myQ = 3, peerQ = null, peerSeen = 0, applied = null, goodStreak = 0, warned = false;
+
+  function paint(id, q, label){
+    const el = $(id); if (!el) return;
+    el.dataset.q = q == null ? '' : q; el.hidden = false;
+    el.querySelector('.nl').textContent = label;
+    el.title = label + ': ' + (q == null ? '—' : tx().q[q]);
+    el.querySelector('.nq').textContent = q == null ? '—' : tx().q[q];
+  }
+  window.bmNetPeer = m => { peerQ = Math.max(0, Math.min(3, m.q | 0)); peerSeen = Date.now(); paint('netThem', peerQ, S.peerName || '—'); };
+
+  async function tune(target){
+    const pc = S.call && S.call.peerConnection; if (!pc || applied === target) return;
+    const p = PROFILES[target];
+    for (const snd of pc.getSenders()){
+      if (!snd.track) continue;
+      try {
+        const prm = snd.getParameters(); if (!prm.encodings || !prm.encodings.length) prm.encodings = [{}];
+        if (snd.track.kind === 'audio'){ prm.encodings[0].priority = 'high'; prm.encodings[0].networkPriority = 'high'; }
+        else {
+          prm.degradationPreference = target >= 2 ? 'balanced' : 'maintain-framerate';
+          prm.encodings[0].maxBitrate = S.screenStream ? Math.max(p.maxBitrate, 900000) : p.maxBitrate;
+          prm.encodings[0].scaleResolutionDownBy = S.screenStream ? 1 : p.scale;
+          prm.encodings[0].maxFramerate = S.screenStream ? 10 : p.fps;
+          prm.encodings[0].priority = 'low';
+        }
+        await snd.setParameters(prm);
+      } catch(e){}
+    }
+    applied = target;
+  }
+
+  async function tick(){
+    if ($('call').hidden){ ['netMe','netThem'].forEach(id => $(id) && ($(id).hidden = true)); prev = null; applied = null; return; }
+    const pc = S.call && S.call.peerConnection;
+    if (!pc){ paint('netMe', S.peer && !S.peer.disconnected ? null : 0, tx().me); return; }
+    const ice = pc.iceConnectionState;
+    let rtt = 0, avail = 0, lost = 0, recv = 0, jitter = 0, ts = Date.now();
+    try {
+      const st = await pc.getStats();
+      st.forEach(r => {
+        if (r.type === 'candidate-pair' && (r.nominated || r.selected) && r.state === 'succeeded'){ rtt = r.currentRoundTripTime || rtt; avail = r.availableOutgoingBitrate || avail; }
+        if (r.type === 'inbound-rtp' && !r.isRemote){ lost += r.packetsLost || 0; recv += r.packetsReceived || 0; if (r.kind === 'audio' && r.jitter) jitter = r.jitter; }
+      });
+    } catch(e){}
+    let loss = 0;
+    if (prev){ const dl = lost - prev.lost, dr = recv - prev.recv; loss = dl + dr > 0 ? Math.max(0, dl) / (dl + dr) : 0; }
+    prev = { lost, recv, ts };
+    let q = 3;
+    if (ice === 'disconnected' || ice === 'failed') q = 0;
+    else {
+      if (loss > 0.03 || rtt > 0.3 || jitter > 0.05 || (avail && avail < 500000)) q = 2;
+      if (loss > 0.08 || rtt > 0.6 || jitter > 0.1 || (avail && avail < 200000)) q = 1;
+    }
+    myQ = q;
+    paint('netMe', q, tx().me);
+    send({ type:'net', q });
+    if (peerSeen && Date.now() - peerSeen > 8000){ peerQ = 0; paint('netThem', 0, S.peerName || '—'); }
+    // Gönderdiğim görüntünün kalitesi: iki taraftan kötü olanına göre; düşüş hemen, yükseliş 3 ölçüm sonra
+    const target = Math.min(myQ, peerQ == null ? 3 : peerQ);
+    if (applied == null || target < applied){ goodStreak = 0; await tune(target); }
+    else if (target > applied){ if (++goodStreak >= 3){ goodStreak = 0; await tune(Math.min(3, applied + 1)); } }
+    const worst = Math.min(myQ, peerQ == null ? 3 : peerQ);
+    if (worst <= 1 && !warned){ warned = true; toast(tx().weak); }
+    else if (worst >= 3 && warned){ warned = false; toast(tx().back); }
+  }
+  setInterval(() => { tick().catch(() => {}); }, 2000);
+})();
+
+/* Tarayıcının kendiliğinden picture-in-picture'a alması görüntüyü ana ekrandan kaldırıyordu → kapatıldı */
+['vRemote','vSelf','pvVideo'].forEach(id => {
+  const v = $(id); if (!v) return;
+  v.disablePictureInPicture = true; v.setAttribute('disablepictureinpicture', '');
+  v.addEventListener('enterpictureinpicture', () => { if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {}); });
+});
+try { if (navigator.mediaSession && navigator.mediaSession.setActionHandler) navigator.mediaSession.setActionHandler('enterpictureinpicture', null); } catch(e){}
+/* Ana ekranda görüntü durursa (sekme değişimi, PiP dönüşü) yeniden oynat */
+document.addEventListener('visibilitychange', () => { if (!document.hidden) ['vRemote','vSelf'].forEach(id => { const v = $(id); if (v && v.srcObject && v.paused) v.play().catch(() => {}); }); });
+/* Masaüstünde fare hareketi menüleri geri getirir */
+document.addEventListener('mousemove', (() => { let last = 0; return () => { const n = Date.now(); if (n - last < 400) return; last = n; const c = $('call'); if (!c.hidden && c.classList.contains('ui-off')){ c.classList.remove('ui-off'); clearTimeout(window._bmHide); window._bmHide = setTimeout(() => { if ($('menu').hidden) c.classList.add('ui-off'); }, 5000); } }; })());
+/* Görüntü ekranla aynı yönde ise tam doldur (cover); dik telefon görüntüsü yatay ekranda ise kırpmadan sığdır */
+(function bmFit(){
+  const fit = () => ['vRemote','vSelf'].forEach(id => {
+    const v = $(id), box = v && v.parentElement; if (!v || !v.videoWidth || !box) return;
+    const vPortrait = v.videoHeight > v.videoWidth, bPortrait = box.clientHeight > box.clientWidth;
+    v.classList.toggle('fit-contain', vPortrait !== bPortrait && box.clientWidth > 160);
+  });
+  ['vRemote','vSelf'].forEach(id => { const v = $(id); if (v){ v.addEventListener('loadedmetadata', fit); v.addEventListener('resize', fit); } });
+  addEventListener('resize', fit); setInterval(fit, 3000);
 })();
