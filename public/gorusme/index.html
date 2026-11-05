@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="/gorusme/app.css?v=2">
+<link rel="stylesheet" href="/gorusme/app.css?v=3">
 </head>
 <body>
 <div id="bm-intro" aria-live="polite"><div class="in-wrap"><img class="in-logo" src="/brazil-migration-logo.png" alt="Brazil Migration"><div class="in-line"></div><div class="in-tag">Tercümanlı görüntülü görüşme</div><div class="in-load"><div class="in-ring"></div><div class="in-bar"><i></i></div><div class="in-txt">Görüşme hazırlanıyor… <b id="bm-pct">0%</b></div></div></div></div>
@@ -18,7 +18,7 @@
 
 <!-- SVG icon sprite -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="i-flip" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><path d="M9 12.5a3 3 0 0 1 5.2-1.6M15 14a3 3 0 0 1-5.2 1.6"/><path d="M14.5 9.5v1.6h-1.6M9.5 17v-1.6h1.6"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
   <symbol id="i-mic-off" viewBox="0 0 24 24"><path d="M15 9.5V6a3 3 0 0 0-5.7-1.3M9 9v2a3 3 0 0 0 5 2.2M5 11a7 7 0 0 0 11.5 5.4M19 11a7 7 0 0 1-.6 2.8M12 18v3M3 3l18 18"/></symbol>
   <symbol id="i-cam" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10.5 5-3v9l-5-3z"/></symbol>
   <symbol id="i-cam-off" viewBox="0 0 24 24"><path d="M10 6h3.5A2.5 2.5 0 0 1 16 8.5v3M16 10.5l5-3v9l-3-1.8M16 16a2.5 2.5 0 0 1-2.5 2H5.5A2.5 2.5 0 0 1 3 15.5v-7A2.5 2.5 0 0 1 5 6M3 3l18 18"/></symbol>
@@ -161,6 +161,7 @@
     <div class="dock-group dock-center">
       <button class="ctl" id="micBtn" data-tip="M"><svg class="i"><use href="#i-mic"/></svg><span class="lbl" data-i="mic">Mikrofon</span></button>
       <button class="ctl" id="camBtn" data-tip="V"><svg class="i"><use href="#i-cam"/></svg><span class="lbl" data-i="cam">Kamera</span></button>
+      <button class="ctl" id="flipBtn" hidden aria-label="Kamerayı çevir"><svg class="i"><use href="#i-flip"/></svg><span class="lbl">Çevir</span></button>
       <button class="ctl" id="voiceBtn" data-tip="T"><svg class="i"><use href="#i-voice"/></svg><span class="lbl" data-i="voice">Sesli çeviri</span></button>
       <button class="ctl" id="screenBtn"><svg class="i"><use href="#i-screen"/></svg><span class="lbl" data-i="share">Ekran</span></button>
       <button class="ctl" id="panelBtn" data-tip="C"><svg class="i"><use href="#i-chat"/></svg><span class="lbl" data-i="panelBtn">Sohbet</span><span class="badge" id="chatBadge" hidden>0</span></button>
@@ -203,6 +204,6 @@
 <div class="toasts" id="toasts" aria-live="assertive"></div>
 
 <script src="/gorusme/peerjs.min.js?v=1.5.4"></script>
-<script src="/gorusme/app.js?v=2"></script>
+<script src="/gorusme/app.js?v=3"></script>
 </body>
 </html>

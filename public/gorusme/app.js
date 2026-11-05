@@ -693,3 +693,49 @@ window.addEventListener('beforeunload', () => send({ type:'bye' }));
     }
   } catch(e){}
 })();
+
+/* ---------- Mobil: tam ekran görüntü, dokununca menü, ön/arka kamera ---------- */
+(function bmMobile(){
+  const call = $('call'), stage = $('stage');
+  let hideT = 0;
+  const showUI = () => {
+    call.classList.remove('ui-off'); clearTimeout(hideT);
+    hideT = setTimeout(() => { if (!call.hidden && $('menu').hidden && !document.querySelector('.panel:not([hidden])')) call.classList.add('ui-off'); }, 5000);
+  };
+  stage.addEventListener('click', e => {
+    if (e.target.closest('#tileSelf,button,a,.menu')) return;
+    if (call.classList.contains('ui-off')) showUI(); else { clearTimeout(hideT); call.classList.add('ui-off'); }
+  });
+  ['.topbar','.dock'].forEach(sel => { const el = call.querySelector(sel); if (el) el.addEventListener('pointerdown', showUI); });
+  new MutationObserver(() => { if (!call.hidden) showUI(); }).observe(call, { attributes:true, attributeFilter:['hidden'] });
+
+  S.facing = 'user';
+  const flip = $('flipBtn');
+  const refresh = () => navigator.mediaDevices && navigator.mediaDevices.enumerateDevices && navigator.mediaDevices.enumerateDevices().then(ds => {
+    const cams = ds.filter(d => d.kind === 'videoinput').length;
+    flip.hidden = !(cams > 1 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+  }).catch(() => {});
+  refresh(); if (navigator.mediaDevices) navigator.mediaDevices.addEventListener('devicechange', refresh);
+  flip.onclick = async e => {
+    e.stopPropagation(); if (!S.stream || flip.disabled) return;
+    const next = S.facing === 'user' ? 'environment' : 'user';
+    flip.disabled = true;
+    const old = S.stream.getVideoTracks()[0];
+    if (old){ S.stream.removeTrack(old); old.stop(); }   // iOS iki kamerayı aynı anda açamaz
+    const ask = fm => navigator.mediaDevices.getUserMedia({ video:{ facingMode:fm, width:{ ideal:1280 }, height:{ ideal:720 } } });
+    let s;
+    try { s = await ask({ exact:next }); } catch(_){ try { s = await ask(next); } catch(_2){ s = null; } }
+    if (!s){ try { s = await ask(S.facing); } catch(_3){} toast(t('media'), true); }
+    else S.facing = next;
+    if (s){
+      const nt = s.getVideoTracks()[0];
+      S.stream.addTrack(nt);
+      if (!S.screenStream) replaceOutgoing(nt);
+      ['vSelf','vRemote','pvVideo'].forEach(id => { const v = $(id); if (v && v.srcObject === S.stream){ v.srcObject = null; v.srcObject = S.stream; } });
+      applyTrackStates();
+    }
+    call.classList.toggle('rear', S.facing === 'environment');
+    $('lobby').classList.toggle('rear', S.facing === 'environment');
+    flip.disabled = false;
+  };
+})();

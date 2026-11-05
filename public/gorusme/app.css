@@ -284,3 +284,42 @@ select.input option{background:#123224;color:#f1f8f1}
 @keyframes bmSpin{to{transform:rotate(360deg)}}
 @keyframes bmBar{to{width:100%}}
 @media (prefers-reduced-motion:reduce){#bm-intro *{animation-duration:.01s!important;animation-delay:0s!important}}
+
+/* ---------- Görüşme ekranı: %100 responsive, tam ekran görüntü ---------- */
+#call{display:block;height:100vh;height:100dvh;overflow:hidden;background:#06140c}
+#call>.main{position:absolute;inset:0}
+#call .stage{position:absolute;inset:0}
+#call .tile video{object-fit:cover}
+#call .topbar,#call .dock{position:absolute;left:0;right:0;z-index:20;border:0!important;transition:opacity .3s ease,transform .3s ease}
+#call .topbar{top:0;padding-top:max(10px,env(safe-area-inset-top,0px));background:linear-gradient(180deg,rgba(6,20,12,.7),rgba(6,20,12,0))!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+#call .dock{bottom:0;padding-bottom:max(12px,env(safe-area-inset-bottom,0px));background:linear-gradient(0deg,rgba(6,20,12,.75),rgba(6,20,12,0))!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+#call.ui-off .topbar{opacity:0;transform:translateY(-100%);pointer-events:none}
+#call.ui-off .dock{opacity:0;transform:translateY(100%);pointer-events:none}
+#call .self{top:calc(max(10px,env(safe-area-inset-top,0px)) + 56px);transition:top .3s ease;background:#0b2016}
+#call.ui-off .self{top:max(12px,env(safe-area-inset-top,0px))}
+#call .self video{object-fit:cover}
+#call .captions{bottom:calc(max(12px,env(safe-area-inset-bottom,0px)) + 78px);transition:bottom .3s ease}
+#call.ui-off .captions{bottom:max(16px,env(safe-area-inset-bottom,0px))}
+.rear .tile.mirror video,#lobby.rear .pv-frame video{transform:none!important}
+/* Altyazı: şeffaf zemin, net yazı */
+.cap{background:rgba(0,0,0,.22)!important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);border:0!important}
+.cap .main{color:#fff!important;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 10px rgba(0,0,0,.7)}
+.cap .orig{color:#e6f2e7!important;font-weight:500;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 8px rgba(0,0,0,.7)}
+.cap .who{color:#cfe7d1!important;text-shadow:0 1px 2px rgba(0,0,0,.9)}
+.cap.live .main{color:#f3f8f3!important}
+.ctl{background:rgba(255,255,255,.14)}
+@media (max-width:900px){#call .panel{z-index:40}}
+@media (max-width:640px){
+  #call .topbar{gap:6px;padding-left:10px;padding-right:10px}
+  #call .chip{font-size:12.5px;padding:5px 10px}
+  #call .self{width:28vw;min-width:92px;aspect-ratio:3/4;right:10px}
+  #call .dock{padding-left:6px;padding-right:6px}
+  #call .dock-center{gap:5px;flex-wrap:nowrap}
+  #call .ctl{height:44px;min-width:44px;padding:0 10px}
+  #call .captions{padding-left:8px;padding-right:8px}
+  .cap{padding:8px 12px 9px}
+}
+@media (max-width:380px){#call .ctl{height:40px;min-width:40px;padding:0 8px}#call .ctl .i{width:18px;height:18px}}
+@media (max-width:640px){#call #screenBtn{display:none}#call .dock{justify-content:center}#call .dock-center{flex:0 1 auto}}
+#call #tileRemote>.nameplate{top:calc(max(10px,env(safe-area-inset-top,0px)) + 58px);transition:top .3s ease}
+#call.ui-off #tileRemote>.nameplate{top:max(12px,env(safe-area-inset-top,0px))}
