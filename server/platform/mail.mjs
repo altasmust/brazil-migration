@@ -21,7 +21,7 @@ function smtp() {
   return transport;
 }
 
-export async function sendMail({to, subject, title, text, link, button, throwOnError}) {
+export async function sendMail({to, subject, title, text, link, button, throwOnError, from}) {
   const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#1a2e1f">
   <h2 style="color:#1b5e20">${esc(title || subject)}</h2><p style="line-height:1.6">${esc(text)}</p>
   ${link ? `<p><a href="${esc(link)}" style="display:inline-block;background:#1b5e20;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none">${esc(button || 'Devam et')}</a></p><p style="font-size:12px;color:#667">Buton çalışmazsa bu bağlantıyı tarayıcınıza yapıştırın:<br>${esc(link)}</p>` : ''}
@@ -33,7 +33,10 @@ export async function sendMail({to, subject, title, text, link, button, throwOnE
   }
   try {
     if (smtpReady()) {
-      await smtp().sendMail({from: fromAddress(), replyTo: process.env.EMAIL_REPLY_TO || undefined, to, subject, html, text: plain});
+      const msg = {replyTo: process.env.EMAIL_REPLY_TO || undefined, to, subject, html, text: plain};
+      // İstenen gönderen adresi (ör. bilgi@…); SMTP sunucusu reddederse varsayılan adresle tekrar dener.
+      if (from) { try { await smtp().sendMail({...msg, from}); } catch (e) { console.error('[mail] gönderen reddedildi, varsayılanla deneniyor:', e.message); await smtp().sendMail({...msg, from: fromAddress()}); } }
+      else await smtp().sendMail({...msg, from: fromAddress()});
       return {sent: true};
     }
     const r = await fetch('https://api.resend.com/emails', {

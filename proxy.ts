@@ -6,7 +6,7 @@ import {inspect} from './server/waf.mjs';
 // everything else (site + customer/advisor/lawyer/staff panels) on the main domain.
 // Also maps "/folder/" to "/folder/index.html" for the static pages in /public.
 const adminHosts = () => (process.env.ADMIN_HOST || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-const PANEL = /^\/(admin|panel|partner|avukat|kyc)(\/|$)/;
+const PANEL = /^\/(admin|panel|partner|avukat|kyc|gorusme)(\/|$)/;
 const SHARED = /^\/(brazil-migration-logo\.png|theme\.js|style\.css|page-visuals\.css|favicon\.ico|robots\.txt|bm\/|images\/|illustrations\/|kyc\/)/;
 
 export function proxy(req: NextRequest) {

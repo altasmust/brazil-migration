@@ -317,3 +317,12 @@
 - API (workspace.mjs): `visa-form` GET (kendi formları; ?id= ile danışman/yetkili salt okunur), POST {id, form, submit} → item kind `visa_form` (gönderilen değiştirilemez; gönderimde danışman + owner bildirimi). snapshot kindPerm'e visa_form eklendi.
 - Danışman: Müşteriler tablosunda "Vize formu (✓)" butonu → `/panel/vize/?id=` danışman görünümü: resmî form sırasıyla özet, satır satır "Kopyala", JSON indir, Yazdır/PDF. Resmî sistemin herkese açık API'si yok → aktarım elle (kopyala-yapıştır).
 - features.js v=10. Çeviri sözlüğüne vize sayfası metinleri henüz eklenmedi.
+
+## Görüşme modülü (2026-11-05)
+- Kullanıcının "IusJud Görüşme" uygulaması (PeerJS + canlı TR⇄PT çeviri) Brazil Migration'a uyarlandı: `public/gorusme/` (index.html, app.css, app.js, peerjs.min.js 1.5.4 yerel + LICENSE). Adres brazilmigration.com/gorusme. Renk: koyu orman yeşili + lime; logo beyaz filtre. Dil TR⇄PT (EN/FA istenmedi).
+- proxy.ts PANEL regex'e `gorusme` eklendi (statik index.html). next.config CSP connect-src `https: wss://0.peerjs.com`; Permissions-Policy camera/microphone/display-capture=(self).
+- Davet linki: `/gorusme/?oda=KOD&dil=tr|pt&otomatik=1` — otomatik=1: ilk giren oda sahibi, ID doluysa misafir olarak katılır.
+- Ayar: item `config-meeting` {enabled, inBooking, teamLang, from}. Admin: Genel Ayarlar → "Görüşme (çevirili)" sekmesi (bm-settings.js meetingPage). API: public `/api/auth/meeting` (enabled), admin `settings/meeting` GET/POST, workspace `meeting` (yaklaşan randevunun odası).
+- Randevu: modül açık + inBooking → booking.room/roomLink(tr)/teamRoomLink(teamLang); e-posta "Görüşmeye katıl" butonu, gönderen config.from (bilgi@brazilmigration.com). Meet linki varsa yanında. mail.mjs sendMail `from` destekler; SMTP reddederse varsayılan gönderenle yeniden dener.
+- Paneller: müşteri nav "Görüşmeye katıl" (/gorusme/, randevu odası otomatik dolar), danışman nav `/gorusme/?dil=pt`. Admin randevu tablosunda oda linki. Modül kapalıysa /gorusme "şu an kullanılamıyor" ekranı.
+- PeerJS bağlantısı sandbox'ta (ağ kısıtlı) test edilemedi; canlıda iki cihazla denenmeli.

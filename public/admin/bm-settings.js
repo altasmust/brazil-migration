@@ -13,7 +13,7 @@
   const R = () => window.BMRoutes || {};
 
   // ---------- Genel Ayarlar / Güvenlik: yalnız çalışan sekmeler ----------
-  const PAGES = {general: {'Firma Bilgileri': 'company', 'E-posta (SMTP)': 'eposta', 'Google Meet': 'meet'}, security: {'Güvenlik Duvarı': 'waf', 'KYC · Didit': 'kimlik'}};
+  const PAGES = {general: {'Firma Bilgileri': 'company', 'E-posta (SMTP)': 'eposta', 'Google Meet': 'meet', 'Görüşme (çevirili)': 'gorusme'}, security: {'Güvenlik Duvarı': 'waf', 'KYC · Didit': 'kimlik'}};
   const OLD = {eposta: ['general', 'E-posta (SMTP)'], meet: ['general', 'Google Meet'], kimlik: ['security', 'KYC · Didit']};
   let pending = null;
   for (const page of Object.keys(PAGES)) {
@@ -21,7 +21,7 @@
       if (pending && pending[0] === page) { tab = pending[1]; pending = null; }
       const T = Object.keys(PAGES[page]); if (!T.includes(tab)) tab = T[0];
       const key = PAGES[page][tab];
-      const inner = key === 'company' ? companyPage() : key === 'waf' ? wafPage() : R()[key] ? R()[key]() : '<div class="loading">Yükleniyor…</div>';
+      const inner = key === 'company' ? companyPage() : key === 'waf' ? wafPage() : key === 'gorusme' ? meetingPage() : R()[key] ? R()[key]() : '<div class="loading">Yükleniyor…</div>';
       return heading() + `<section class="panel settings-revision">${T.length > 1 ? tabs(T) : ''}<div class="settings bms-tabembed">${inner}</div></section>`;
     };
     if (page === 'general') general = fn; else security = fn;
@@ -33,6 +33,26 @@
     if (r === 'overview') return dashboard();
     return _ov();
   };
+
+  // ---------- Görüşme modülü (/gorusme) ----------
+  function meetingPage() {
+    setTimeout(async () => {
+      const root = $('#bmg-root'); if (!root) return;
+      let d; try { d = await A('settings/meeting'); } catch (e) { root.innerHTML = `<div class="bmc-err">${esc(e.message)}</div>`; return; }
+      const m = d.meeting;
+      root.innerHTML = `<div class="bmw-hero ${m.enabled ? 'on' : ''}"><span class="bmw-shield">${ic('chat')}</span><div><b>Brazil Migration Görüşme ${m.enabled ? 'açık' : 'kapalı'}</b><small>Türkçe ⇄ Portekizce anlık çevirili görüntülü görüşme. Görüntü ve ses iki cihaz arasında doğrudan taşınır, sunucuda kaydedilmez. Adres: <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.url)}</a></small></div><label class="bmw-sw"><input type="checkbox" id="bmg-on" ${m.enabled ? 'checked' : ''}><span></span></label></div>
+        <section class="bmw-card"><h3>${ic('calendar')} Ücretsiz ön görüşme randevuları</h3>
+          <label class="bmi-cb"><input type="checkbox" id="bmg-book" ${m.inBooking ? 'checked' : ''}> Randevu alındığında görüşme odası oluştur ve linkini e-postayla gönder (Google Meet linki varsa onun yanında)</label>
+          <label class="bmi-f">Ekip tarafının dili<select id="bmg-lang"><option value="pt" ${m.teamLang === 'pt' ? 'selected' : ''}>Português (avukat / Brezilya ekibi)</option><option value="tr" ${m.teamLang === 'tr' ? 'selected' : ''}>Türkçe</option></select><small>Müşteriye giden link Türkçe açılır; ekip bildirimindeki link bu dilde açılır.</small></label>
+          <label class="bmi-f">Gönderen adres<input id="bmg-from" class="bmi-in" value="${esc(m.from)}"><small>SMTP hesabınız bu adresle göndermeye izinli olmalı (aynı posta kutusu veya takma ad). İzin yoksa e-posta varsayılan gönderenle gider.${d.mail ? '' : ' <b>E-posta henüz yapılandırılmadı</b> — Genel Ayarlar → E-posta (SMTP).'}</small></label>
+          <button class="btn primary small" id="bmg-save">${ic('check')} Kaydet</button></section>
+        <section class="bmw-card"><h3>${ic('link')} Kullanım</h3><p class="bmw-hint">Müşteri ve danışman panellerinde “Görüşmeye katıl” bağlantısı vardır; yaklaşan bir ön görüşmesi olan müşteri doğrudan kendi odasına yönlenir. Planlı linklerde ilk giren odayı açar, diğeri otomatik katılır. En iyi sonuç için Chrome veya Edge önerilir.</p><a class="btn small" href="${esc(d.url)}" target="_blank" rel="noopener">${ic('arrow-up-right')} Görüşme sayfasını aç</a></section>`;
+      const save = async () => { try { await A('settings/meeting', 'POST', {enabled: $('#bmg-on').checked, inBooking: $('#bmg-book').checked, teamLang: $('#bmg-lang').value, from: $('#bmg-from').value.trim()}); say('Kaydedildi.'); meetingPage.reload(); } catch (e) { say(e.message); } };
+      $('#bmg-on').onchange = save; $('#bmg-save').onclick = save;
+    }, 0);
+    return '<div id="bmg-root" class="bmw"><div class="loading">Yükleniyor…</div></div>';
+  }
+  meetingPage.reload = () => { const r = $('#bmg-root'); if (r) r.outerHTML = meetingPage(); };
 
   // ---------- Güvenlik Duvarı (WAF) ----------
   const TYPES = {attack: 'Saldırı denemesi', probe: 'Tarama (açık arama)', scanner: 'Saldırı aracı', 'rate-limit': 'Aşırı istek', ban: 'IP engellendi', method: 'Yasak yöntem', 'url-too-long': 'Aşırı uzun adres'};

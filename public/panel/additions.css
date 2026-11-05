@@ -37,3 +37,5 @@ dialog#modal.bm-wide{width:min(1080px,96vw);max-width:none}
 @media (max-width:520px){.kyc-vis{height:260px}.kv-card{width:190px;height:122px;padding:14px}.kv-photo{width:46px;height:56px}.kv-face{width:92px;height:92px}.kv-face>svg{width:70px}}
 [data-theme=dark] .kyc-vis{background:linear-gradient(145deg,rgba(30,52,38,.9),rgba(18,36,26,.7));border-color:#2c4636}
 [data-theme=dark] .kv-card,[data-theme=dark] .kv-face,[data-theme=dark] .kv-steps span{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);color:#cfe8d2}
+.topbar nav a.bm-meet-link{color:#1b5e20;font-weight:600}
+.topbar nav a.bm-meet-link:before{content:"";width:8px;height:8px;border-radius:50%;background:#43a047;margin-right:7px;box-shadow:0 0 0 3px rgba(67,160,71,.18)}

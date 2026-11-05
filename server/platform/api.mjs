@@ -23,6 +23,12 @@ const DEFAULT_PERMS = {
   accountant: {customers: 1, applications: 1, documents: 1, kyc: 0, finance: 2, support: 1, referrals: 0, team: 0, audit: 1},
   other: {customers: 1, applications: 1, documents: 1, kyc: 0, finance: 0, support: 1, referrals: 0, team: 0, audit: 0},
 };
+// Çevirili görüşme modülü (/gorusme). Ayar: items 'config-meeting'.
+export const MEETING_DEFAULTS = {enabled: true, inBooking: true, teamLang: 'pt', from: 'Brazil Migration <bilgi@brazilmigration.com>'};
+export async function meetingConfig(db) { const r = await db.prepare("SELECT data FROM items WHERE id='config-meeting'").first(); let d = {}; try { d = JSON.parse(r?.data || '{}') || {}; } catch {} return {...MEETING_DEFAULTS, ...d}; }
+const roomCode = () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = crypto.getRandomValues(new Uint8Array(8)); return [...r].map(x => a[x % a.length]).join(''); };
+export const roomLink = (base, code, lang) => `${base}/gorusme/?oda=${encodeURIComponent(code)}&dil=${lang}&otomatik=1`;
+
 export const ACCOUNT_TYPES = {customer: 'Müşteri', advisor: 'Danışman', lawyer: 'Avukat', accountant: 'Muhasebeci', other: 'Diğer'};
 export const PARTNER_SERVICES = ['Oturum İzni', 'Vatandaşlık', 'Evlilik / União Estável', 'Şirket Kurulumu', 'Vize', 'Aile Birleşimi'];
 export const PANELS = {customer: 'Müşteri paneli', partner: 'Danışman / partner paneli', staff: 'Muhasebe & diğer personel', lawyer: 'Avukat paneli'};
@@ -180,6 +186,7 @@ export async function handleAuth(req, env, route) {
     return json({ok: true, verifyRequired: true, mailSent: mail.sent, devLink: mail.devLink});
   }
 
+  if (route === 'meeting' && req.method === 'GET') { const mc = await meetingConfig(db); return json({enabled: !!mc.enabled}); }
   if (route === 'booking' && req.method === 'POST') { // 15-min free call → Google Meet link by e-mail
     const email = clean(b.email, 254).toLowerCase(), name = clean(b.name, 70);
     if (name.length < 2 || !validEmail(email)) fail(400, 'Ad ve geçerli bir e-posta girin.');
@@ -203,14 +210,19 @@ export async function handleAuth(req, env, route) {
       } catch (e) { console.error('[meet-webhook]', e.message); }
     }
     booking.meet = meet;
+    const mc = await meetingConfig(db), base = siteUrl(req);
+    if (mc.enabled && mc.inBooking) { booking.room = roomCode(); booking.roomLink = roomLink(base, booking.room, 'tr'); booking.teamRoomLink = roomLink(base, booking.room, mc.teamLang === 'tr' ? 'tr' : 'pt'); }
     const fmt = new Date(start).toLocaleString('tr-TR', {timeZone: tz, dateStyle: 'long', timeStyle: 'short'});
     const gstamp = t => new Date(t).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-    const cal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Brazil Migration · 15 dk ön görüşme')}&dates=${gstamp(start)}/${gstamp(start + 15 * 6e4)}&details=${encodeURIComponent(meet ? 'Google Meet: ' + meet : 'Toplantı linki e-postayla iletilecek.')}`;
-    const text = meet ? `Ön görüşmeniz ${fmt} (${tz === 'America/Sao_Paulo' ? 'São Paulo' : 'Türkiye'} saati) için planlandı. Aşağıdaki Google Meet bağlantısıyla katılabilirsiniz: ${meet}` : `Ön görüşme talebiniz ${fmt} için alındı. Toplantı bağlantınız kısa süre içinde e-postanıza iletilecek.`;
-    const mail = await sendMail({to: email, subject: 'Ön görüşmeniz: ' + fmt, title: 'Merhaba ' + name.split(' ')[0] + ',', text: text + ' Takviminize eklemek için: ' + cal, link: meet || undefined, button: 'Google Meet’e katıl'});
-    if (cfg.notifyEmail && validEmail(cfg.notifyEmail)) await sendMail({to: cfg.notifyEmail, subject: 'Yeni ön görüşme: ' + name, text: `${name} (${email}) · ${fmt} · ${booking.service || ''} ${meet ? '· ' + meet : ''}`});
+    const cal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Brazil Migration · 15 dk ön görüşme')}&dates=${gstamp(start)}/${gstamp(start + 15 * 6e4)}&details=${encodeURIComponent(booking.roomLink ? 'Görüşme: ' + booking.roomLink + (meet ? '\nGoogle Meet: ' + meet : '') : meet ? 'Google Meet: ' + meet : 'Toplantı linki e-postayla iletilecek.')}`;
+    const zone = tz === 'America/Sao_Paulo' ? 'São Paulo' : 'Türkiye';
+    const text = booking.roomLink
+      ? `Ön görüşmeniz ${fmt} (${zone} saati) için planlandı. Görüşmeye aşağıdaki butondan, Brazil Migration Görüşme odasından katılabilirsiniz; konuşmalar Türkçe ⇄ Portekizce anlık çevrilir. Oda kodu: ${booking.room}. En iyi sonuç için Chrome veya Edge kullanın.${meet ? ' Dilerseniz Google Meet ile de katılabilirsiniz: ' + meet : ''}`
+      : meet ? `Ön görüşmeniz ${fmt} (${zone} saati) için planlandı. Aşağıdaki Google Meet bağlantısıyla katılabilirsiniz: ${meet}` : `Ön görüşme talebiniz ${fmt} için alındı. Toplantı bağlantınız kısa süre içinde e-postanıza iletilecek.`;
+    const mail = await sendMail({to: email, subject: 'Ön görüşmeniz: ' + fmt, title: 'Merhaba ' + name.split(' ')[0] + ',', text: text + ' Takviminize eklemek için: ' + cal, link: booking.roomLink || meet || undefined, button: booking.roomLink ? 'Görüşmeye katıl' : 'Google Meet’e katıl', from: booking.roomLink ? mc.from : undefined});
+    if (cfg.notifyEmail && validEmail(cfg.notifyEmail)) await sendMail({to: cfg.notifyEmail, subject: 'Yeni ön görüşme: ' + name, text: `${name} (${email}) · ${fmt} · ${booking.service || ''} ${meet ? '· ' + meet : ''}${booking.teamRoomLink ? ' · Görüşme odası (ekip linki): ' + booking.teamRoomLink : ''}`, link: booking.teamRoomLink || undefined, button: 'Görüşme odasını aç', from: booking.teamRoomLink ? mc.from : undefined});
     await db.batch([putItem(db, id, 'booking', 'owner', {...booking, mailSent: mail.sent}), notice(db, 'owner', 'Yeni ön görüşme: ' + name + ' · ' + fmt, 'bookings')]);
-    return json({ok: true, meet: meet || null, when: fmt, calendar: cal, mailSent: mail.sent});
+    return json({ok: true, meet: meet || null, room: booking.roomLink || null, when: fmt, calendar: cal, mailSent: mail.sent});
   }
   if (route === 'lead' && req.method === 'POST') { // pre-assessment result gate (public)
     const email = clean(b.email, 254).toLowerCase();
@@ -1076,6 +1088,14 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     return streamFile(env, p.docs[doc]);
   }
 
+  if (route === 'settings/meeting' && req.method === 'GET') return json({meeting: await meetingConfig(db), url: siteUrl(req) + '/gorusme/', mail: mailConfigured()});
+  if (route === 'settings/meeting' && req.method === 'POST') {
+    const from = clean(b.from, 160);
+    if (from && !/^[^<>]*<[^@\s<>]+@[^@\s<>]+\.[a-z]{2,}>$|^[^@\s<>]+@[^@\s<>]+\.[a-z]{2,}$/i.test(from)) fail(400, 'Gönderen adresi “Ad <adres@alanadi.com>” biçiminde olmalı.');
+    const data = {enabled: !!b.enabled, inBooking: !!b.inBooking, teamLang: b.teamLang === 'tr' ? 'tr' : 'pt', from: from || MEETING_DEFAULTS.from, updated: now()};
+    await db.batch([putItem(db, 'config-meeting', 'config', 'owner', data), audit(db, actor, 'settings.meeting', data.enabled ? 'on' : 'off')]);
+    return json({meeting: data});
+  }
   if (route === 'meet' && req.method === 'GET') { const m0 = (await getItem(db, 'integration-meet'))?.data || {mode: 'fixed', active: true}; return json({meet: {...m0, secret: m0.secret ? '••••••' : ''}, mail: mailConfigured()}); }
   if (route === 'meet' && req.method === 'POST') {
     const mode = b.mode === 'webhook' ? 'webhook' : 'fixed';

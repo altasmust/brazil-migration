@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Brazil Migration Görüşme</title>
+<meta name="description" content="Türkçe ⇄ Português (Brasil) anlık çevirili görüntülü görüşme · Videochamada com tradução simultânea">
+<meta name="theme-color" content="#0b1a12">
+<link rel="icon" href="/favicon.ico"><meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="/gorusme/app.css?v=1">
+</head>
+<body>
+
+<!-- SVG icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="i-mic-off" viewBox="0 0 24 24"><path d="M15 9.5V6a3 3 0 0 0-5.7-1.3M9 9v2a3 3 0 0 0 5 2.2M5 11a7 7 0 0 0 11.5 5.4M19 11a7 7 0 0 1-.6 2.8M12 18v3M3 3l18 18"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10.5 5-3v9l-5-3z"/></symbol>
+  <symbol id="i-cam-off" viewBox="0 0 24 24"><path d="M10 6h3.5A2.5 2.5 0 0 1 16 8.5v3M16 10.5l5-3v9l-3-1.8M16 16a2.5 2.5 0 0 1-2.5 2H5.5A2.5 2.5 0 0 1 3 15.5v-7A2.5 2.5 0 0 1 5 6M3 3l18 18"/></symbol>
+  <symbol id="i-screen" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M9 10l3-3 3 3M12 7v6"/></symbol>
+  <symbol id="i-voice" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18V6L7.5 9.5zM15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+  <symbol id="i-cc" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 10.5a2 2 0 1 0 0 3M16 10.5a2 2 0 1 0 0 3"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8l-5 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM15 3v4h4M9 12h7M9 16h5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></symbol>
+  <symbol id="i-end" viewBox="0 0 24 24"><path d="M3 14.5c5-5 13-5 18 0l-2.5 2.5-3.2-1.8v-2.9a10 10 0 0 0-6.6 0v2.9L5.5 17z"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12 20 4l-6 16-3-7z"/></symbol>
+  <symbol id="i-translate" viewBox="0 0 24 24"><path d="M3 5h10M8 3v2M5 5c0 4 3 7 7 8M11 5c-1 4-4 7-7 8M13 21l4-9 4 9M14.5 18h5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+</svg>
+
+<!-- ============ LOBBY ============ -->
+<section id="lobby" class="view">
+  <div class="lobby-wrap">
+    <header class="brandbar">
+      <div class="logo">
+        <a class="logo-mark bm-logo" href="/" aria-label="Brazil Migration"><img src="/brazil-migration-logo.png" alt="Brazil Migration"></a>
+        <div><b id="brandName">Brazil Migration Görüşme</b><span data-i="tagline">Tercümanlı görüntülü görüşme</span></div>
+      </div>
+      <div class="pairchip"><i><span class="swatch sw-tr"></span>Türkçe</i><span aria-hidden="true">⇄</span><i><span class="swatch sw-pt"></span>Português (BR)</i></div>
+    </header>
+
+    <div class="lobby-grid">
+      <div class="preview">
+        <div class="pv-frame">
+          <video id="pvVideo" autoplay playsinline muted></video>
+          <div class="pv-off" id="pvOff" hidden><div><div class="avatar" id="pvAvatar">?</div><span id="pvOffText" data-i="camOffPreview">Kamera kapalı</span></div></div>
+          <div class="pv-tools">
+            <div class="pv-toggles">
+              <button class="round" id="pvMic" aria-pressed="true"><svg class="i"><use href="#i-mic"/></svg><span class="sr" data-i="mic">Mikrofon</span></button>
+              <button class="round" id="pvCam" aria-pressed="true"><svg class="i"><use href="#i-cam"/></svg><span class="sr" data-i="cam">Kamera</span></button>
+            </div>
+            <div class="meter" id="pvMeter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+        <div class="devices">
+          <label class="field"><span class="eyebrow" data-i="micDevice">Mikrofon</span><select class="input" id="selMic"></select></label>
+          <label class="field"><span class="eyebrow" data-i="camDevice">Kamera</span><select class="input" id="selCam"></select></label>
+        </div>
+      </div>
+
+      <form class="join-card" id="joinForm" novalidate>
+        <div>
+          <h1 data-i="headline">Dil engeli olmadan görüşün.</h1>
+          <p class="lead" data-i="lead">Siz kendi dilinizde konuşun; karşı taraf altyazıyı ve isterse sesi kendi dilinde alsın.</p>
+        </div>
+        <div class="field">
+          <span class="eyebrow" data-i="yourLang">Konuştuğunuz dil · Seu idioma</span>
+          <div class="langs" role="group">
+            <button type="button" class="lang" id="lang-tr" data-lang="tr" aria-pressed="true"><b><span class="swatch sw-tr"></span>Türkçe</b><small>Türkçe konuşuyorum</small></button>
+            <button type="button" class="lang" id="lang-pt" data-lang="pt" aria-pressed="false"><b><span class="swatch sw-pt"></span>Português</b><small>Eu falo português</small></button>
+          </div>
+        </div>
+        <label class="field"><span class="eyebrow" data-i="name">Adınız</span><input class="input" id="name" autocomplete="name" maxlength="40" data-iph="namePh" placeholder="Ad Soyad"></label>
+        <label class="field"><span class="eyebrow" data-i="room">Oda kodu</span><input class="input code-input" id="room" maxlength="12" autocapitalize="characters" spellcheck="false" data-iph="roomPh" placeholder="Boş bırakın, otomatik oluşsun"></label>
+        <p class="err" id="lobbyErr" hidden></p>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" id="createBtn" data-i="create">Oda oluştur</button>
+          <button type="button" class="btn btn-ghost" id="joinBtn" data-i="join">Odaya katıl</button>
+        </div>
+        <p class="fine" data-i="fine">En iyi sonuç için Chrome veya Edge kullanın. Görüntü ve ses doğrudan iki cihaz arasında taşınır, sunucuda kaydedilmez.</p>
+      </form>
+    </div>
+
+    <div class="features">
+      <div class="feat"><svg class="i"><use href="#i-cc"/></svg><div><b data-i="f1t">Akan altyazı</b><span data-i="f1d">Cümle bitmeden çeviri ekrana düşer.</span></div></div>
+      <div class="feat"><svg class="i"><use href="#i-voice"/></svg><div><b data-i="f2t">Sesli çeviri</b><span data-i="f2d">Çeviriyi duymak isterseniz tek dokunuşla açın.</span></div></div>
+      <div class="feat"><svg class="i"><use href="#i-lock"/></svg><div><b data-i="f3t">Doğrudan bağlantı</b><span data-i="f3d">Görüntü sunucuya uğramaz; döküm yalnız sizde kalır.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CALL ============ -->
+<section id="call" class="view" hidden>
+  <header class="topbar">
+    <div class="tb-left">
+      <span class="tb-title" id="tbBrand">IusJud Görüşme</span>
+      <span class="chip"><span class="dot" id="connDot"></span><span id="connText">—</span></span>
+      <span class="chip"><span data-i="roomShort">Oda</span> <span class="mono" id="roomChip">—</span></span>
+    </div>
+    <div class="tb-right">
+      <span class="chip rec" id="srChip" hidden><span class="dot"></span><span id="srText">—</span></span>
+      <span class="chip pair"><span class="swatch" id="mySw"></span><span id="pairText">TR → PT</span></span>
+      <span class="timer" id="timer" aria-label="süre">00:00</span>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="stage" id="stage">
+      <div class="tile" id="tileRemote">
+        <video id="vRemote" autoplay playsinline></video>
+        <div class="placeholder" id="remotePh" hidden><div><div class="avatar" id="remoteAvatar">?</div><b id="remotePhName">—</b><span data-i="camOffThem">Kamerası kapalı</span></div></div>
+        <div class="nameplate" id="remotePlate"><span class="swatch" id="remoteSw"></span><span id="remoteName">—</span><svg class="i muted-ic" style="width:15px;height:15px"><use href="#i-mic-off"/></svg></div>
+      </div>
+      <div class="tile self mirror" id="tileSelf" role="button" tabindex="0" data-i-aria="swapTip">
+        <video id="vSelf" autoplay playsinline muted></video>
+        <div class="placeholder" id="selfPh" hidden><div><div class="avatar" id="selfAvatar">?</div></div></div>
+        <div class="nameplate" id="selfPlate"><span data-i="you">Siz</span><svg class="i muted-ic" style="width:14px;height:14px"><use href="#i-mic-off"/></svg></div>
+      </div>
+
+      <div class="waiting" id="waiting">
+        <div class="wait-card">
+          <div class="spinner" id="waitSpin"></div>
+          <h2 id="waitTitle" data-i="waitTitle">Karşı taraf bekleniyor</h2>
+          <p id="waitText" data-i="waitText">Bu linki gönderin. Açtığında dil otomatik Portekizce seçili gelir.</p>
+          <div class="linkbox"><code id="linkText">—</code><button type="button" id="copyLink2" data-i="copy">Kopyala</button></div>
+        </div>
+      </div>
+
+      <div class="captions" id="captions" aria-live="polite"></div>
+    </div>
+
+    <aside class="panel" id="panel" hidden>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tabLog" aria-selected="true"><svg class="i" style="width:17px;height:17px"><use href="#i-doc"/></svg><span data-i="logTab">Döküm</span></button>
+        <button class="tab" role="tab" id="tabChat" aria-selected="false"><svg class="i" style="width:17px;height:17px"><use href="#i-chat"/></svg><span data-i="chatTab">Sohbet</span><span class="badge" id="chatBadge2" hidden>0</span></button>
+        <button class="tab closepanel" id="closePanel" aria-label="Kapat"><svg class="i"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="panel-body" id="logBody">
+        <div class="empty" id="logEmpty"><svg class="i"><use href="#i-doc"/></svg><div data-i="logEmpty">Konuşmalar burada iki dilde birikir.</div></div>
+      </div>
+      <div class="panel-body" id="chatBody" hidden>
+        <div class="empty" id="chatEmpty"><svg class="i"><use href="#i-chat"/></svg><div data-i="chatEmpty">Yazdığınız mesaj karşı tarafa çevrilerek gider. Adres, tarih veya dosya numarası paylaşmak için idealdir.</div></div>
+      </div>
+      <div class="panel-foot" id="logFoot"><button class="btn btn-ghost" style="flex:1" id="dlBtn"><svg class="i"><use href="#i-download"/></svg><span data-i="download">Dökümü indir</span></button></div>
+      <form class="panel-foot" id="chatFoot" hidden><input class="input" id="chatInput" autocomplete="off" maxlength="500" data-iph="chatPh" placeholder="Mesaj yazın…"><button class="btn btn-primary" type="submit" aria-label="Gönder"><svg class="i"><use href="#i-send"/></svg></button></form>
+    </aside>
+  </div>
+
+  <nav class="dock">
+    <div class="dock-group dock-side-l"><span class="chip"><span class="swatch" id="mySw2"></span><span id="meLabel">—</span></span></div>
+    <div class="dock-group dock-center">
+      <button class="ctl" id="micBtn" data-tip="M"><svg class="i"><use href="#i-mic"/></svg><span class="lbl" data-i="mic">Mikrofon</span></button>
+      <button class="ctl" id="camBtn" data-tip="V"><svg class="i"><use href="#i-cam"/></svg><span class="lbl" data-i="cam">Kamera</span></button>
+      <button class="ctl" id="voiceBtn" data-tip="T"><svg class="i"><use href="#i-voice"/></svg><span class="lbl" data-i="voice">Sesli çeviri</span></button>
+      <button class="ctl" id="screenBtn"><svg class="i"><use href="#i-screen"/></svg><span class="lbl" data-i="share">Ekran</span></button>
+      <button class="ctl" id="panelBtn" data-tip="C"><svg class="i"><use href="#i-chat"/></svg><span class="lbl" data-i="panelBtn">Sohbet</span><span class="badge" id="chatBadge" hidden>0</span></button>
+      <div style="position:relative">
+        <button class="ctl" id="moreBtn" aria-haspopup="true" aria-expanded="false"><svg class="i"><use href="#i-more"/></svg><span class="sr" data-i="more">Diğer</span></button>
+        <div class="menu" id="menu" hidden>
+          <div class="mi"><span data-i="capSize">Altyazı boyutu</span><span class="seg" id="capSeg"><button type="button" data-s="18">A</button><button type="button" data-s="22">A</button><button type="button" data-s="28">A</button></span></div>
+          <button class="mi" id="ownCapsBtn" role="switch" aria-checked="true"><span data-i="ownCaps">Kendi altyazımı göster</span><span class="switch"></span></button>
+          <button class="mi" id="origBtn" role="switch" aria-checked="true"><span data-i="showOrig">Orijinal metni göster</span><span class="switch"></span></button>
+          <hr>
+          <button class="mi" id="copyLinkBtn"><span data-i="copyLink">Davet linkini kopyala</span><svg class="i" style="width:17px;height:17px"><use href="#i-link"/></svg></button>
+          <button class="mi" id="fullBtn"><span data-i="fullscreen">Tam ekran</span><svg class="i" style="width:17px;height:17px"><use href="#i-full"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="dock-group"><button class="ctl end" id="endBtn"><svg class="i"><use href="#i-end"/></svg><span class="lbl" data-i="end">Bitir</span></button></div>
+  </nav>
+</section>
+
+<!-- ============ ENDED ============ -->
+<section id="ended" class="view" hidden>
+  <div class="end-card">
+    <div>
+      <div class="eyebrow" id="endRoom">—</div>
+      <h2 data-i="endTitle">Görüşme sona erdi</h2>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="stDur">00:00</b><span data-i="stDur">Süre</span></div>
+      <div class="stat"><b id="stLines">0</b><span data-i="stLines">Çevrilen cümle</span></div>
+      <div class="stat"><b id="stMsgs">0</b><span data-i="stMsgs">Mesaj</span></div>
+    </div>
+    <p class="fine" data-i="endNote">Döküm yalnızca bu cihazda tutuluyor. Sayfayı kapatmadan önce indirin.</p>
+    <div class="actions">
+      <button class="btn btn-primary" id="endDl"><svg class="i"><use href="#i-download"/></svg><span data-i="download">Dökümü indir</span></button>
+      <button class="btn btn-ghost" id="rejoin" data-i="newCall">Yeni görüşme</button>
+    </div>
+  </div>
+</section>
+
+<div class="toasts" id="toasts" aria-live="assertive"></div>
+
+<script src="/gorusme/peerjs.min.js?v=1.5.4"></script>
+<script src="/gorusme/app.js?v=1"></script>
+</body>
+</html>
