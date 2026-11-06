@@ -482,7 +482,7 @@ export async function handlePlatform(req, env, route, ctx = {}) {
   const {u, person} = await memberContext(db, req);
   if (route === 'pay/iyzico/start' && req.method === 'POST') {
     const b = await body(req);
-    const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('x-real-ip') || '';
+    const ip = clientIp(req.headers) === 'unknown' ? '' : clientIp(req.headers);
     return json(await startCheckout({db, req, person, invoiceId: clean(b.invoice, 80), putItem, getItem, ip}));
   }
   if (route.startsWith('partner/kyc-credit')) {
