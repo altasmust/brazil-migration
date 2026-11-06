@@ -13,7 +13,7 @@
   const R = () => window.BMRoutes || {};
 
   // ---------- Genel Ayarlar / Güvenlik: yalnız çalışan sekmeler ----------
-  const PAGES = {general: {'Firma Bilgileri': 'company', 'E-posta (SMTP)': 'eposta', 'Google Meet': 'meet', 'Görüşme (çevirili)': 'gorusme', 'Sunucu Modülleri': 'sunucu', 'Analiz & Doğrulama': 'analiz', 'SEO': 'seo'}, security: {'Güvenlik Duvarı': 'waf', 'KYC · Didit': 'kimlik'}};
+  const PAGES = {general: {'Firma Bilgileri': 'company', 'E-posta (SMTP)': 'eposta', 'Google Meet': 'meet', 'Görüşme (çevirili)': 'gorusme', 'Sunucu Modülleri': 'sunucu', 'Analiz & Doğrulama': 'analiz'}, security: {'Güvenlik Duvarı': 'waf', 'KYC · Didit': 'kimlik'}};
   const OLD = {eposta: ['general', 'E-posta (SMTP)'], meet: ['general', 'Google Meet'], kimlik: ['security', 'KYC · Didit']};
   let pending = null;
   for (const page of Object.keys(PAGES)) {
@@ -21,7 +21,7 @@
       if (pending && pending[0] === page) { tab = pending[1]; pending = null; }
       const T = Object.keys(PAGES[page]); if (!T.includes(tab)) tab = T[0];
       const key = PAGES[page][tab];
-      const inner = key === 'company' ? companyPage() : key === 'waf' ? wafPage() : key === 'gorusme' ? meetingPage() : key === 'sunucu' ? serversPage() : key === 'analiz' ? analyticsPage() : key === 'seo' ? seoPage() : R()[key] ? R()[key]() : '<div class="loading">Yükleniyor…</div>';
+      const inner = key === 'company' ? companyPage() : key === 'waf' ? wafPage() : key === 'gorusme' ? meetingPage() : key === 'sunucu' ? serversPage() : key === 'analiz' ? analyticsPage() : R()[key] ? R()[key]() : '<div class="loading">Yükleniyor…</div>';
       return heading() + `<section class="panel settings-revision">${T.length > 1 ? tabs(T) : ''}<div class="settings bms-tabembed">${inner}</div></section>`;
     };
     if (page === 'general') general = fn; else security = fn;
@@ -202,8 +202,14 @@
   }
 
   // ---------- SEO (site geneli) ----------
-  function seoPage() {
-    setTimeout(async () => {
+  window.bmSeoGeneral = () => {
+    $('#modal-title').textContent = 'Site geneli SEO';
+    $('#modal-body').innerHTML = '<div class="bmw" id="bmseo-root"><div class="loading">Yükleniyor…</div></div>';
+    if (!$('#modal').open) $('#modal').showModal();
+    seoInit();
+  };
+  async function seoInit() {
+    {
       const root = $('#bmseo-root'); if (!root) return;
       let r; try { r = await A('settings/seo'); } catch (e) { root.innerHTML = `<div class="bmc-err">${esc(e.message)}</div>`; return; }
       const g = r.seo || {}, site = r.site || '';
@@ -218,7 +224,7 @@
         <section><h3>${ic('shield')} Dizinleme</h3>
           <label class="bmy-check" style="display:flex;gap:10px;align-items:flex-start;margin:4px 0 12px"><input type="checkbox" name="noindexAll" ${g.noindexAll ? 'checked' : ''}><span><b>Tüm siteyi arama motorlarından gizle</b><br><small class="bmw-hint">Yalnız bakım/test sırasında kullanın. Açıkken Google siteyi listelemez.</small></span></label>
           <label class="bmy-f full"><span>robots.txt ek kuralları (isteğe bağlı)</span><textarea class="bmy-in mono" name="robotsExtra" rows="3" placeholder="Disallow: /ornek-gizli-sayfa/">${esc(g.robotsExtra || '')}</textarea><small>Panel, yönetim ve API yolları zaten kapalı.</small></label>
-          <p class="bmw-hint">Hızlı bağlantılar: <a href="/sitemap.xml" target="_blank" rel="noopener">sitemap.xml</a> · <a href="/robots.txt" target="_blank" rel="noopener">robots.txt</a> · Sayfa bazında başlık/açıklama: Site Yönetimi → Sayfalar → SEO</p></section>
+          <p class="bmw-hint">Hızlı bağlantılar: <a href="/sitemap.xml" target="_blank" rel="noopener">sitemap.xml</a> · <a href="/robots.txt" target="_blank" rel="noopener">robots.txt</a> · Her sayfanın kendi başlık/açıklaması: listedeki “SEO” düğmesi</p></section>
         <section><h3>${ic('check')} Otomatik yapılanlar</h3><ul class="bmw-hint" style="margin:0;padding-left:18px;line-height:1.8">
           <li>Her sayfada canonical, Open Graph ve X (Twitter) kartı etiketleri</li><li>Site haritası (sayfalar + blog) ve robots.txt</li>
           <li>Kuruluş şeması (ProfessionalService) + ücretsiz ön görüşme teklifi ve konuşulan diller</li><li>Blog yazılarında makale şeması, canlı görüşme sayfasında SSS (FAQ) şeması</li>
@@ -227,9 +233,8 @@
       const ta = root.querySelector('[name=description]'); ta.oninput = () => { $('#bmseo-n').textContent = ta.value.length; root.querySelector('.bmseo-prev p').textContent = ta.value || '—'; };
       $('#bmseo-form').onsubmit = async e => { e.preventDefault(); const fd = new FormData(e.target); const body = Object.fromEntries(fd); body.noindexAll = !!fd.get('noindexAll');
         if (body.noindexAll && !confirm('Tüm site arama motorlarından gizlenecek. Emin misiniz?')) return;
-        try { await A('settings/seo', 'POST', body); say('SEO ayarları kaydedildi.'); render(); } catch (err) { say(err.message); } };
-    }, 0);
-    return '<div class="bmw"><section class="bmw-card" id="bmseo-root"><div class="loading">Yükleniyor…</div></section></div>';
+        try { await A('settings/seo', 'POST', body); say('Site geneli SEO ayarları kaydedildi.'); $('#modal').close(); } catch (err) { say(err.message); } };
+    }
   }
 
   // ---------- Başlangıç (gösterge paneli) ----------

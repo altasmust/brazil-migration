@@ -250,15 +250,17 @@ function applyTrust(root, st) {
 export const LIVE = {path: '/canli-cevirili-gorusme/', langs: 'Türkçe · Português · English · فارسی'};
 function applyLivePromo(root, path) {
   const f = root.querySelector('footer.site-footer'); if (!f || root.querySelector('.bmlp') || path === LIVE.path) return;
+  // ana sayfada "Neden biz" bölümünün hemen ardından (blog yazıları footer'ın üstüne alınır)
+  const anchor = path === '/' ? root.querySelector('section.why') : null;
   const ic = n => `<bm-i class="ic ic-${n}" aria-hidden="true"></bm-i>`;
-  f.insertAdjacentHTML('beforebegin', `<section class="bmlp" aria-labelledby="bmlp-h"><div class="wrap bmlp-in">
+  (anchor || f).insertAdjacentHTML(anchor ? 'afterend' : 'beforebegin', `<section class="bmlp" aria-labelledby="bmlp-h"><div class="wrap bmlp-in">
     <div class="bmlp-txt"><span class="bmlp-tag"><i></i> Canlı çeviri · Ücretsiz</span><h2 id="bmlp-h">Dil engeli olmadan ücretsiz ön görüşme</h2>
     <p>Siz kendi dilinizde konuşun, Brezilya’daki avukatımız Portekizce. Görüntülü görüşmede söyledikleriniz anında karşı tarafın diline çevrilir; altyazı ve isterseniz sesli çeviriyle.</p>
     <ul><li>${ic('chat')} Canlı altyazı + sesli çeviri</li><li>${ic('globe')} ${LIVE.langs}</li><li>${ic('lock')} Uygulama yok, tarayıcıdan katılın</li><li>${ic('clock')} 15 dakika · ücretsiz</li></ul>
     <div class="bmlp-cta"><button class="btn" type="button" onclick="book()">Ücretsiz ön görüşme planla <span>↗</span></button><a class="bmlp-more" href="${LIVE.path}">Nasıl çalışır?</a></div></div>
-    <div class="bmlp-art" aria-hidden="true"><div class="bl-win"><div class="bl-v"><span class="bl-face"></span><span class="bl-cap"><b>Você</b>Bom dia! Como posso ajudar?<small>Günaydın! Size nasıl yardımcı olabilirim?</small></span></div><div class="bl-self"><span class="bl-face s"></span></div><div class="bl-bar"><i></i><i></i><i></i><i class="r"></i></div></div><span class="bl-chip c1"><img src="/bm/flags/tr.svg" alt="" width="18" height="13">TR</span><span class="bl-chip c2"><img src="/bm/flags/br.svg" alt="" width="18" height="13">PT</span><span class="bl-chip c3"><img src="/bm/flags/gb.svg" alt="" width="18" height="13">EN</span><span class="bl-chip c4"><img src="/bm/flags/ir.svg" alt="" width="18" height="13">FA</span></div>
+    <div class="bmlp-art"><div class="bmv" data-bmv></div></div>
   </div></section>`);
-  const head = root.querySelector('head'); if (head && !head.querySelector('link[href^="/bm/live.css"]')) head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/live.css?v=2">');
+  const head = root.querySelector('head'); if (head && !head.querySelector('link[href^="/bm/live.css"]')) head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/live.css?v=5"><script src="/bm/live.js?v=2" defer></script>');
 }
 
 // ---------- Analiz ve doğrulama (Genel Ayarlar → Analiz & Doğrulama) ----------
@@ -427,7 +429,7 @@ export async function renderPage(db, path, {editor = false, preview = null} = {}
   if (!root) return {status: 404, html: await notFound(db)};
   if (st?.menu || preview) applyMenu(root, (st || await siteState(db)).menu);
   try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); if (!editor) { applyGlobalSeo(root, path, S.seo || {}); applyAnalytics(root, S.analytics || {}, path); applyLivePromo(root, path); } } catch (e) { console.error('[site]', e.message); }
-  if (path === '/' && !editor && st) { const why = root.querySelector('section.why'); const hb = homeBlogHTML(Object.values(st.blog || {}).filter(p => p.published)); if (why && hb) { why.insertAdjacentHTML('afterend', hb); root.querySelector('head')?.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/blog.css?v=1">'); } }
+  if (path === '/' && !editor && st) { const why = root.querySelector('section.why'); const hb = homeBlogHTML(Object.values(st.blog || {}).filter(p => p.published)); const ft = root.querySelector('footer.site-footer'); if (ft && hb) { ft.insertAdjacentHTML('beforebegin', hb); root.querySelector('head')?.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/blog.css?v=1">'); } }
   let html = '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
   if (siteUrl()) html = html.replace(OLD_HOSTS, siteUrl());
   html = arrowize(html);
