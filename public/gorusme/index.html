@@ -10,11 +10,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="/gorusme/app.css?v=4">
+<link rel="stylesheet" href="/gorusme/app.css?v=5">
 </head>
 <body>
 <div id="bm-intro" aria-live="polite"><div class="in-wrap"><img class="in-logo" src="/brazil-migration-logo.png" alt="Brazil Migration"><div class="in-line"></div><div class="in-tag">Tercümanlı görüntülü görüşme</div><div class="in-load"><div class="in-ring"></div><div class="in-bar"><i></i></div><div class="in-txt">Görüşme hazırlanıyor… <b id="bm-pct">0%</b></div></div></div></div>
-<script src="/gorusme/intro.js?v=1"></script>
+<script src="/gorusme/intro.js?v=2"></script>
 
 <!-- SVG icon sprite -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -46,7 +46,7 @@
         <a class="logo-mark bm-logo" href="/" aria-label="Brazil Migration"><img src="/brazil-migration-logo.png" alt="Brazil Migration"></a>
         <div><b id="brandName">Brazil Migration Görüşme</b><span data-i="tagline">Tercümanlı görüntülü görüşme</span></div>
       </div>
-      <div class="pairchip"><i><span class="swatch sw-tr"></span>Türkçe</i><span aria-hidden="true">⇄</span><i><span class="swatch sw-pt"></span>Português (BR)</i></div>
+      <div class="pairchip"><i><span class="swatch sw-tr"></span>TR</i><i><span class="swatch sw-pt"></span>PT</i><i><span class="swatch sw-en"></span>EN</i><i><span class="swatch sw-fa"></span>FA</i></div>
     </header>
 
     <div class="lobby-grid">
@@ -78,6 +78,8 @@
           <div class="langs" role="group">
             <button type="button" class="lang" id="lang-tr" data-lang="tr" aria-pressed="true"><b><span class="swatch sw-tr"></span>Türkçe</b><small>Türkçe konuşuyorum</small></button>
             <button type="button" class="lang" id="lang-pt" data-lang="pt" aria-pressed="false"><b><span class="swatch sw-pt"></span>Português</b><small>Eu falo português</small></button>
+            <button type="button" class="lang" id="lang-en" data-lang="en" aria-pressed="false"><b><span class="swatch sw-en"></span>English</b><small>I speak English</small></button>
+            <button type="button" class="lang" id="lang-fa" data-lang="fa" aria-pressed="false"><b><span class="swatch sw-fa"></span>فارسی</b><small>فارسی صحبت می‌کنم</small></button>
           </div>
         </div>
         <label class="field"><span class="eyebrow" data-i="name">Adınız</span><input class="input" id="name" autocomplete="name" maxlength="40" data-iph="namePh" placeholder="Ad Soyad"></label>
@@ -205,6 +207,6 @@
 <div class="toasts" id="toasts" aria-live="assertive"></div>
 
 <script src="/gorusme/peerjs.min.js?v=1.5.4"></script>
-<script src="/gorusme/app.js?v=4"></script>
+<script src="/gorusme/app.js?v=5"></script>
 </body>
 </html>

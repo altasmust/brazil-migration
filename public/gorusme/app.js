@@ -15,9 +15,12 @@ const CONFIG = {
 
 const LANGS = {
   tr: { code:'tr', sr:'tr-TR', tts:'tr-TR', short:'TR', label:'Türkçe', sw:'url(/bm/flags/tr.svg) center/cover' },
-  pt: { code:'pt', sr:'pt-BR', tts:'pt-BR', short:'PT', label:'Português', sw:'url(/bm/flags/br.svg) center/cover' }
+  pt: { code:'pt', sr:'pt-BR', tts:'pt-BR', short:'PT', label:'Português', sw:'url(/bm/flags/br.svg) center/cover' },
+  en: { code:'en', sr:'en-US', tts:'en-US', short:'EN', label:'English', sw:'url(/bm/flags/gb.svg) center/cover' },
+  fa: { code:'fa', sr:'fa-IR', tts:'fa-IR', short:'FA', label:'فارسی', sw:'url(/bm/flags/ir.svg) center/cover' }
 };
 
+const LOC = { tr:'tr-TR', pt:'pt-BR', en:'en-GB', fa:'fa-IR' };
 const I18N = {
   tr: {
     tagline:'Tercümanlı görüntülü görüşme', camOffPreview:'Kamera kapalı', mic:'Mikrofon', cam:'Kamera',
@@ -30,7 +33,7 @@ const I18N = {
     f2t:'Sesli çeviri', f2d:'Çeviriyi duymak isterseniz tek dokunuşla açın.',
     f3t:'Doğrudan bağlantı', f3d:'Görüntü sunucuya uğramaz; döküm yalnız sizde kalır.',
     roomShort:'Oda', camOffThem:'Kamerası kapalı', you:'Siz', swapTip:'Görüntüleri yer değiştir',
-    waitTitle:'Karşı taraf bekleniyor', waitText:'Bu linki gönderin. Açtığında dil otomatik Portekizce seçili gelir.',
+    waitTitle:'Karşı taraf bekleniyor', waitText:'Bu linki gönderin. Karşı taraf kendi dilini seçer (Português, English, فارسی…).',
     copy:'Kopyala', logTab:'Döküm', chatTab:'Sohbet', logEmpty:'Konuşmalar burada iki dilde birikir.',
     chatEmpty:'Yazdığınız mesaj karşı tarafa çevrilerek gider. Adres, tarih veya dosya numarası paylaşmak için idealdir.',
     download:'Dökümü indir', chatPh:'Mesaj yazın…', voice:'Sesli çeviri', share:'Ekran', panelBtn:'Sohbet', more:'Diğer',
@@ -47,7 +50,7 @@ const I18N = {
     noMedia:'Kamera bulunamadı; yalnız sesle devam ediliyor.', signal:'Bağlantı sunucusuna ulaşılamadı. İnternetinizi kontrol edip tekrar deneyin.',
     shareOn:'Ekranınız paylaşılıyor', shareFail:'Ekran paylaşımı başlatılamadı.', themShare:'{n} ekranını paylaşıyor',
     voiceOn:'Sesli çeviri açık', voiceOff:'Sesli çeviri kapalı', speakerDefault:'Karşı taraf',
-    meSpeaks:'Siz: Türkçe', pair:'TR → PT', retry:'Tekrar dene'
+    meSpeaks:'Siz: Türkçe', pair:'TR → PT', retry:'Tekrar dene', trFail:'çeviri bekleniyor'
   },
   pt: {
     tagline:'Videochamada com tradução', camOffPreview:'Câmera desligada', mic:'Microfone', cam:'Câmera',
@@ -60,7 +63,7 @@ const I18N = {
     f2t:'Voz traduzida', f2d:'Ative com um toque se quiser ouvir a tradução.',
     f3t:'Conexão direta', f3d:'O vídeo não passa por servidor; a transcrição fica só com você.',
     roomShort:'Sala', camOffThem:'Câmera desligada', you:'Você', swapTip:'Trocar vídeos de lugar',
-    waitTitle:'Aguardando a outra pessoa', waitText:'Envie este link. Ao abrir, o idioma já vem em turco.',
+    waitTitle:'Aguardando a outra pessoa', waitText:'Envie este link. A outra pessoa escolhe o próprio idioma.',
     copy:'Copiar', logTab:'Transcrição', chatTab:'Chat', logEmpty:'As falas ficam aqui nos dois idiomas.',
     chatEmpty:'Sua mensagem chega traduzida. Ideal para endereços, datas ou números de processo.',
     download:'Baixar transcrição', chatPh:'Escreva uma mensagem…', voice:'Voz traduzida', share:'Tela', panelBtn:'Chat', more:'Mais',
@@ -77,7 +80,165 @@ const I18N = {
     noMedia:'Câmera não encontrada; seguindo só com áudio.', signal:'Não foi possível acessar o servidor de conexão. Verifique a internet e tente de novo.',
     shareOn:'Sua tela está sendo compartilhada', shareFail:'Não foi possível compartilhar a tela.', themShare:'{n} está compartilhando a tela',
     voiceOn:'Voz traduzida ligada', voiceOff:'Voz traduzida desligada', speakerDefault:'Outra pessoa',
-    meSpeaks:'Você: Português', pair:'PT → TR', retry:'Tentar de novo'
+    meSpeaks:'Você: Português', pair:'PT → TR', retry:'Tentar de novo', trFail:'tradução pendente'
+  },
+  en: {
+    tagline:"Video call with live translation",
+    camOffPreview:"Camera off",
+    mic:"Microphone",
+    cam:"Camera",
+    micDevice:"Microphone",
+    camDevice:"Camera",
+    headline:"Talk without a language barrier.",
+    lead:"Speak in your own language; the other person gets captions and, if they like, voice in theirs.",
+    yourLang:"Your language",
+    name:"Your name",
+    namePh:"Full name",
+    room:"Room code",
+    roomPh:"Leave empty to generate",
+    create:"Create room",
+    join:"Join room",
+    fine:"Use Chrome or Edge for best results. Video and audio go directly between the two devices and are not recorded on a server.",
+    f1t:"Live captions",
+    f1d:"Translation appears before the sentence ends.",
+    f2t:"Spoken translation",
+    f2d:"Turn it on with one tap to hear the translation.",
+    f3t:"Direct connection",
+    f3d:"Video never touches a server; the transcript stays with you.",
+    roomShort:"Room",
+    camOffThem:"Camera off",
+    you:"You",
+    swapTip:"Swap videos",
+    waitTitle:"Waiting for the other person",
+    waitText:"Send this link. The other person picks their own language.",
+    copy:"Copy",
+    logTab:"Transcript",
+    chatTab:"Chat",
+    logEmpty:"The conversation collects here in both languages.",
+    chatEmpty:"Your message arrives translated. Ideal for addresses, dates or case numbers.",
+    download:"Download transcript",
+    chatPh:"Type a message…",
+    voice:"Spoken translation",
+    share:"Screen",
+    panelBtn:"Chat",
+    more:"More",
+    capSize:"Caption size",
+    ownCaps:"Show my captions",
+    showOrig:"Show original text",
+    copyLink:"Copy invite link",
+    fullscreen:"Full screen",
+    end:"End",
+    endTitle:"Call ended",
+    stDur:"Duration",
+    stLines:"Translated sentences",
+    stMsgs:"Messages",
+    endNote:"The transcript is kept only on this device. Download it before closing the page.",
+    newCall:"New call",
+    connecting:"Connecting",
+    waiting:"Waiting",
+    connected:"Connected",
+    reconnecting:"Reconnecting",
+    left:"The other person left",
+    listening:"Listening",
+    paused:"Reading translation aloud",
+    noSR:"No speech recognition · use Chrome/Edge",
+    srNet:"Speech recognition disconnected",
+    copied:"Link copied",
+    joined:"{n} joined the call",
+    leftT:"{n} left the call",
+    needRoom:"Enter the room code to join.",
+    taken:"This room is already open. Tap \"Join room\" or try another code.",
+    notFound:"No open room with this code. Check the code or wait for the other person to open it.",
+    media:"Camera or microphone permission denied. Allow it from the lock icon in the address bar.",
+    noMedia:"No camera found; continuing with audio only.",
+    signal:"Could not reach the connection server. Check your internet and try again.",
+    shareOn:"Your screen is being shared",
+    shareFail:"Could not start screen sharing.",
+    themShare:"{n} is sharing their screen",
+    voiceOn:"Spoken translation on",
+    voiceOff:"Spoken translation off",
+    speakerDefault:"Other person",
+    retry:"Try again",
+    trFail:"translation pending"
+  },
+  fa: {
+    tagline:"تماس تصویری با ترجمه همزمان",
+    camOffPreview:"دوربین خاموش است",
+    mic:"میکروفون",
+    cam:"دوربین",
+    micDevice:"میکروفون",
+    camDevice:"دوربین",
+    headline:"بدون مانع زبان گفتگو کنید.",
+    lead:"به زبان خودتان صحبت کنید؛ طرف مقابل زیرنویس و در صورت تمایل صدا را به زبان خودش دریافت می‌کند.",
+    yourLang:"زبان شما",
+    name:"نام شما",
+    namePh:"نام و نام خانوادگی",
+    room:"کد اتاق",
+    roomPh:"خالی بگذارید تا ساخته شود",
+    create:"ساخت اتاق",
+    join:"ورود به اتاق",
+    fine:"برای بهترین نتیجه از Chrome یا Edge استفاده کنید. تصویر و صدا مستقیماً بین دو دستگاه منتقل می‌شود و روی سرور ذخیره نمی‌شود.",
+    f1t:"زیرنویس زنده",
+    f1d:"ترجمه پیش از پایان جمله نمایش داده می‌شود.",
+    f2t:"ترجمه صوتی",
+    f2d:"با یک لمس، ترجمه را بشنوید.",
+    f3t:"اتصال مستقیم",
+    f3d:"تصویر از سرور عبور نمی‌کند؛ متن گفتگو فقط نزد شما می‌ماند.",
+    roomShort:"اتاق",
+    camOffThem:"دوربین خاموش است",
+    you:"شما",
+    swapTip:"جابجایی تصاویر",
+    waitTitle:"در انتظار طرف مقابل",
+    waitText:"این لینک را بفرستید. طرف مقابل زبان خود را انتخاب می‌کند.",
+    copy:"کپی",
+    logTab:"متن گفتگو",
+    chatTab:"گفتگو",
+    logEmpty:"گفتگو در اینجا به هر دو زبان جمع می‌شود.",
+    chatEmpty:"پیام شما ترجمه‌شده می‌رسد. برای آدرس، تاریخ یا شماره پرونده مناسب است.",
+    download:"دانلود متن گفتگو",
+    chatPh:"پیام بنویسید…",
+    voice:"ترجمه صوتی",
+    share:"صفحه",
+    panelBtn:"گفتگو",
+    more:"بیشتر",
+    capSize:"اندازه زیرنویس",
+    ownCaps:"نمایش زیرنویس خودم",
+    showOrig:"نمایش متن اصلی",
+    copyLink:"کپی لینک دعوت",
+    fullscreen:"تمام صفحه",
+    end:"پایان",
+    endTitle:"تماس پایان یافت",
+    stDur:"مدت",
+    stLines:"جملات ترجمه‌شده",
+    stMsgs:"پیام‌ها",
+    endNote:"متن گفتگو فقط روی این دستگاه نگه داشته می‌شود. پیش از بستن صفحه آن را دانلود کنید.",
+    newCall:"تماس جدید",
+    connecting:"در حال اتصال",
+    waiting:"در انتظار",
+    connected:"متصل",
+    reconnecting:"اتصال مجدد",
+    left:"طرف مقابل خارج شد",
+    listening:"در حال شنیدن",
+    paused:"در حال خواندن ترجمه",
+    noSR:"تشخیص گفتار در دسترس نیست · از Chrome/Edge استفاده کنید",
+    srNet:"اتصال تشخیص گفتار قطع شد",
+    copied:"لینک کپی شد",
+    joined:"{n} وارد تماس شد",
+    leftT:"{n} از تماس خارج شد",
+    needRoom:"برای ورود، کد اتاق را وارد کنید.",
+    taken:"این اتاق باز است. «ورود به اتاق» را بزنید یا کد دیگری امتحان کنید.",
+    notFound:"اتاق بازی با این کد پیدا نشد. کد را بررسی کنید یا منتظر طرف مقابل بمانید.",
+    media:"اجازه دوربین یا میکروفون داده نشد. از نماد قفل در نوار آدرس اجازه دهید.",
+    noMedia:"دوربین پیدا نشد؛ فقط با صدا ادامه می‌دهیم.",
+    signal:"به سرور اتصال دسترسی نیست. اینترنت را بررسی و دوباره تلاش کنید.",
+    shareOn:"صفحه شما در حال اشتراک است",
+    shareFail:"اشتراک صفحه آغاز نشد.",
+    themShare:"{n} صفحه خود را به اشتراک گذاشته است",
+    voiceOn:"ترجمه صوتی روشن",
+    voiceOff:"ترجمه صوتی خاموش",
+    speakerDefault:"طرف مقابل",
+    retry:"تلاش دوباره",
+    trFail:"ترجمه در انتظار"
   }
 };
 
@@ -93,7 +254,7 @@ const S = {
   audioCtx: null, meterRaf: 0
 };
 const t = (k, vars) => { let s = (I18N[S.me][k] ?? I18N.tr[k] ?? k); if (vars) for (const v in vars) s = s.replace('{' + v + '}', vars[v]); return s; };
-const other = l => l === 'tr' ? 'pt' : 'tr';
+const other = l => (S.peerLang && S.peerLang !== l) ? S.peerLang : (l === 'tr' ? 'pt' : 'tr');
 const store = { get(k){ try { return localStorage.getItem('ij-' + k); } catch(e){ return null; } }, set(k,v){ try { localStorage.setItem('ij-' + k, v); } catch(e){} } };
 const initials = n => (n || '?').trim().split(/\s+/).slice(0,2).map(x => x[0]).join('').toUpperCase() || '?';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -102,19 +263,19 @@ function toast(msg, bad){ const el = document.createElement('div'); el.className
 
 /* ===== i18n ===== */
 function applyLang(){
-  document.documentElement.lang = S.me === 'tr' ? 'tr' : 'pt-BR';
+  document.documentElement.lang = LOC[S.me] || 'tr';
+  document.documentElement.dir = S.me === 'fa' ? 'rtl' : 'ltr';
   document.querySelectorAll('[data-i]').forEach(el => el.textContent = t(el.dataset.i));
   document.querySelectorAll('[data-iph]').forEach(el => el.placeholder = t(el.dataset.iph));
   document.querySelectorAll('[data-i-aria]').forEach(el => el.setAttribute('aria-label', t(el.dataset.iAria)));
-  $('lang-tr').setAttribute('aria-pressed', S.me === 'tr');
-  $('lang-pt').setAttribute('aria-pressed', S.me === 'pt');
+  document.querySelectorAll('.lang[data-lang]').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === S.me));
   ['brandName','tbBrand'].forEach(id => $(id).textContent = CONFIG.brand);
   document.title = CONFIG.brand;
 }
 
 /* ===== Lobby: preview, devices, meter ===== */
 async function openMedia(micId, camId){
-  const audio = { echoCancellation:true, noiseSuppression:true, autoGainControl:true, ...(micId ? { deviceId:{ exact:micId } } : {}) };
+  const audio = { echoCancellation:true, noiseSuppression:true, autoGainControl:true, voiceIsolation:true, channelCount:1, ...(micId ? { deviceId:{ exact:micId } } : {}) };
   const video = { width:{ ideal:1280 }, height:{ ideal:720 }, ...(camId ? { deviceId:{ exact:camId } } : {}) };
   try { return await navigator.mediaDevices.getUserMedia({ audio, video }); }
   catch(e){
@@ -151,7 +312,7 @@ async function switchDevice(kind, id){
   const isAudio = kind === 'audio';
   try {
     const s = await navigator.mediaDevices.getUserMedia(isAudio
-      ? { audio:{ deviceId:{ exact:id }, echoCancellation:true, noiseSuppression:true } }
+      ? { audio:{ deviceId:{ exact:id }, echoCancellation:true, noiseSuppression:true, autoGainControl:true, voiceIsolation:true, channelCount:1 } }
       : { video:{ deviceId:{ exact:id }, width:{ ideal:1280 }, height:{ ideal:720 } } });
     const nt = isAudio ? s.getAudioTracks()[0] : s.getVideoTracks()[0];
     const old = isAudio ? S.stream.getAudioTracks()[0] : S.stream.getVideoTracks()[0];
@@ -207,25 +368,31 @@ function lobbyErr(msg){ $('lobbyErr').textContent = msg || ''; $('lobbyErr').hid
 
 /* ===== Translation ===== */
 const tcache = new Map();
+const TR_BAD = /MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID LANGUAGE PAIR|USAGE ?LIMITS/i;
+async function translateOnce(text, from, to){
+  try {
+    const r = await fetch('/api/auth/translate', { method:'POST', headers:{ 'Content-Type':'application/json' }, credentials:'same-origin', body:JSON.stringify({ q:text, sl:from, tl:to }) });
+    if (r.ok){ const j = await r.json(); if (j.ok && j.text && !TR_BAD.test(j.text)) return j.text; }
+  } catch(e){}
+  try { // sunucuya ulaşılamazsa tarayıcıdan doğrudan
+    const r = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`);
+    if (r.ok){ const j = await r.json(); const o = (j[0] || []).map(x => x && x[0]).filter(Boolean).join(''); if (o && !TR_BAD.test(o)) return o; }
+  } catch(e){}
+  return null;
+}
+// Döner: çeviri; başarısızsa null (asla uyarı metni dönmez)
 async function translate(text, from, to){
+  if (!text || from === to) return text;
   const key = from + '|' + to + '|' + text;
   if (tcache.has(key)) return tcache.get(key);
-  let out = null;
-  try {
-    const r = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`);
-    if (r.ok){ const j = await r.json(); out = (j[0] || []).map(x => x[0]).join(''); }
-  } catch(e){}
-  if (!out){
-    try {
-      const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to === 'pt' ? 'pt-BR' : to}`);
-      const j = await r.json(); out = j.responseData && j.responseData.translatedText;
-    } catch(e){}
-  }
-  out = out || text;
-  if (tcache.size > 400) tcache.clear();
+  let out = await translateOnce(text, from, to);
+  if (!out){ await new Promise(r => setTimeout(r, 700)); out = await translateOnce(text, from, to); }
+  if (!out) return null;
+  if (tcache.size > 600) tcache.clear();
   tcache.set(key, out);
   return out;
 }
+const fallbackTr = text => text + ' · (' + t('trFail') + ')';
 
 /* ===== Captions ===== */
 const capEls = {};
@@ -233,7 +400,7 @@ function renderCap(slot, { lang, who, main, orig, live, mine }){
   let el = capEls[slot];
   if (!el){
     el = document.createElement('div');
-    el.innerHTML = '<span class="bar"></span><span class="who"></span><span class="main"></span><span class="orig"></span>';
+    el.innerHTML = '<span class="bar"></span><span class="who"></span><span class="main" dir="auto"></span><span class="orig" dir="auto"></span>';
     if (mine) $('captions').appendChild(el); else $('captions').prepend(el);
     capEls[slot] = el;
   }
@@ -251,11 +418,11 @@ function addLine(entry){
   const second = entry.lang === S.me ? entry.tr : entry.orig;
   const d = document.createElement('div');
   d.className = 'entry ' + entry.lang;
-  d.innerHTML = `<span class="bar"></span><div><div class="meta"><time>${esc(entry.time)}</time><span>${esc(entry.who)}</span></div><div class="t1">${esc(mineFirst)}</div><div class="t2">${esc(second)}</div></div>`;
+  d.innerHTML = `<span class="bar"></span><div><div class="meta"><time>${esc(entry.time)}</time><span>${esc(entry.who)}</span></div><div class="t1" dir="auto">${esc(mineFirst)}</div><div class="t2" dir="auto">${esc(second)}</div></div>`;
   const body = $('logBody'); const atEnd = body.scrollHeight - body.scrollTop - body.clientHeight < 40;
   body.appendChild(d); if (atEnd) body.scrollTop = body.scrollHeight;
 }
-const nowStr = () => new Date().toLocaleTimeString(S.me === 'tr' ? 'tr-TR' : 'pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+const nowStr = () => new Date().toLocaleTimeString(LOC[S.me], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
 
 /* ===== Speech synthesis ===== */
 let voicesCache = [];
@@ -286,8 +453,9 @@ function startRecognition(){
   rec.onstart = () => setSR(t('listening') + ' · ' + LANGS[S.me].label, true);
   rec.onresult = ev => {
     for (let i = ev.resultIndex; i < ev.results.length; i++){
-      const res = ev.results[i], text = res[0].transcript.trim();
+      const res = ev.results[i], text = res[0].transcript.trim(), conf = res[0].confidence;
       if (!text) continue;
+      if (!VAD.accept(text, conf, res.isFinal)){ if (res.isFinal){ clearTimeout(interimTimer); removeCap('me'); segId++; } continue; }
       if (res.isFinal) finalizeSegment(text);
       else interimSegment(text);
     }
@@ -302,7 +470,9 @@ function startRecognition(){
     else if (!S.recPaused) setSR('', false);
   };
   S.rec = rec;
-  try { rec.start(); } catch(e){ S.rec = null; }
+  const tr0 = S.stream && S.stream.getAudioTracks()[0];
+  try { if (tr0 && VAD.trackOK !== false) rec.start(tr0); else rec.start(); }
+  catch(e){ VAD.trackOK = false; try { rec.start(); } catch(e2){ S.rec = null; } }
 }
 function stopRecognition(){ const r = S.rec; S.rec = null; if (r){ r.onend = null; try { r.abort(); } catch(e){} } }
 function pauseRecognition(p){
@@ -317,30 +487,32 @@ function interimSegment(text){
   clearTimeout(interimTimer);
   interimTimer = setTimeout(async () => {
     if (text === lastInterimSent || id !== segId) return;
+    if (Math.abs(text.length - lastInterimSent.length) < 4 && lastInterimSent) return;
     lastInterimSent = text;
-    const tr = await translate(text, S.me, other(S.me));
-    if (id !== segId) return;
-    send({ type:'interim', id, text, tr, lang:S.me });
-  }, 450);
+    send({ type:'interim', id, text, lang:S.me });
+  }, 650);
 }
 async function finalizeSegment(text){
   const id = segId++; clearTimeout(interimTimer); lastInterimSent = '';
-  const tr = await translate(text, S.me, other(S.me));
-  renderCap('me', { lang:S.me, who:t('you'), main:text, orig:tr, mine:true });
-  addLine({ time:nowStr(), who:S.name || t('you'), lang:S.me, orig:text, tr });
-  send({ type:'final', id, text, tr, lang:S.me });
+  const to = other(S.me);
+  send({ type:'final', id, text, lang:S.me });
+  renderCap('me', { lang:S.me, who:t('you'), main:text, mine:true });
+  const tr = await translate(text, S.me, to);
+  renderCap('me', { lang:S.me, who:t('you'), main:text, orig:tr || '', mine:true });
+  addLine({ time:nowStr(), who:S.name || t('you'), lang:S.me, orig:text, tr:tr || text });
 }
 
 /* ===== Peer messaging ===== */
 function send(msg){ if (S.conn && S.conn.open){ try { S.conn.send(msg); } catch(e){} } }
 function sendState(){ send({ type:'state', mic:S.micOn, cam:S.camOn && !!(S.stream && S.stream.getVideoTracks().length), screen:!!S.screenStream }); }
-function onData(m){
+async function onData(m){
   if (!m || typeof m !== 'object') return;
   const who = S.peerName || t('speakerDefault');
   const lang = m.lang || S.peerLang || other(S.me);
   switch (m.type){
     case 'hello':
-      S.peerName = String(m.name || '').slice(0, 40) || t('speakerDefault'); S.peerLang = m.lang;
+      S.peerName = String(m.name || '').slice(0, 40) || t('speakerDefault'); S.peerLang = LANGS[m.lang] ? m.lang : null; S.lastFinal = -1;
+      $('pairText').textContent = LANGS[S.me].short + ' ⇄ ' + (S.peerLang ? LANGS[S.peerLang].short : '…');
       $('remoteName').textContent = S.peerName; $('remotePhName').textContent = S.peerName;
       $('remoteAvatar').textContent = initials(S.peerName); $('remoteAvatar').className = 'avatar ' + (m.lang || '');
       $('remoteSw').style.background = LANGS[m.lang] ? LANGS[m.lang].sw : 'var(--muted)';
@@ -353,17 +525,23 @@ function onData(m){
       if (m.screen && !S._peerSharing) toast(t('themShare', { n:who }));
       S._peerSharing = !!m.screen;
       break;
-    case 'interim':
-      renderCap('them', { lang, who, main:m.tr || '…', orig:m.text, live:true });
-      break;
-    case 'final':
-      renderCap('them', { lang, who, main:m.tr, orig:m.text });
-      addLine({ time:nowStr(), who, lang, orig:m.text, tr:m.tr });
-      speak(m.tr);
-      break;
-    case 'chat':
-      addMsg({ me:false, who, text:m.tr, orig:m.text });
-      break;
+    case 'interim': {
+      if (typeof m.id === 'number' && m.id <= (S.lastFinal ?? -1)) break;
+      renderCap('them', { lang, who, main:'…', orig:m.text, live:true });
+      translate(m.text, lang, S.me).then(tr => { if (typeof m.id === 'number' && m.id <= (S.lastFinal ?? -1)) return; if (tr) renderCap('them', { lang, who, main:tr, orig:m.text, live:true }); });
+      break; }
+    case 'final': {
+      if (typeof m.id === 'number') S.lastFinal = Math.max(S.lastFinal ?? -1, m.id);
+      const tr = await translate(m.text, lang, S.me);
+      const main = tr || fallbackTr(m.text);
+      renderCap('them', { lang, who, main, orig:m.text });
+      addLine({ time:nowStr(), who, lang, orig:m.text, tr:tr || m.text });
+      if (tr) speak(tr);
+      break; }
+    case 'chat': {
+      const tr = await translate(m.text, lang, S.me);
+      addMsg({ me:false, who, text:tr || fallbackTr(m.text), orig:m.text });
+      break; }
     case 'net':
       if (window.bmNetPeer) window.bmNetPeer(m);
       break;
@@ -379,7 +557,7 @@ function addMsg({ me, who, text, orig }){
   $('chatEmpty').hidden = true;
   const d = document.createElement('div');
   d.className = 'msg' + (me ? ' me' : '');
-  d.innerHTML = `<span class="meta">${esc(who)} · ${esc(nowStr().slice(0,5))}</span><span class="t1">${esc(text)}</span>${orig && orig !== text ? `<span class="t2">${esc(orig)}</span>` : ''}`;
+  d.innerHTML = `<span class="meta">${esc(who)} · ${esc(nowStr().slice(0,5))}</span><span class="t1" dir="auto">${esc(text)}</span>${orig && orig !== text ? `<span class="t2" dir="auto">${esc(orig)}</span>` : ''}`;
   $('chatBody').appendChild(d); $('chatBody').scrollTop = $('chatBody').scrollHeight;
   if (!me && !(S.panelOpen && S.panelTab === 'chat')){ S.unread++; updateBadge(); }
 }
@@ -388,16 +566,16 @@ $('chatFoot').addEventListener('submit', async e => {
   e.preventDefault();
   const text = $('chatInput').value.trim(); if (!text) return;
   $('chatInput').value = '';
+  send({ type:'chat', text, lang:S.me });
   const tr = await translate(text, S.me, other(S.me));
-  addMsg({ me:true, who:t('you'), text, orig:tr });
-  send({ type:'chat', text, tr, lang:S.me });
+  addMsg({ me:true, who:t('you'), text, orig:tr || '' });
 });
 
 /* ===== Connection ===== */
 function setConn(kind, text){ $('connDot').className = 'dot ' + (kind || ''); $('connText').textContent = text; }
 function inviteLink(){
   const u = new URL(location.href); u.search = ''; u.hash = '';
-  u.searchParams.set('oda', S.room); u.searchParams.set('dil', other(S.me));
+  u.searchParams.set('oda', S.room); u.searchParams.set('dil', S.me === 'tr' ? 'pt' : 'tr');
   return u.toString();
 }
 function wireConn(c){
@@ -501,7 +679,7 @@ function enterCall(){
   $('roomChip').textContent = S.room;
   $('linkText').textContent = inviteLink();
   $('mySw').style.background = LANGS[S.me].sw; $('mySw2').style.background = LANGS[S.me].sw;
-  $('pairText').textContent = t('pair'); $('meLabel').textContent = t('meSpeaks');
+  $('pairText').textContent = LANGS[S.me].short + ' ⇄ ' + (S.peerLang && LANGS[S.peerLang] ? LANGS[S.peerLang].short : '…'); $('meLabel').textContent = t('you') + ': ' + LANGS[S.me].label;
   $('vSelf').srcObject = S.stream;
   $('waitTitle').textContent = t('waitTitle');
   $('waitText').hidden = S.role === 'guest'; $('waitText').closest('.wait-card').querySelector('.linkbox').hidden = S.role === 'guest';
@@ -560,7 +738,7 @@ function selectTab(tab){
 
 /* ===== Transcript ===== */
 function downloadTranscript(){
-  const head = `${CONFIG.brand}\n${t('roomShort')}: ${S.room}\n${new Date().toLocaleString(S.me === 'tr' ? 'tr-TR' : 'pt-BR')}\n${S.startedAt ? t('stDur') + ': ' + fmt(Date.now() - S.startedAt) + '\n' : ''}\n`;
+  const head = `${CONFIG.brand}\n${t('roomShort')}: ${S.room}\n${new Date().toLocaleString(LOC[S.me])}\n${S.startedAt ? t('stDur') + ': ' + fmt(Date.now() - S.startedAt) + '\n' : ''}\n`;
   const body = S.lines.map(l => `[${l.time}] ${l.who} (${l.lang.toUpperCase()})\n  ${l.orig}\n  → ${l.tr}`).join('\n\n');
   const blob = new Blob([head + body + '\n'], { type:'text/plain;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -753,7 +931,9 @@ window.addEventListener('beforeunload', () => send({ type:'bye' }));
 /* ---------- Bağlantı kalitesi: iki tarafın sinyali + zayıf ağda uyarlanan kalite ---------- */
 (function bmNet(){
   const L = { tr:{ me:'Siz', q:['Kopuk','Zayıf','Orta','Güçlü'], weak:'Bağlantı zayıf: ses öncelikli, görüntü kalitesi düşürüldü', back:'Bağlantı düzeldi' },
-              pt:{ me:'Você', q:['Sem sinal','Fraco','Médio','Forte'], weak:'Conexão fraca: áudio priorizado, qualidade de vídeo reduzida', back:'Conexão restabelecida' } };
+              pt:{ me:'Você', q:['Sem sinal','Fraco','Médio','Forte'], weak:'Conexão fraca: áudio priorizado, qualidade de vídeo reduzida', back:'Conexão restabelecida' },
+              en:{ me:'You', q:['No signal','Weak','Fair','Strong'], weak:'Weak connection: audio prioritised, video quality reduced', back:'Connection restored' },
+              fa:{ me:'شما', q:['قطع','ضعیف','متوسط','قوی'], weak:'اتصال ضعیف: اولویت با صدا، کیفیت تصویر کاهش یافت', back:'اتصال برقرار شد' } };
   const tx = () => L[S.me] || L.tr;
   const PROFILES = { 3:{ maxBitrate:1500000, scale:1, fps:30 }, 2:{ maxBitrate:600000, scale:1.5, fps:24 }, 1:{ maxBitrate:220000, scale:2.5, fps:15 }, 0:{ maxBitrate:120000, scale:4, fps:10 } };
   let prev = null, myQ = 3, peerQ = null, peerSeen = 0, applied = null, goodStreak = 0, warned = false;
@@ -838,7 +1018,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) ['vR
 document.addEventListener('mousemove', (() => { let last = 0; return () => { const n = Date.now(); if (n - last < 400) return; last = n; const c = $('call'); if (!c.hidden && c.classList.contains('ui-off')){ c.classList.remove('ui-off'); clearTimeout(window._bmHide); window._bmHide = setTimeout(() => { if ($('menu').hidden) c.classList.add('ui-off'); }, 5000); } }; })());
 /* Görüntü ekranla aynı yönde ise tam doldur (cover); dik telefon görüntüsü yatay ekranda ise kırpmadan sığdır */
 (function bmFit(){
-  const fit = () => ['vRemote','vSelf'].forEach(id => {
+  const fit = () => ['vRemote'].forEach(id => {
     const v = $(id), box = v && v.parentElement; if (!v || !v.videoWidth || !box) return;
     const vPortrait = v.videoHeight > v.videoWidth, bPortrait = box.clientHeight > box.clientWidth;
     v.classList.toggle('fit-contain', vPortrait !== bPortrait && box.clientWidth > 160);
@@ -846,3 +1026,44 @@ document.addEventListener('mousemove', (() => { let last = 0; return () => { con
   ['vRemote','vSelf'].forEach(id => { const v = $(id); if (v){ v.addEventListener('loadedmetadata', fit); v.addEventListener('resize', fit); } });
   addEventListener('resize', fit); setInterval(fit, 3000);
 })();
+
+
+/* ---------- Gürültü / yankı filtresi: yalnız sizin sesiniz çevrilir ---------- */
+const VAD = (() => {
+  const v = { trackOK: undefined, lastVoice: 0, remoteVoice: 0, floor: 0.008, active: false, ctx: null, la: null, ra: null, rs: null };
+  const rms = an => { const b = new Float32Array(an.fftSize); an.getFloatTimeDomainData(b); let x = 0; for (let i = 0; i < b.length; i++) x += b[i] * b[i]; return Math.sqrt(x / b.length); };
+  function attach(){
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC || !S.stream) return;
+      v.ctx = v.ctx || new AC();
+      if (v.ctx.state === 'suspended') v.ctx.resume().catch(() => {});
+      const at = S.stream.getAudioTracks()[0];
+      if (at && (!v.la || v.la._t !== at)){ const an = v.ctx.createAnalyser(); an.fftSize = 1024; v.ctx.createMediaStreamSource(new MediaStream([at])).connect(an); an._t = at; v.la = an; }
+      const rsrc = $('vRemote').srcObject, rt = rsrc && rsrc.getAudioTracks && rsrc.getAudioTracks()[0];
+      if (rt && (!v.ra || v.ra._t !== rt)){ const an = v.ctx.createAnalyser(); an.fftSize = 1024; v.ctx.createMediaStreamSource(new MediaStream([rt])).connect(an); an._t = rt; v.ra = an; }
+    } catch(e){}
+  }
+  setInterval(() => {
+    if ($('call').hidden) return;
+    attach();
+    if (!v.ctx || v.ctx.state !== 'running' || !v.la){ v.active = false; return; }
+    v.active = true;
+    const now = Date.now(), l = rms(v.la);
+    // gürültü tabanı: sessizlikte hızlı, konuşmada çok yavaş uyum
+    v.floor = l < v.floor ? v.floor * 0.7 + l * 0.3 : v.floor * 0.995 + l * 0.005;
+    if (l > Math.max(0.015, v.floor * 3)) v.lastVoice = now;
+    if (v.ra && rms(v.ra) > 0.02) v.remoteVoice = now;
+  }, 60);
+  v.accept = (text, conf, isFinal) => {
+    const now = Date.now(), words = text.split(/\s+/).filter(Boolean).length;
+    if (isFinal && conf > 0 && conf < 0.45) return false;                    // tanıma emin değil → büyük olasılıkla ortam sesi
+    if (isFinal && words === 1 && conf > 0 && conf < 0.7) return false;
+    if (v.active){
+      if (now - v.lastVoice > (isFinal ? 2500 : 1500)) return false;         // mikrofonda konuşma yok → ortam/TV/müzik
+      if (now - v.remoteVoice < 1200 && now - v.lastVoice > 900) return false; // karşı tarafın hoparlörden gelen sesi (yankı)
+    }
+    return true;
+  };
+  return v;
+})();
+function removeCap(slot){ const el = capEls[slot]; if (el){ el.remove(); delete capEls[slot]; } }

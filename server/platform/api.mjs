@@ -5,6 +5,7 @@ import {
   createImpersonationSession, isImpersonated, readCookie,
 } from './auth.mjs';
 import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
+import {translateText, translateStats} from './translate.mjs';
 import {applyConfig} from './config.mjs';
 import {loadSplits, cleanSplits, splitFor, serviceKey, SPLIT_DEFAULTS} from './commission.mjs';
 import {wafState, unban, clearEvents, cleanIps, clientIp} from '../waf.mjs';
@@ -25,6 +26,7 @@ const DEFAULT_PERMS = {
 };
 // Çevirili görüşme modülü (/gorusme). Ayar: items 'config-meeting'.
 export const MEETING_DEFAULTS = {enabled: true, inBooking: true, teamLang: 'pt', from: 'Brazil Migration <bilgi@brazilmigration.com>'};
+export async function translateConfig(db) { const r = await db.prepare("SELECT data FROM items WHERE id='config-translate'").first(); let d = {}; try { d = JSON.parse(r?.data || '{}') || {}; } catch {} return {provider: '', key: '', region: '', ...d, email: 'bilgi@brazilmigration.com'}; }
 export async function meetingConfig(db) { const r = await db.prepare("SELECT data FROM items WHERE id='config-meeting'").first(); let d = {}; try { d = JSON.parse(r?.data || '{}') || {}; } catch {} return {...MEETING_DEFAULTS, ...d}; }
 const roomCode = () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = crypto.getRandomValues(new Uint8Array(8)); return [...r].map(x => a[x % a.length]).join(''); };
 export const roomLink = (base, code, lang) => `${base}/gorusme/?oda=${encodeURIComponent(code)}&dil=${lang}&otomatik=1`;
@@ -187,6 +189,13 @@ export async function handleAuth(req, env, route) {
   }
 
   if (route === 'meeting' && req.method === 'GET') { const mc = await meetingConfig(db); return json({enabled: !!mc.enabled}); }
+  if (route === 'translate' && req.method === 'POST') { // görüşme çevirisi (yalnız kendi sitemizden)
+    const origin = req.headers.get('origin') || req.headers.get('referer') || '';
+    let host = ''; try { host = new URL(origin).host; } catch {}
+    if (!host || host !== new URL(req.url).host && host !== (req.headers.get('x-forwarded-host') || req.headers.get('host'))) fail(403, 'Yetkisiz.');
+    const r = await translateText(b.q, String(b.sl || ''), String(b.tl || ''), await translateConfig(db));
+    return json(r);
+  }
   if (route === 'booking' && req.method === 'POST') { // 15-min free call → Google Meet link by e-mail
     const email = clean(b.email, 254).toLowerCase(), name = clean(b.name, 70);
     if (name.length < 2 || !validEmail(email)) fail(400, 'Ad ve geçerli bir e-posta girin.');
@@ -1088,6 +1097,16 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     return streamFile(env, p.docs[doc]);
   }
 
+  if (route === 'settings/translate' && req.method === 'GET') { const c = await translateConfig(db); return json({translate: {provider: c.provider, region: c.region, key: c.key ? MASK : ''}, stats: translateStats()}); }
+  if (route === 'settings/translate' && req.method === 'POST') {
+    const old = await translateConfig(db), provider = ['azure', 'google', 'deepl'].includes(b.provider) ? b.provider : '';
+    const key = b.key && b.key !== MASK ? clean(b.key, 300) : provider === old.provider ? old.key : '';
+    if (provider && !key) fail(400, 'Seçilen servis için API anahtarı girin.');
+    const data = {provider, key: provider ? key : '', region: clean(b.region, 40), updated: now()};
+    if (provider){ const t = await translateText('Merhaba, nasılsınız?', 'tr', 'pt', {...data, provider}); if (!t.ok || t.by !== 'pro') fail(400, 'Anahtar test edilemedi: servis çeviri döndürmedi. Anahtarı/bölgeyi kontrol edin.'); }
+    await db.batch([putItem(db, 'config-translate', 'config', 'owner', data), audit(db, actor, 'settings.translate', provider || 'free')]);
+    return json({translate: {provider, region: data.region, key: data.key ? MASK : ''}, stats: translateStats()});
+  }
   if (route === 'settings/meeting' && req.method === 'GET') return json({meeting: await meetingConfig(db), url: siteUrl(req) + '/gorusme/', mail: mailConfigured()});
   if (route === 'settings/meeting' && req.method === 'POST') {
     const from = clean(b.from, 160);
