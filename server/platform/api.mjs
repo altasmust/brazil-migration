@@ -26,7 +26,30 @@ const DEFAULT_PERMS = {
 };
 // Çevirili görüşme modülü (/gorusme). Ayar: items 'config-meeting'.
 export const MEETING_DEFAULTS = {enabled: true, inBooking: true, teamLang: 'pt', from: 'Brazil Migration <bilgi@brazilmigration.com>'};
-export async function translateConfig(db) { const r = await db.prepare("SELECT data FROM items WHERE id='config-translate'").first(); let d = {}; try { d = JSON.parse(r?.data || '{}') || {}; } catch {} const gr = await db.prepare("SELECT data, updated FROM items WHERE id='config-glossary'").first(); let gt = null; try { gt = gr ? JSON.parse(gr.data).text : null; } catch {} return {provider: '', key: '', region: '', ...d, email: 'bilgi@brazilmigration.com', glossary: parseGlossary(gt ?? DEFAULT_GLOSSARY), gv: gr?.updated || 0}; }
+// ---------- Görüşme sunucu modülleri (çeviri + bağlantı) tek kayıtta: config-servers ----------
+export const SERVER_MODULES = [
+  {id: 'azure', group: 'tr', name: 'Microsoft Azure Translator', category: 'Çeviri', region: 'Global', icon: 'globe', color: '#0078d4', desc: 'Resmî çeviri servisi; ayda 2 milyon karakter ücretsiz. Etkin olduğunda çeviriler önce buradan yapılır.', fields: [{k: 'key', label: 'API anahtarı (KEY 1)', secret: true, req: true}, {k: 'region', label: 'Bölge (Location/Region)', ph: 'ör. germanywestcentral'}], help: 'Azure portalında Translator kaynağı → Keys and Endpoint sayfasındaki KEY 1 ve Location/Region değerleri. Kaydederken deneme çevirisiyle doğrulanır.'},
+  {id: 'google', group: 'tr', name: 'Google Cloud Translation', category: 'Çeviri', region: 'Global', icon: 'globe', color: '#4285f4', desc: 'Google’ın resmî çeviri API’si; ayda 500 bin karakter ücretsiz.', fields: [{k: 'key', label: 'API anahtarı', secret: true, req: true}], help: 'Google Cloud Console → APIs & Services → Credentials → API key. Cloud Translation API etkin olmalı.'},
+  {id: 'deepl', group: 'tr', name: 'DeepL API', category: 'Çeviri', region: 'Avrupa', icon: 'globe', color: '#0f2b46', desc: 'Doğal çeviri kalitesi; ücretsiz pakette ayda 500 bin karakter. Farsça desteklemez (Farsça ücretsiz yedekle çevrilir).', fields: [{k: 'key', label: 'Authentication Key', secret: true, req: true}], help: 'DeepL hesabı → API Keys. Ücretsiz anahtarlar ":fx" ile biter.'},
+  {id: 'freetr', group: 'tr', name: 'Ücretsiz çeviri (yedek)', category: 'Çeviri', region: 'Global', icon: 'refresh', color: '#2e7d32', desc: 'Google ve MyMemory ücretsiz uçları; resmî servis yanıt vermezse otomatik devreye girer. Kota uyarıları gösterilmez.', fields: [], locked: true, help: 'Her zaman açık yedek katman; ayar gerektirmez.'},
+  {id: 'metered', group: 'turn', name: 'Metered TURN', category: 'Bağlantı sunucusu', region: 'Global', icon: 'transfer', color: '#7c3aed', desc: 'Zayıf/filtreli ağlarda görüntü ve sesi 443 portundan şifreli aktarır. Ücretsiz paket ayda 500 MB.', fields: [{k: 'u', label: 'Kullanıcı adı (Username)', req: true}, {k: 'p', label: 'Şifre (Password)', secret: true, req: true}], help: 'Metered panelinde TURN Server → Credentials tablosundaki Username ve Password. Adresler otomatik eklenir.'},
+  {id: 'cloudflare', group: 'turn', name: 'Cloudflare Realtime TURN', category: 'Bağlantı sunucusu', region: 'Global', icon: 'transfer', color: '#f38020', desc: 'Ayda 1.000 GB ücretsiz (Cloudflare ödeme yöntemi ister). Geçici giriş bilgileri sunucuda her gün yenilenir.', fields: [{k: 'keyId', label: 'Turn Token ID', req: true}, {k: 'token', label: 'API Token', secret: true, req: true}], help: 'Cloudflare paneli → Realtime → TURN Server → Create. Kaydederken Cloudflare’e bağlanılıp doğrulanır.'},
+  {id: 'custom', group: 'turn', name: 'Özel TURN / STUN', category: 'Bağlantı sunucusu', region: 'Elle', icon: 'key', color: '#455a64', desc: 'Başka bir sağlayıcının veya kendi sunucunuzun adresleri.', fields: [{k: 'text', label: 'Sunucular — her satır: adres | kullanıcı | şifre', type: 'textarea', req: true, ph: 'turns:sunucu.ornek.com:443?transport=tcp | kullanici | sifre'}], help: 'Bir satıra birden çok adres boşlukla yazılabilir (turn:, turns:, stun:).'},
+  {id: 'peerjs', group: 'turn', name: 'PeerJS ortak sunucu', category: 'Bağlantı sunucusu', region: 'Global', icon: 'link', color: '#00897b', desc: 'Ücretsiz ortak eşleştirme ve yedek aktarım sunucusu; her zaman açık.', fields: [], locked: true, help: 'Ayar gerektirmez. Kopma olursa otomatik yeniden bağlanma ve yalnız ses modu devrededir.'},
+];
+export async function serversConfig(db) {
+  const r = await getItem(db, 'config-servers'); if (r?.data) return r.data;
+  // ilk kullanım: eski ayrı kayıtlardan taşı
+  const t = (await getItem(db, 'config-translate'))?.data || {}, u = (await getItem(db, 'config-turn'))?.data || {}, d = {};
+  if (t.provider && t.key) d[t.provider] = {enabled: true, key: t.key, ...(t.region ? {region: t.region} : {})};
+  if (u.cfKeyId && u.cfToken) d.cloudflare = {enabled: true, keyId: u.cfKeyId, token: u.cfToken};
+  const lines = String(u.text || '').split(/\r?\n/).filter(l => l.trim());
+  const ml = lines.find(l => /relay\.metered\.ca/.test(l)); if (ml) { const [, mu, mp] = ml.split('|').map(x => x.trim()); if (mu && mp) d.metered = {enabled: true, u: mu, p: mp}; }
+  const rest = lines.filter(l => !/relay\.metered\.ca/.test(l)).join('\n'); if (rest.trim()) d.custom = {enabled: true, text: rest};
+  return d;
+}
+export const meteredIce = m => [{urls: ['turns:global.relay.metered.ca:443?transport=tcp', 'turn:global.relay.metered.ca:443'], username: m.u, credential: m.p}, {urls: ['turn:global.relay.metered.ca:80?transport=tcp', 'turn:global.relay.metered.ca:80'], username: m.u, credential: m.p}];
+export async function translateConfig(db) { const sv = await serversConfig(db); const pid = ['azure', 'google', 'deepl'].find(k => sv[k]?.enabled && sv[k]?.key); const gr = await db.prepare("SELECT data, updated FROM items WHERE id='config-glossary'").first(); let gt = null; try { gt = gr ? JSON.parse(gr.data).text : null; } catch {} return {provider: pid || '', key: pid ? sv[pid].key : '', region: pid ? sv[pid].region || '' : '', email: 'bilgi@brazilmigration.com', glossary: parseGlossary(gt ?? DEFAULT_GLOSSARY), gv: gr?.updated || 0}; }
 // Ek TURN/STUN sunucuları: satır başına "adres | kullanıcı | şifre" (turn:, turns:, stun:)
 export function parseIce(text) {
   return String(text || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#')).slice(0, 12).map(l => {
@@ -37,15 +60,15 @@ export function parseIce(text) {
 }
 // Cloudflare Realtime TURN: anahtar sunucuda kalır, tarayıcıya 24 saatlik geçici giriş bilgisi verilir (12 saat önbellek)
 async function cloudflareIce(cfg, force) {
-  if (!cfg?.cfKeyId || !cfg?.cfToken) return [];
+  if (!cfg?.keyId || !cfg?.token) return [];
   const c = globalThis.__bmCfIce;
-  if (!force && c && c.k === cfg.cfKeyId && c.exp > Date.now()) return c.ice;
-  const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(cfg.cfKeyId)}/credentials/generate-ice-servers`, {method: 'POST', signal: AbortSignal.timeout(8000), headers: {Authorization: 'Bearer ' + cfg.cfToken, 'Content-Type': 'application/json'}, body: JSON.stringify({ttl: 86400})});
+  if (!force && c && c.k === cfg.keyId && c.exp > Date.now()) return c.ice;
+  const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(cfg.keyId)}/credentials/generate-ice-servers`, {method: 'POST', signal: AbortSignal.timeout(8000), headers: {Authorization: 'Bearer ' + cfg.token, 'Content-Type': 'application/json'}, body: JSON.stringify({ttl: 86400})});
   if (!r.ok) throw new Error('Cloudflare yanıtı: ' + r.status);
   const j = await r.json();
   // tarayıcılar 53 numaralı portu engeller → zaman kaybı olmasın diye çıkar
   const ice = (j.iceServers || []).map(x => ({...x, urls: [].concat(x.urls || []).filter(u => !/:53(\?|$)/.test(u))})).filter(x => x.urls.length);
-  globalThis.__bmCfIce = {k: cfg.cfKeyId, ice, exp: Date.now() + 12 * 3600e3};
+  globalThis.__bmCfIce = {k: cfg.keyId, ice, exp: Date.now() + 12 * 3600e3};
   return ice;
 }
 export async function meetingConfig(db) { const r = await db.prepare("SELECT data FROM items WHERE id='config-meeting'").first(); let d = {}; try { d = JSON.parse(r?.data || '{}') || {}; } catch {} return {...MEETING_DEFAULTS, ...d}; }
@@ -240,7 +263,13 @@ export async function handleAuth(req, env, route) {
     return json({ok: true, verifyRequired: true, mailSent: mail.sent, devLink: mail.devLink});
   }
 
-  if (route === 'meeting' && req.method === 'GET') { const mc = await meetingConfig(db), tc = (await getItem(db, 'config-turn'))?.data; let cf = []; try { cf = await cloudflareIce(tc); } catch (e) { console.error('[turn]', e.message); } return json({enabled: !!mc.enabled, ice: [...cf, ...parseIce(tc?.text)]}); }
+  if (route === 'meeting' && req.method === 'GET') {
+    const mc = await meetingConfig(db), sv = await serversConfig(db), ice = [];
+    if (sv.cloudflare?.enabled) { try { ice.push(...await cloudflareIce(sv.cloudflare)); } catch (e) { console.error('[turn]', e.message); } }
+    if (sv.metered?.enabled && sv.metered.u && sv.metered.p) ice.push(...meteredIce(sv.metered));
+    if (sv.custom?.enabled) ice.push(...parseIce(sv.custom.text));
+    return json({enabled: !!mc.enabled, ice});
+  }
   if (route === 'translate' && req.method === 'POST') { // görüşme çevirisi (yalnız kendi sitemizden)
     const origin = req.headers.get('origin') || req.headers.get('referer') || '';
     let host = ''; try { host = new URL(origin).host; } catch {}
@@ -278,7 +307,7 @@ export async function handleAuth(req, env, route) {
     const cal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Brazil Migration · 15 dk ön görüşme')}&dates=${gstamp(start)}/${gstamp(start + 15 * 6e4)}&details=${encodeURIComponent(booking.roomLink ? 'Görüşme: ' + booking.roomLink + (meet ? '\nGoogle Meet: ' + meet : '') : meet ? 'Google Meet: ' + meet : 'Toplantı linki e-postayla iletilecek.')}`;
     const zone = tz === 'America/Sao_Paulo' ? 'São Paulo' : 'Türkiye';
     const text = booking.roomLink
-      ? `Ön görüşmeniz ${fmt} (${zone} saati) için planlandı. Görüşmeye aşağıdaki butondan, Brazil Migration Görüşme odasından katılabilirsiniz; konuşmalar Türkçe ⇄ Portekizce anlık çevrilir. Oda kodu: ${booking.room}. En iyi sonuç için Chrome veya Edge kullanın.${meet ? ' Dilerseniz Google Meet ile de katılabilirsiniz: ' + meet : ''}`
+      ? `Ön görüşmeniz ${fmt} (${zone} saati) için planlandı. Görüşmeye aşağıdaki butondan, Brazil Migration Görüşme odasından katılabilirsiniz; siz kendi dilinizde konuşursunuz, konuşmalar karşı tarafın diline anlık çevrilir (Türkçe, Portekizce, İngilizce, Farsça). Oda kodu: ${booking.room}. En iyi sonuç için Chrome veya Edge kullanın.${meet ? ' Dilerseniz Google Meet ile de katılabilirsiniz: ' + meet : ''}`
       : meet ? `Ön görüşmeniz ${fmt} (${zone} saati) için planlandı. Aşağıdaki Google Meet bağlantısıyla katılabilirsiniz: ${meet}` : `Ön görüşme talebiniz ${fmt} için alındı. Toplantı bağlantınız kısa süre içinde e-postanıza iletilecek.`;
     const mail = await sendMail({to: email, subject: 'Ön görüşmeniz: ' + fmt, title: 'Merhaba ' + name.split(' ')[0] + ',', text: text + ' Takviminize eklemek için: ' + cal, link: booking.roomLink || meet || undefined, button: booking.roomLink ? 'Görüşmeye katıl' : 'Google Meet’e katıl', from: booking.roomLink ? mc.from : undefined});
     if (cfg.notifyEmail && validEmail(cfg.notifyEmail)) await sendMail({to: cfg.notifyEmail, subject: 'Yeni ön görüşme: ' + name, text: `${name} (${email}) · ${fmt} · ${booking.service || ''} ${meet ? '· ' + meet : ''}${booking.teamRoomLink ? ' · Görüşme odası (ekip linki): ' + booking.teamRoomLink : ''}`, link: booking.teamRoomLink || undefined, button: 'Görüşme odasını aç', from: booking.teamRoomLink ? mc.from : undefined});
@@ -1155,30 +1184,26 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     await db.batch([putItem(db, 'config-glossary', 'config', 'owner', {text, updated: now()}), audit(db, actor, 'settings.glossary', String(parseGlossary(text).length))]);
     return json({text, count: parseGlossary(text).length});
   }
-  if (route === 'settings/translate' && req.method === 'GET') { const c = await translateConfig(db); return json({translate: {provider: c.provider, region: c.region, key: c.key ? MASK : ''}, stats: translateStats()}); }
-  if (route === 'settings/translate' && req.method === 'POST') {
-    const old = await translateConfig(db), provider = ['azure', 'google', 'deepl'].includes(b.provider) ? b.provider : '';
-    const key = b.key && b.key !== MASK ? clean(b.key, 300) : provider === old.provider ? old.key : '';
-    if (provider && !key) fail(400, 'Seçilen servis için API anahtarı girin.');
-    const data = {provider, key: provider ? key : '', region: clean(b.region, 40), updated: now()};
-    if (provider){ const t = await translateText('Merhaba, nasılsınız?', 'tr', 'pt', {...data, provider}); if (!t.ok || t.by !== 'pro') fail(400, 'Anahtar test edilemedi: servis çeviri döndürmedi. Anahtarı/bölgeyi kontrol edin.'); }
-    await db.batch([putItem(db, 'config-translate', 'config', 'owner', data), audit(db, actor, 'settings.translate', provider || 'free')]);
-    return json({translate: {provider, region: data.region, key: data.key ? MASK : ''}, stats: translateStats()});
-  }
   if (route === 'settings/meeting' && req.method === 'GET') return json({meeting: await meetingConfig(db), url: siteUrl(req) + '/gorusme/', mail: mailConfigured()});
-  if (route === 'settings/turn' && req.method === 'GET') { const tc = (await getItem(db, 'config-turn'))?.data || {}; return json({text: tc.text || '', count: parseIce(tc.text).length, cfKeyId: tc.cfKeyId || '', cfToken: tc.cfToken ? MASK : '', cf: !!(tc.cfKeyId && tc.cfToken)}); }
-  if (route === 'settings/turn' && req.method === 'POST') {
-    const old = (await getItem(db, 'config-turn'))?.data || {};
-    const text = String(b.text ?? old.text ?? '').slice(0, 4000), n = parseIce(text).length;
-    if (text.trim() && !n) fail(400, 'Geçerli sunucu bulunamadı. Satır biçimi: turns:adres:443?transport=tcp | kullanıcı | şifre');
-    const cfKeyId = b.cfKeyId === undefined ? old.cfKeyId || '' : clean(b.cfKeyId, 80).replace(/[^a-zA-Z0-9_-]/g, '');
-    const cfToken = b.cfToken === undefined || b.cfToken === MASK ? (cfKeyId ? old.cfToken || '' : '') : clean(b.cfToken, 300);
-    if (!!cfKeyId !== !!cfToken) fail(400, 'Cloudflare için hem Token ID hem API Token gerekli.');
-    const data = {text, cfKeyId, cfToken, updated: now()};
-    let servers = 0;
-    if (cfKeyId) { try { servers = (await cloudflareIce(data, true)).reduce((a, x) => a + x.urls.length, 0); } catch (e) { fail(400, 'Cloudflare bilgileri doğrulanamadı (' + e.message + '). Token ID ve API Token değerlerini kontrol edin.'); } }
-    await db.batch([putItem(db, 'config-turn', 'config', 'owner', data), audit(db, actor, 'settings.turn', (cfKeyId ? 'cloudflare+' : '') + n)]);
-    return json({text, count: n, cf: !!cfKeyId, cfKeyId, cfToken: cfToken ? MASK : '', servers});
+  if (route === 'settings/servers' && (req.method === 'GET' || req.method === 'POST')) {
+    const sv = await serversConfig(db);
+    if (req.method === 'POST') {
+      const def = SERVER_MODULES.find(m => m.id === b.id); if (!def || def.locked) fail(400, 'Bu modül değiştirilemez.');
+      const cur = {...(sv[def.id] || {})}, vals = b.values && typeof b.values === 'object' ? b.values : null;
+      if (vals) for (const f of def.fields) { const v = vals[f.k]; if (v === undefined || (f.secret && (v === MASK || v === ''))) continue; cur[f.k] = f.type === 'textarea' ? String(v).slice(0, 4000) : clean(v, 300); }
+      if (b.enabled !== undefined) cur.enabled = !!b.enabled;
+      if (cur.enabled) {
+        const miss = def.fields.filter(f => f.req && !String(cur[f.k] || '').trim()); if (miss.length) fail(400, 'Etkinleştirmek için bilgileri girin: ' + miss.map(f => f.label).join(', ') + '.');
+        if (def.group === 'tr') { const t = await translateText('Merhaba, nasılsınız?', 'tr', 'pt', {provider: def.id, key: cur.key, region: cur.region}); if (!t.ok || t.by !== 'pro') fail(400, 'Anahtar doğrulanamadı: servis çeviri döndürmedi. Anahtarı ve bölgeyi kontrol edin.'); for (const k of ['azure', 'google', 'deepl']) if (k !== def.id && sv[k]) sv[k] = {...sv[k], enabled: false}; }
+        if (def.id === 'cloudflare') { cur.keyId = String(cur.keyId || '').replace(/[^a-zA-Z0-9_-]/g, ''); try { await cloudflareIce(cur, true); } catch (e) { fail(400, 'Cloudflare bilgileri doğrulanamadı (' + e.message + ').'); } }
+        if (def.id === 'metered' && /[|\s]/.test(cur.u + cur.p)) fail(400, 'Kullanıcı adı ve şifrede boşluk veya | olmamalı.');
+        if (def.id === 'custom' && !parseIce(cur.text).length) fail(400, 'Geçerli sunucu bulunamadı. Satır biçimi: turns:adres:443?transport=tcp | kullanıcı | şifre');
+      }
+      sv[def.id] = cur;
+      await db.batch([putItem(db, 'config-servers', 'config', 'owner', sv), audit(db, actor, 'settings.servers', def.id + ':' + (cur.enabled ? 'on' : 'off'))]);
+    }
+    const modules = SERVER_MODULES.map(m => { const v = sv[m.id] || {}, values = {}; for (const f of m.fields) values[f.k] = f.secret ? (v[f.k] ? MASK : '') : v[f.k] || ''; return {...m, enabled: m.locked ? true : !!v.enabled, ready: m.locked || m.fields.every(f => !f.req || v[f.k]), values}; });
+    return json({modules, stats: translateStats()});
   }
   if (route === 'settings/meeting' && req.method === 'POST') {
     const from = clean(b.from, 160);

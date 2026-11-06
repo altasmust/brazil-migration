@@ -47,64 +47,57 @@
           <label class="bmi-f">Gönderen adres<input id="bmg-from" class="bmi-in" value="${esc(m.from)}"><small>SMTP hesabınız bu adresle göndermeye izinli olmalı (aynı posta kutusu veya takma ad). İzin yoksa e-posta varsayılan gönderenle gider.${d.mail ? '' : ' <b>E-posta henüz yapılandırılmadı</b> — Genel Ayarlar → E-posta (SMTP).'}</small></label>
           <button class="btn primary small" id="bmg-save">${ic('check')} Kaydet</button></section>
         <section class="bmw-card"><h3>${ic('link')} Kullanım</h3><p class="bmw-hint">Müşteri ve danışman panellerinde “Görüşmeye katıl” bağlantısı vardır; yaklaşan bir ön görüşmesi olan müşteri doğrudan kendi odasına yönlenir. Planlı linklerde ilk giren odayı açar, diğeri otomatik katılır. En iyi sonuç için Chrome veya Edge önerilir.</p><a class="btn small" href="${esc(d.url)}" target="_blank" rel="noopener">${ic('arrow-up-right')} Görüşme sayfasını aç</a></section>
-        <section class="bmw-card" id="bmt-card"><h3>${ic('globe')} Çeviri servisi</h3><div class="loading">Yükleniyor…</div></section>
-        <section class="bmw-card" id="bmturn-card"><h3>${ic('wifi')} Bağlantı güçlendirme (TURN sunucusu)</h3><div class="loading">Yükleniyor…</div></section>
-        <section class="bmw-card" id="bmgl-card"><h3>${ic('book')} Hukuki terim sözlüğü</h3><div class="loading">Yükleniyor…</div></section>`;
+        <section class="bmw-card bmsv" id="bmsv-card"><div class="loading">Sunucu modülleri yükleniyor…</div></section>
+        <section class="bmw-card" id="bmgl-card"><h3>${ic('doc')} Hukuki terim sözlüğü</h3><div class="loading">Yükleniyor…</div></section>`;
       (async () => {
-        const card = $('#bmturn-card'); let g;
-        try { g = await A('settings/turn'); } catch (e) { card.insertAdjacentHTML('beforeend', `<div class="bmc-err">${esc(e.message)}</div>`); return; }
-        card.innerHTML = `<h3>${ic('wifi')} Bağlantı güçlendirme (TURN sunucusu) <small style="margin-left:auto;font-weight:500">${g.cf ? 'Cloudflare etkin' : /relay\.metered\.ca/.test(g.text || '') ? 'Metered etkin' : g.count ? g.count + ' sunucu etkin' : 'yalnız ücretsiz ortak sunucu'}</small></h3>
-          <div style="border:1px solid #d6e6d0;background:#f6faf4;border-radius:12px;padding:12px 14px;margin:6px 0 14px"><b>Cloudflare Realtime TURN</b> <span class="bmw-hint">— ayda 1.000 GB ücretsiz; giriş bilgileri sunucuda her gün otomatik yenilenir.</span>
-          <label class="bmi-f" style="margin-top:8px">Turn Token ID<input id="bmcf-id" class="bmi-in" autocomplete="off" value="${esc(g.cfKeyId)}" placeholder="ör. 3f8c…"></label>
-          <label class="bmi-f">API Token<input id="bmcf-tok" class="bmi-in" type="password" autocomplete="off" value="${esc(g.cfToken)}" placeholder="Cloudflare'in bir kez gösterdiği uzun anahtar"><small>Yalnız sunucuda saklanır; kaydederken Cloudflare'e bağlanılıp doğrulanır.</small></label>
-          <div style="display:flex;gap:8px"><button class="btn primary small" id="bmcf-save">${ic('check')} Cloudflare'i kaydet</button>${g.cf ? `<button class="btn small" id="bmcf-off">Cloudflare'i kaldır</button>` : ''}</div></div>
-          <div style="border:1px solid #ddd6fe;background:#faf7ff;border-radius:12px;padding:12px 14px;margin:0 0 14px"><b>Metered TURN</b> <span class="bmw-hint">— Metered panelindeki Credentials tablosundan yalnızca kullanıcı adı ve şifreyi girin; adresler otomatik eklenir.</span>
-          <label class="bmi-f" style="margin-top:8px">Kullanıcı adı (Username)<input id="bmm-u" class="bmi-in" autocomplete="off" value="${esc(((g.text || '').match(/relay\.metered\.ca[^|]*\|\s*([^|\n]+?)\s*\|/) || [])[1] || '')}"></label>
-          <label class="bmi-f">Şifre (Password)<input id="bmm-p" class="bmi-in" type="password" autocomplete="off" placeholder="${/relay\.metered\.ca/.test(g.text || '') ? 'Kayıtlı — değiştirmek için yeni şifreyi yazın' : ''}"></label>
-          <button class="btn primary small" id="bmm-save">${ic('check')} Metered'i kaydet</button></div>
-          <details><summary class="bmw-hint" style="cursor:pointer">Gelişmiş: başka bir TURN sunucusunu elle ekle</summary>
-          <p class="bmw-hint">Zayıf veya filtreli ağlardan (ör. İran, bazı mobil operatörler) gelen kullanıcılarda doğrudan bağlantı kurulamazsa görüntü ve ses bu sunucu üzerinden aktarılır. En iyi sonuç için 443 portunda TLS (turns:) adresi ekleyin; bu trafik sıradan HTTPS gibi görünür ve filtrelerden daha az etkilenir. Her satır: <code>adres | kullanıcı adı | şifre</code></p>
-          <textarea id="bmturn-t" class="bmi-in" rows="4" spellcheck="false" placeholder="turns:sunucu.ornek.com:443?transport=tcp | kullanici | sifre&#10;turn:sunucu.ornek.com:80 | kullanici | sifre" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px">${esc(g.text)}</textarea>
-          <button class="btn primary small" id="bmturn-save" style="margin-top:10px">${ic('check')} Kaydet</button></details>`;
-        $('#bmm-save').onclick = async () => {
-          const u = $('#bmm-u').value.trim(); let pw = $('#bmm-p').value.trim();
-          if (!pw) { const m = (g.text || '').match(/relay\.metered\.ca[^|]*\|[^|]*\|\s*([^\n]+)/); pw = m ? m[1].trim() : ''; }
-          if (!u || !pw) { say('Kullanıcı adı ve şifre gerekli.'); return; }
-          if (/[|\s]/.test(u + pw)) { say('Kullanıcı adı ve şifrede boşluk veya | olmamalı.'); return; }
-          const other = (g.text || '').split(/\r?\n/).filter(l => l.trim() && !/relay\.metered\.ca/.test(l));
-          const text = [`turns:global.relay.metered.ca:443?transport=tcp turn:global.relay.metered.ca:443 | ${u} | ${pw}`, `turn:global.relay.metered.ca:80?transport=tcp turn:global.relay.metered.ca:80 | ${u} | ${pw}`, ...other].join('\n');
-          try { await A('settings/turn', 'POST', {text}); say('Metered TURN etkin.'); meetingPage.reload(); } catch (e) { say(e.message); }
+        const root = $('#bmsv-card'); if (!root) return;
+        let SV, flt = {status: 'all', cat: ''};
+        const tile = m => `<span class="bmy-ico" style="--c:${m.color}">${ic(m.icon)}</span>`;
+        const pill = m => m.locked ? `<span class="bmy-pill on">${ic('check')} Her zaman açık</span>` : m.enabled ? `<span class="bmy-pill on">${ic('check')} Etkin</span>` : `<span class="bmy-pill">${ic('power')} Devre dışı</span>`;
+        const sw = m => m.locked ? '' : `<label class="bmy-sw" title="${m.enabled ? 'Devre dışı bırak' : 'Etkinleştir'}"><input type="checkbox" data-sv-tog="${m.id}" ${m.enabled ? 'checked' : ''}><span></span></label>`;
+        const draw = () => {
+          const cats = [...new Set(SV.modules.map(m => m.category))], on = SV.modules.filter(m => m.enabled), st = SV.stats || {}, by = st.by || {};
+          const list = SV.modules.filter(m => (flt.status === 'all' || (flt.status === 'on') === m.enabled) && (!flt.cat || m.category === flt.cat));
+          root.innerHTML = `<div class="bmy-all"><aside class="bmy-filters"><h3>Filtreler</h3>
+              <div class="bmy-radios">${[['all', 'Tümü'], ['on', 'Etkin'], ['off', 'Devre dışı']].map(([v, l]) => `<label><input type="radio" name="bmsv-st" value="${v}" ${flt.status === v ? 'checked' : ''}> ${l}</label>`).join('')}</div>
+              <select class="bmy-in" id="bmsv-cat"><option value="">Tüm kategoriler</option>${cats.map(c => `<option ${flt.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+              <button class="btn small" id="bmsv-clear">${ic('refresh')} Filtreleri temizle</button>
+              <div class="bmy-count"><div><b>${SV.modules.length}</b><small>Toplam</small></div><div class="ok"><b>${on.length}</b><small>Etkin</small></div></div>
+              <p class="bmw-hint" style="margin-top:12px">Çeviri: ${st.req || 0} istek · ${st.hit || 0} önbellekten${Object.keys(by).length ? ' · ' + Object.entries(by).map(([k, n]) => ({pro: 'resmî', gtx: 'Google', c5: 'Google yedek', mm: 'MyMemory'}[k] || k) + ' ' + n).join(' · ') : ''}${st.fail ? ' · ' + st.fail + ' başarısız' : ''}</p></aside>
+            <div><div class="bmy-head"><span class="bmy-hico">${ic('settings')}</span><div><b>Sunucu modülleri</b><small>Çeviri ve bağlantı sunucularını seçin, bilgilerini girin ve etkinleştirin. Aynı anda tek bir resmî çeviri servisi etkin olabilir; ücretsiz yedekler her zaman açıktır.</small></div></div>
+              <div class="bmy-grid">${list.map(m => `<article class="bmy-card ${m.enabled ? 'on' : ''}" ${m.locked ? '' : `data-sv-open="${m.id}" tabindex="0"`}>${tile(m)}<div class="bmy-top">${pill(m)}</div><b>${esc(m.name)}</b><small>${esc(m.category)} · ${esc(m.region)}</small><p>${esc(m.desc)}</p><div class="bmy-foot">${m.locked ? `<span class="bmy-cfg bmy-muted">${ic('info')} Ayar gerekmez</span>` : `<span class="bmy-cfg">${ic('settings')} ${m.ready ? 'Ayarları düzenle' : 'Bilgileri gir'}</span>`}${sw(m)}</div></article>`).join('') || '<div class="bmy-empty">Eşleşen modül yok.</div>'}</div></div></div>`;
+          root.querySelectorAll('[name=bmsv-st]').forEach(r => r.onchange = () => { flt.status = r.value; draw(); });
+          $('#bmsv-cat').onchange = e => { flt.cat = e.target.value; draw(); };
+          $('#bmsv-clear').onclick = () => { flt = {status: 'all', cat: ''}; draw(); };
         };
-        $('#bmcf-save').onclick = async () => { const bt = $('#bmcf-save'); bt.disabled = true; try { const r = await A('settings/turn', 'POST', {cfKeyId: $('#bmcf-id').value.trim(), cfToken: $('#bmcf-tok').value.trim()}); say('Cloudflare TURN etkin: ' + r.servers + ' bağlantı adresi alındı.'); meetingPage.reload(); } catch (e) { say(e.message); bt.disabled = false; } };
-        if ($('#bmcf-off')) $('#bmcf-off').onclick = async () => { try { await A('settings/turn', 'POST', {cfKeyId: '', cfToken: ''}); say('Cloudflare kaldırıldı.'); meetingPage.reload(); } catch (e) { say(e.message); } };
-        $('#bmturn-save').onclick = async () => { try { const r = await A('settings/turn', 'POST', {text: $('#bmturn-t').value}); say(r.count ? r.count + ' sunucu kaydedildi.' : 'Kaydedildi.'); meetingPage.reload(); } catch (e) { say(e.message); } };
+        const save = async (body, box) => { try { SV = await A('settings/servers', 'POST', body); say(body.enabled === false ? 'Modül devre dışı bırakıldı.' : 'Modül kaydedildi.'); if ($('#modal').open) $('#modal').close(); draw(); return true; } catch (e) { if (box) box.checked = !box.checked; say(e.message); return false; } };
+        const open = (id, warn) => {
+          const m = SV.modules.find(x => x.id === id); if (!m || m.locked) return;
+          const fields = m.fields.map(f => f.type === 'textarea' ? `<label class="bmy-f full"><span>${esc(f.label)}</span><textarea class="bmy-in mono" name="${f.k}" rows="4" placeholder="${esc(f.ph || '')}">${esc(m.values[f.k] || '')}</textarea></label>`
+            : `<label class="bmy-f"><span>${esc(f.label)}${f.req ? ' *' : ''}</span><input class="bmy-in mono" name="${f.k}" ${f.secret ? 'type="password" autocomplete="new-password"' : 'autocomplete="off"'} value="${f.secret ? '' : esc(m.values[f.k] || '')}" placeholder="${f.secret && m.values[f.k] ? 'Kayıtlı — değiştirmek için yazın' : esc(f.ph || '')}"></label>`).join('');
+          $('#modal-title').textContent = m.name + ' ayarları';
+          $('#modal-body').innerHTML = `<form class="bmy-form" id="bmsv-form">${warn ? `<div class="info warning">${esc(warn)}</div>` : ''}
+            <div class="bmy-mhead">${tile(m)}<div><b>${esc(m.name)}</b><small>${esc(m.desc)}</small></div><label class="bmy-sw big"><input type="checkbox" name="enabled" ${m.enabled || !m.ready ? 'checked' : ''}><span></span></label></div>
+            <div class="bmy-fields">${fields}</div><p class="bmy-help">${ic('info')} <span>${esc(m.help)} Anahtarlar yalnız sunucuda saklanır, tarayıcıya geri gönderilmez.</span></p>
+            <div class="form-actions"><button type="button" class="btn" data-action="close">Vazgeç</button><button class="btn primary" type="submit">${ic('check')} Kaydet</button></div></form>`;
+          if (!$('#modal').open) $('#modal').showModal();
+          $('#bmsv-form').onsubmit = async e => { e.preventDefault(); const fd = new FormData(e.target), values = {}; m.fields.forEach(f => values[f.k] = fd.get(f.k) ?? ''); const bt = e.target.querySelector('[type=submit]'); bt.disabled = true; if (!await save({id, enabled: !!fd.get('enabled'), values})) bt.disabled = false; };
+        };
+        root.addEventListener('click', e => { if (e.target.closest('.bmy-sw')) return; const c = e.target.closest('[data-sv-open]'); if (c) open(c.dataset.svOpen); });
+        root.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('[data-sv-open]')) open(e.target.dataset.svOpen); });
+        root.addEventListener('change', async e => { const t = e.target; if (!t.dataset?.svTog) return; const m = SV.modules.find(x => x.id === t.dataset.svTog); if (t.checked && !m.ready) { t.checked = false; open(m.id, 'Etkinleştirmek için önce bilgileri girin.'); return; } if (!await save({id: m.id, enabled: t.checked}, t) && t.checked === false) {} });
+        try { SV = await A('settings/servers'); draw(); } catch (e) { root.innerHTML = `<div class="bmc-err">${esc(e.message)}</div>`; }
       })();
       (async () => {
         const card = $('#bmgl-card'); let g;
         try { g = await A('settings/glossary'); } catch (e) { card.insertAdjacentHTML('beforeend', `<div class="bmc-err">${esc(e.message)}</div>`); return; }
-        card.innerHTML = `<h3>${ic('book')} Hukuki terim sözlüğü <small style="margin-left:auto;font-weight:500">${g.count} terim</small></h3>
+        card.innerHTML = `<h3>${ic('doc')} Hukuki terim sözlüğü <small style="margin-left:auto;font-weight:500">${g.count} terim</small></h3>
           <p class="bmw-hint">Görüşmelerde bu terimler her zaman burada yazdığınız karşılıkla çevrilir. Her satıra bir terim yazın: <code>Türkçe | Português | English | فارسی</code>. Bir dili boş bırakabilirsiniz. # ile başlayan satırlar not olarak sayılır.</p>
           <textarea id="bmgl-t" class="bmi-in" rows="12" spellcheck="false" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.6;resize:vertical;min-height:200px">${esc(g.text)}</textarea>
           <div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary small" id="bmgl-save">${ic('check')} Sözlüğü kaydet</button><button class="btn small" id="bmgl-reset">Varsayılan listeye dön</button></div>`;
         const go = async body => { try { const r = await A('settings/glossary', 'POST', body); say('Sözlük kaydedildi: ' + r.count + ' terim.'); meetingPage.reload(); } catch (e) { say(e.message); } };
         $('#bmgl-save').onclick = () => go({text: $('#bmgl-t').value});
         $('#bmgl-reset').onclick = () => { if (confirm('Sözlük varsayılan listeye dönsün mü? Eklediğiniz terimler silinir.')) go({reset: true}); };
-      })();
-      (async () => {
-        const card = $('#bmt-card'); let t;
-        try { t = await A('settings/translate'); } catch (e) { card.insertAdjacentHTML('beforeend', `<div class="bmc-err">${esc(e.message)}</div>`); return; }
-        const c = t.translate, st = t.stats || {}, by = st.by || {};
-        const NAMES = {'': 'Ücretsiz (otomatik, yedekli)', azure: 'Microsoft Azure Translator — ayda 2 milyon karakter ücretsiz', google: 'Google Cloud Translation — ayda 500 bin karakter ücretsiz', deepl: 'DeepL API Free — ayda 500 bin karakter (Farsça yok)'};
-        card.innerHTML = `<h3>${ic('globe')} Çeviri servisi</h3>
-          <p class="bmw-hint">Çeviri artık sitenizin sunucusu üzerinden yapılır: aynı cümle bir kez çevrilir ve önbellekten gelir; bir servis kotaya takılırsa otomatik olarak sıradakine geçilir. Kota uyarı yazıları hiçbir zaman ekrana çıkmaz. Yoğun kullanımda kesintisiz ve garantili çeviri için aşağıdan resmî bir servis anahtarı ekleyin; ücretsiz servisler yedek olarak kalır.</p>
-          <label class="bmi-f">Ana servis<select id="bmt-p">${Object.entries(NAMES).map(([k, v]) => `<option value="${k}" ${c.provider === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></label>
-          <label class="bmi-f" id="bmt-kw">API anahtarı<input id="bmt-k" class="bmi-in" type="password" autocomplete="off" value="${esc(c.key)}" placeholder="Anahtarı buraya yapıştırın"><small>Anahtar yalnız sunucuda saklanır, tarayıcıya gönderilmez. Kaydederken bir deneme çevirisiyle doğrulanır.</small></label>
-          <label class="bmi-f" id="bmt-rw">Bölge (yalnız Azure)<input id="bmt-r" class="bmi-in" value="${esc(c.region)}" placeholder="ör. westeurope"></label>
-          <button class="btn primary small" id="bmt-save">${ic('check')} Kaydet</button>
-          <p class="bmw-hint" style="margin-top:12px">Bu sunucu açıldığından beri: ${st.req || 0} çeviri isteği · ${st.hit || 0} önbellekten · ${Object.entries(by).map(([k, n]) => ({pro: 'resmî servis', gtx: 'Google', c5: 'Google (yedek)', mm: 'MyMemory'}[k] || k) + ' ' + n).join(' · ') || '—'}${st.fail ? ' · <b>' + st.fail + ' başarısız</b>' : ''}${(st.down || []).length ? ' · geçici olarak bekleyen: ' + st.down.join(', ') : ''}</p>`;
-        const vis = () => { const p = $('#bmt-p').value; $('#bmt-kw').hidden = !p; $('#bmt-rw').hidden = p !== 'azure'; };
-        $('#bmt-p').onchange = vis; vis();
-        $('#bmt-save').onclick = async () => { const b = $('#bmt-save'); b.disabled = true; try { await A('settings/translate', 'POST', {provider: $('#bmt-p').value, key: $('#bmt-k').value.trim(), region: $('#bmt-r').value.trim()}); say('Kaydedildi.'); meetingPage.reload(); } catch (e) { say(e.message); b.disabled = false; } };
       })();
       const save = async () => { try { await A('settings/meeting', 'POST', {enabled: $('#bmg-on').checked, inBooking: $('#bmg-book').checked, teamLang: $('#bmg-lang').value, from: $('#bmg-from').value.trim()}); say('Kaydedildi.'); meetingPage.reload(); } catch (e) { say(e.message); } };
       $('#bmg-on').onchange = save; $('#bmg-save').onclick = save;
