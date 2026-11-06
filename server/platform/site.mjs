@@ -484,6 +484,8 @@ function applyLangLinks(root, trPath, enPath, S, {draft = false} = {}) {
   const btn = `<a class="bm-langsw" href="${to.href}" hreflang="${to.code}" lang="${to.code}" translate="no"><img src="/bm/flags/${to.flag}.svg" alt="" width="18" height="13"><span>${to.label}</span></a>`;
   const tt = root.querySelector('header .theme-toggle'); if (tt) tt.insertAdjacentHTML('beforebegin', btn);
 }
+// önizlemedeki yöneticiye Türkçe sayfada gösterilen düğme
+export function langSwitchHTML(trPath) { const en = i18nDict('en').toEn.get(trPath); return en ? `<a class="bm-langsw" href="${en}" hreflang="en" lang="en" translate="no" title="English (taslak önizleme)"><img src="/bm/flags/gb.svg" alt="" width="18" height="13"><span>English</span></a>` : ''; }
 // /en/... sayfası: Türkçe sayfa render edilir, sonra çevrilir.
 const enCache = new Map();
 export async function renderEn(db, enPath, {draft = false, missing = null} = {}) {

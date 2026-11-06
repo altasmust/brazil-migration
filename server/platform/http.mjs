@@ -58,6 +58,7 @@ export function platform(kind, after) {
   };
 }
 export {isAdminRequest};
+const LANGSW_PREVIEW_CSS = '<style>.bm-langsw{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:7px 11px;border:1px dashed #8a6d1a;border-radius:6px;font-size:13px;font-weight:600;color:var(--ink,#183b2c);text-decoration:none}.bm-langsw img{border-radius:2px}@media(max-width:760px){.bm-langsw{min-height:36px;padding:6px 9px}.bm-langsw span{display:none}}</style>';
 const readCookieRaw = (req, name) => { const m = (req.headers.get('cookie') || '').match(new RegExp('(?:^|;\\s*)' + name + '=([^;]+)')); return m ? decodeURIComponent(m[1]) : ''; };
 
 // Public site pages (rewritten here by proxy.ts), uploaded site media, sitemap and robots.
@@ -82,6 +83,15 @@ export function site() {
           return new Response(req.method === 'HEAD' ? null : r.html, {status: 200, headers: prev ? {...htmlHeaders, 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex, nofollow'} : htmlHeaders});
         }
         const r = await renderPage(db, path);
+        // Taslak önizleme açık yönetici: Türkçe sayfada da "English" düğmesi (yalnız bu yanıtta, önbelleğe girmez)
+        if (r.status === 200 && (req.headers.get('cookie') || '').includes('bm_lang_prev=')) {
+          const {siteState, enPublished, langSwitchHTML} = await import('./site.mjs');
+          const st = await siteState(db), key = st.i18n?.previewKey;
+          if (!enPublished(st) && key && readCookieRaw(req, 'bm_lang_prev') === key) {
+            const sw = langSwitchHTML(path);
+            if (sw) return new Response(req.method === 'HEAD' ? null : r.html.replace('<button type="button" class="theme-toggle"', sw + '<button type="button" class="theme-toggle"').replace('</head>', LANGSW_PREVIEW_CSS + '</head>'), {status: 200, headers: {...htmlHeaders, 'Cache-Control': 'private, no-store'}});
+          }
+        }
         return new Response(req.method === 'HEAD' ? null : r.html, {status: r.status, headers: htmlHeaders});
       }
       if (route === 'i18n/en.js') {

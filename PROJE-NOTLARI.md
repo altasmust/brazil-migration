@@ -385,3 +385,4 @@
   - Admin görsel düzenleyiciyle değiştirilen Türkçe metnin çevirisi sözlükte yoksa EN'de Türkçe görünür → "Eksik çevirileri tara" gösterir; en.json'a eklenmeli.
   - Çeviri iş akışı (scratchpad/gm): ex.js/crawl.js eksikleri toplar → kNN.txt → tNN.txt (id\tçeviri, "=" aynı) → merge.py en.json'u yeniden üretir; verify.js tüm EN sayfaları tarar (Türkçe kalıntı, kırık link, JS hatası: hepsi 0).
   - live.js v=3: EN sayfada demo müşterisi İngilizce konuşur. grow.css v=2 (EN'de "Available as an add-on").
+- Dil düğmesi (2026-11-07): Taslakta, önizleme çerezi olan yöneticiye Türkçe sayfalarda da kesik çerçeveli "English" düğmesi gösterilir (http.mjs, yanıt private/no-store, önbelleğe girmez; diğer ziyaretçiler görmez). EN sayfalarda "Türkçe" düğmesi. runtime.js .bm-langsw bağlantısını çevirmez.
