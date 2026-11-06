@@ -471,21 +471,25 @@ export function arrowize(html) {
 
 // ---------- diller ----------
 export const enPublished = S => !!S?.i18n?.en?.published;
-const LANGSW_CSS = '<style>.bm-langsw{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:7px 11px;border:1px solid var(--line,#dfe5d8);border-radius:6px;font-size:13px;font-weight:600;color:var(--ink,#183b2c);text-decoration:none}.bm-langsw img{border-radius:2px}.bm-draft{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:9999;background:#8a6d1a;color:#fff;font:600 13px/1.3 Poppins,Arial,sans-serif;padding:9px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.25)}@media(max-width:760px){.bm-langsw{min-height:36px;padding:6px 9px}.bm-langsw span{display:none}}</style>';
-// hreflang + dil düğmesi. TR sayfada: yalnız İngilizce yayındaysa. EN sayfada (taslak önizleme dahil): her zaman.
+// Dil menüsü (müşteri panelindeki gibi açılır seçim). Herkese: yalnız İngilizce yayındaysa. Taslakta yalnız önizlemedeki yönetici görür.
+const LANGS = [['tr', 'TR', 'Türkçe'], ['en', 'EN', 'English']];
+export const LANG_CSS = '<style>.bm-lang{position:relative;display:inline-flex;align-items:center}.bm-lang select{appearance:none;-webkit-appearance:none;border:1px solid var(--line,#d6e2d3);background:var(--cream,#fff) url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\'%3E%3Cpath d=\'M1 1l4 4 4-4\' fill=\'none\' stroke=\'%231b5e20\' stroke-width=\'1.6\'/%3E%3C/svg%3E") no-repeat right 11px center;border-radius:999px;min-height:40px;padding:7px 30px 7px 13px;font:600 13px/1 inherit;font-family:inherit;color:var(--forest,#1b5e20);cursor:pointer}.bm-lang select:focus-visible{outline:2px solid #a5d6a7;outline-offset:1px}.bm-lang.is-preview select{border-style:dashed;border-color:#8a6d1a}.bm-lang .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}[data-theme=dark] .bm-lang select{background-color:#14241c;border-color:#2f4a3a;color:#cfe8cf}@media(max-width:760px){.bm-lang select{min-height:36px;padding:6px 26px 6px 10px;font-size:12px}}.bm-draft{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:9999;background:#8a6d1a;color:#fff;font:600 13px/1.3 Poppins,Arial,sans-serif;padding:9px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.25)}</style>';
+export function langMenuHTML(cur, trPath, S, {preview = false} = {}) {
+  const enPath = i18nDict('en').toEn.get(trPath); if (!enPath) return '';
+  const lab = S?.i18n?.menu?.labels || {}, fmt = S?.i18n?.menu?.format || 'code-label';
+  const href = {tr: trPath, en: enPath};
+  const text = ([k, code, name]) => { const n = lab[k] || name; return fmt === 'label' ? n : fmt === 'code' ? code : `${code} · ${n}`; };
+  return `<label class="bm-lang${preview ? ' is-preview' : ''}" translate="no"><span class="sr-only">Language / Dil</span><select aria-label="Language / Dil" onchange="location.href=this.value"${preview ? ' title="Taslak önizleme — ziyaretçiler görmez"' : ''}>${LANGS.map(l => `<option value="${href[l[0]]}" lang="${l[0]}"${l[0] === cur ? ' selected' : ''}>${text(l)}</option>`).join('')}</select></label>`;
+}
 function applyLangLinks(root, trPath, enPath, S, {draft = false} = {}) {
   const d = i18nDict('en'); enPath = enPath || d.toEn.get(trPath); if (!enPath) return;
   const onEn = root.querySelector('html')?.getAttribute('lang') === 'en';
   if (!onEn && !enPublished(S)) return;
   const head = root.querySelector('head'), base = siteUrl();
   if (head && enPublished(S) && !draft) head.insertAdjacentHTML('beforeend', `<link rel="alternate" hreflang="tr" href="${base}${trPath}"><link rel="alternate" hreflang="en" href="${base}${enPath}"><link rel="alternate" hreflang="x-default" href="${base}${trPath}">`);
-  if (head) head.insertAdjacentHTML('beforeend', LANGSW_CSS);
-  const to = onEn ? {href: trPath, code: 'tr', flag: 'tr', label: 'Türkçe'} : {href: enPath, code: 'en', flag: 'gb', label: 'English'};
-  const btn = `<a class="bm-langsw" href="${to.href}" hreflang="${to.code}" lang="${to.code}" translate="no"><img src="/bm/flags/${to.flag}.svg" alt="" width="18" height="13"><span>${to.label}</span></a>`;
-  const tt = root.querySelector('header .theme-toggle'); if (tt) tt.insertAdjacentHTML('beforebegin', btn);
+  if (head) head.insertAdjacentHTML('beforeend', LANG_CSS);
+  const tt = root.querySelector('header .theme-toggle'); if (tt) tt.insertAdjacentHTML('beforebegin', langMenuHTML(onEn ? 'en' : 'tr', trPath, S, {preview: draft}));
 }
-// önizlemedeki yöneticiye Türkçe sayfada gösterilen düğme
-export function langSwitchHTML(trPath) { const en = i18nDict('en').toEn.get(trPath); return en ? `<a class="bm-langsw" href="${en}" hreflang="en" lang="en" translate="no" title="English (taslak önizleme)"><img src="/bm/flags/gb.svg" alt="" width="18" height="13"><span>English</span></a>` : ''; }
 // /en/... sayfası: Türkçe sayfa render edilir, sonra çevrilir.
 const enCache = new Map();
 export async function renderEn(db, enPath, {draft = false, missing = null} = {}) {
@@ -497,7 +501,7 @@ export async function renderEn(db, enPath, {draft = false, missing = null} = {})
   const tr = await renderPage(db, trPath);
   if (tr.status !== 200) return null;
   const root = parseHTML(tr.html);
-  root.querySelectorAll('link[hreflang],a.bm-langsw').forEach(n => n.remove());
+  root.querySelectorAll('link[hreflang],a.bm-langsw,label.bm-lang').forEach(n => n.remove());
   // İngilizcesi olmayan (yalnız Türkçe) bölümler: blog vitrini ve menüdeki Türkçe-özel sayfa bağlantıları
   root.querySelectorAll('section.home-blog').forEach(n => n.remove());
   root.querySelectorAll('header a[href^="/blog"],footer a[href^="/blog"],header a[href^="/turkiye-brezilya/"],footer a[href^="/turkiye-brezilya/"],header a[href^="/portekizce/"],footer a[href^="/portekizce/"],.full-menu a[href^="/blog"],.full-menu a[href^="/turkiye-brezilya/"],.full-menu a[href^="/portekizce/"]').forEach(a => { const li = a.parentNode; (li && li.rawTagName?.toLowerCase() === 'li' ? li : a).remove(); });

@@ -16,7 +16,7 @@ export async function i18nAdmin(req, db, route) {
   const d = dict('en');
   if (route === 'i18n' && req.method === 'GET') {
     const has = (req.headers.get('cookie') || '').includes('bm_lang_prev=' + cfg.previewKey);
-    return json({en: {published: !!cfg.en?.published, publishedAt: cfg.en?.publishedAt || null, preview: !!(cfg.previewKey && has), pages: [...d.toEn].map(([tr, en]) => ({tr, en})), strings: d.t.size}});
+    return json({en: {published: !!cfg.en?.published, publishedAt: cfg.en?.publishedAt || null, preview: !!(cfg.previewKey && has), pages: [...d.toEn].map(([tr, en]) => ({tr, en})), strings: d.t.size, menu: cfg.menu || {}}});
   }
   if (route === 'i18n/missing') {
     reloadDict();
@@ -33,6 +33,11 @@ export async function i18nAdmin(req, db, route) {
   if (route === 'i18n/preview') {
     if (b.on) { if (!cfg.previewKey) { cfg.previewKey = randomBytes(24).toString('base64url'); await setCfg(db, cfg); } return json({ok: true}, 200, {'Set-Cookie': cookie(req, cfg.previewKey, 12 * 3600)}); }
     return json({ok: true}, 200, {'Set-Cookie': cookie(req, '', 0)});
+  }
+  if (route === 'i18n/menu') {
+    const clean = v => String(v || '').replace(/[<>"]/g, '').trim().slice(0, 30);
+    cfg.menu = {labels: {tr: clean(b.labels?.tr) || 'Türkçe', en: clean(b.labels?.en) || 'English'}, format: ['code-label', 'label', 'code'].includes(b.format) ? b.format : 'code-label'};
+    await setCfg(db, cfg); return json({ok: true, menu: cfg.menu});
   }
   if (route === 'i18n/publish') {
     cfg.en = {...cfg.en, published: !!b.published, publishedAt: b.published ? Date.now() : null};

@@ -106,8 +106,16 @@
         <button class="btn ${pub ? '' : 'primary'} small" data-lg="${pub ? 'unpub' : 'pub'}">${pub ? 'Taslağa al' : 'Yayınla'}</button></div>
       <p class="bmg-hint" style="margin-top:12px">Önerilen yayın zamanı: Search Console’da Türkçe sayfaların çoğu “Dizine eklendi” göründüğünde. Sözlükte ${d.strings} çeviri var; blog yazıları ve Türkiye–Brezilya karşılaştırması bilerek Türkçe bırakıldı.</p>
       <div id="bmg-scan"></div></section>
+    <section class="panel bmg-p"><header class="panel-head"><h2>Dil menüsü</h2><span class="bmc-login ${pub ? 'on' : 'off'}">${pub ? 'Sitede görünüyor' : 'Gizli — yayına kadar'}</span></header>
+      <p class="bmg-hint">Sitenin üst menüsünde, tema düğmesinin yanında açılır dil seçimi (müşteri panelindeki gibi). ${pub ? 'Şu an ziyaretçilere açık.' : '<b>Yayınlayana kadar ziyaretçilere ve Google’a görünmez.</b> Önizleme açıkken yalnız siz kesik çerçeveli halini görürsünüz.'}</p>
+      <form class="bmg-form" id="bmg-lm"><div class="bmg-row"><label>Türkçe etiketi<input name="tr" maxlength="30" value="${esc(d.menu.labels?.tr || 'Türkçe')}"></label><label>İngilizce etiketi<input name="en" maxlength="30" value="${esc(d.menu.labels?.en || 'English')}"></label><label>Görünüm<select name="format">${[['code-label', 'TR · Türkçe'], ['label', 'Türkçe'], ['code', 'TR']].map(([v, l]) => `<option value="${v}" ${(d.menu.format || 'code-label') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      <div class="bmg-lmprev"><small>Önizleme</small><span class="bmg-pill"><select id="bmg-lmsel" aria-label="Önizleme"></select></span></div>
+      <div class="form-actions"><button class="btn primary" type="submit">${ic('check')} Kaydet</button></div></form></section>
     <section class="panel bmg-p"><header class="panel-head"><h2>Sayfalar (${d.pages.length})</h2></header><ul class="bmg-ul">${d.pages.map(p => `<li><span><b>${esc(p.en)}</b><small>${esc(p.tr)}</small></span>${pub || d.preview ? `<a class="btn small" href="${esc(p.en)}" target="_blank" rel="noopener">${ic('eye')} Aç</a>` : ''}</li>`).join('')}</ul></section></div>`;
-  }); return wrap('Diller', 'Sitenin İngilizce sürümü: taslak önizleme ve yayın.'); };
+    const f = $('#bmg-lm'); const upd = () => { const fm = f.format.value, t = (c, n) => fm === 'label' ? n : fm === 'code' ? c : c + ' · ' + n; $('#bmg-lmsel').innerHTML = `<option>${esc(t('TR', f.tr.value || 'Türkçe'))}</option><option>${esc(t('EN', f.en.value || 'English'))}</option>`; };
+    f.addEventListener('input', upd); upd();
+    f.onsubmit = async e => { e.preventDefault(); try { await A('i18n/menu', 'POST', {labels: {tr: f.tr.value, en: f.en.value}, format: f.format.value}); say('Dil menüsü kaydedildi.'); } catch (err) { say(err.message); } };
+  }); return wrap('Diller', 'Sitenin İngilizce sürümü: taslak önizleme, dil menüsü ve yayın.'); };
   document.addEventListener('click', async e => {
     const b = e.target.closest('[data-lg]'); if (!b) return; const a = b.dataset.lg;
     try {
@@ -175,6 +183,7 @@
   .bmg-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.bmg-kpis div{background:#fff;border:1px solid #e3e8de;border-radius:14px;padding:14px 16px}.bmg-kpis small{display:block;color:#7b887e;font-size:12px}.bmg-kpis b{font-size:24px}
   .bmg-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}.bmg-p{padding:0 18px 18px}.bmg-p .panel-head{margin:0 -18px 14px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px}.bmg-hint{font-size:12.5px;color:#68776b;margin:0 0 12px;line-height:1.6}.bmg-h3{font-size:14px;margin:20px 0 8px}
   .bmg-ul{list-style:none;padding:0;margin:0;display:grid;gap:8px}.bmg-ul li{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #eef1eb;border-radius:10px;padding:9px 12px}.bmg-ul small{display:block;color:#7b887e;font-size:12px}.bmg-err b{font-family:ui-monospace,monospace;font-size:12.5px;font-weight:600;word-break:break-word}
+  .bmg-lmprev{display:flex;align-items:center;gap:12px;background:#f6f9f3;border:1px dashed #cfdcc8;border-radius:12px;padding:12px 14px}.bmg-lmprev small{color:#7b887e}.bmg-pill select{appearance:none;-webkit-appearance:none;border:1px solid #d6e2d3;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%231b5e20' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 11px center;border-radius:999px;padding:8px 30px 8px 13px;font:600 13px/1 inherit;color:#1b5e20}
   .bmg-prs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
   @media(max-width:900px){.bmg-2{grid-template-columns:1fr}.bmg-kpis{grid-template-columns:1fr 1fr}}`;
   document.head.appendChild(css);

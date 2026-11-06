@@ -85,11 +85,11 @@ export function site() {
         const r = await renderPage(db, path);
         // Taslak önizleme açık yönetici: Türkçe sayfada da "English" düğmesi (yalnız bu yanıtta, önbelleğe girmez)
         if (r.status === 200 && (req.headers.get('cookie') || '').includes('bm_lang_prev=')) {
-          const {siteState, enPublished, langSwitchHTML} = await import('./site.mjs');
+          const {siteState, enPublished, langMenuHTML, LANG_CSS} = await import('./site.mjs');
           const st = await siteState(db), key = st.i18n?.previewKey;
           if (!enPublished(st) && key && readCookieRaw(req, 'bm_lang_prev') === key) {
-            const sw = langSwitchHTML(path);
-            if (sw) return new Response(req.method === 'HEAD' ? null : r.html.replace('<button type="button" class="theme-toggle"', sw + '<button type="button" class="theme-toggle"').replace('</head>', LANGSW_PREVIEW_CSS + '</head>'), {status: 200, headers: {...htmlHeaders, 'Cache-Control': 'private, no-store'}});
+            const sw = langMenuHTML('tr', path, st, {preview: true});
+            if (sw) return new Response(req.method === 'HEAD' ? null : r.html.replace('<button type="button" class="theme-toggle"', sw + '<button type="button" class="theme-toggle"').replace('</head>', LANG_CSS + '</head>'), {status: 200, headers: {...htmlHeaders, 'Cache-Control': 'private, no-store'}});
           }
         }
         return new Response(req.method === 'HEAD' ? null : r.html, {status: r.status, headers: htmlHeaders});
