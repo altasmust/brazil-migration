@@ -3,6 +3,7 @@ import {kycShield, kvkkRosette} from './trust-badges.mjs';
 // (menu, texts/images/links, hidden elements, SEO, new pages) are stored in the items table and applied here
 // when a page is served. If anything fails, the untouched static file is served.
 import {readFile, readdir, stat} from 'node:fs/promises';
+import {readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {parse} from 'node-html-parser';
@@ -50,10 +51,14 @@ export async function staticPages() {
 // ---------- saved site state (short in-memory cache, shared by all requests) ----------
 let state = null, stateAt = 0;
 export function invalidateSite() { stateAt = 0; renderCache.clear(); }
+import {loadSplits} from './commission.mjs';
+import {publishedReviews, reviewsHTML, subscribeHTML, PRICE_KEYS} from './growth.mjs';
 export async function siteState(db) {
   if (state && Date.now() - stateAt < 15000) return state;
-  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post') OR id IN ('config-company','config-payments','config-didit','config-analytics','config-seo')").all()).results || [];
+  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post') OR id IN ('config-company','config-payments','config-didit','config-analytics','config-seo','config-prices')").all()).results || [];
   const s = {menu: null, pages: {}, custom: {}, blog: {}, company: null, stamp: ''};
+  try { s.reviews = await publishedReviews(db, 12); } catch { s.reviews = []; }
+  try { s.splits = await loadSplits(db); } catch { s.splits = null; }
   let stamp = rows.length;
   for (const r of rows) {
     const d = parseJSON(r.data); stamp += ':' + r.updated;
@@ -66,6 +71,7 @@ export async function siteState(db) {
     if (r.id === 'config-didit') s.didit = d;
     if (r.id === 'config-analytics') s.analytics = d;
     if (r.id === 'config-seo') s.seo = d;
+    if (r.id === 'config-prices') s.prices = d;
   }
   s.stamp = hash(stamp);
   if (state?.stamp !== s.stamp) renderCache.clear();
@@ -231,6 +237,13 @@ function applyCompany(root, co) {
 // ---------- footer güven şeridi (her sayfada, footer alt satırının üstünde) ----------
 const LAW = {firm: 'ACG Advogada', lawyer: 'Dra. Ana Carolina', oab: 'OAB/SP 386.588', verify: 'https://cna.oab.org.br/'};
 // Güvence rozetleri: orijinal logolar (public/bm/trust/*.webp) + KYC kalkanı ve KVKK rozeti (SVG, trust-badges.mjs).
+// CNPJ: 14 hane + kontrol basamakları doğruysa footer'da "Receita Federal'de doğrula" rozeti
+export function cnpjDigits(v) {
+  const d = String(v || '').replace(/\D/g, ''); if (d.length !== 14 || /^(\d)\1+$/.test(d)) return '';
+  const calc = n => { const w = n === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]; const s = w.reduce((a, x, i) => a + x * +d[i], 0) % 11; return s < 2 ? 0 : 11 - s; };
+  return calc(12) === +d[12] && calc(13) === +d[13] ? d : '';
+}
+export const cnpjFmt = d => d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
 function applyTrust(root, st) {
   const f = root.querySelector('footer.site-footer'), fb = f?.querySelector('.footer-bottom'); if (!f || !fb || f.querySelector('.footer-trust')) return;
   const ic = n => `<bm-i class="ic ic-${n}" aria-hidden="true"></bm-i>`;
@@ -242,6 +255,7 @@ function applyTrust(root, st) {
     `<a class="aw a-acg" href="${LAW.verify}" target="_blank" rel="noopener" title="OAB kaydını doğrula"><img src="/bm/trust/acg.webp${V}" alt="${LAW.firm} · Ana Carolina de Almeida Garcia · Advogada" width="150" height="70" loading="lazy"><small>${LAW.oab}</small></a>`,
     `<span class="aw a-ius" title="IusJud · Legal Intelligence"><img src="/bm/trust/iusjud.webp${V}" alt="IusJud Legal Intelligence" width="78" height="78" loading="lazy"></span>`,
     `<span class="aw a-kv" title="KVKK &amp; LGPD uyumlu">${kvkkRosette({year, p: 'twv'})}</span>`,
+    (() => { const d = cnpjDigits(st?.company?.taxId); return d ? `<a class="aw a-cnpj" href="https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp?cnpj=${d}" target="_blank" rel="noopener" title="CNPJ kaydını Receita Federal'de doğrula"><span class="cnpj-b"><b>CNPJ</b><span>${cnpjFmt(d)}</span><small>${ic('shield-check')} Receita Federal'de doğrula</small></span></a>` : ''; })(),
   ].filter(Boolean).join('');
   fb.insertAdjacentHTML('beforebegin', `<div class="footer-trust"><div class="ft-head"><span class="ft-line"></span><span class="kicker">Güvenceler &amp; Sertifikalar</span><span class="ft-line"></span></div><div class="ft-awards">${items}</div><p class="ft-legal">${ic('scale')}<span>Başvurularınız Polícia Federal ve Ministério da Justiça nezdinde, resmî kanallardan yürütülür. Hukuki işlemler <b>${LAW.firm} · ${LAW.lawyer} (${LAW.oab})</b> tarafından yürütülür. <a href="${LAW.verify}" target="_blank" rel="noopener">OAB kaydını doğrula</a></span></p></div>`);
 }
@@ -261,6 +275,49 @@ function applyLivePromo(root, path) {
     <div class="bmlp-art"><div class="bmv" data-bmv></div></div>
   </div></section>`);
   const head = root.querySelector('head'); if (head && !head.querySelector('link[href^="/bm/live.css"]')) head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/live.css?v=5"><script src="/bm/live.js?v=2" defer></script>');
+}
+
+// ---------- Yorumlar, bülten formu, paket fiyatları, PWA (büyüme) ----------
+const REVIEW_PAGES = new Set(['/', '/brezilya-oturum-izni/', '/brezilya-vatandasligi/', '/brezilyada-sirket-kurma/', '/fiyatlar/', '/canli-cevirili-gorusme/', '/hakkimizda/']);
+function applyGrowth(root, path, S) {
+  const head = root.querySelector('head'), f = root.querySelector('footer.site-footer');
+  if (head && !head.querySelector('link[rel="manifest"]')) head.insertAdjacentHTML('beforeend', '<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1b5e20"><link rel="apple-touch-icon" href="/bm/pwa/icon-192.png"><link rel="stylesheet" href="/bm/grow.css?v=1"><script src="/bm/grow.js?v=1" defer></script>');
+  if (!f) return;
+  // yorumlar: yalnız onaylı gerçek yorum varsa
+  if (REVIEW_PAGES.has(path) && S.reviews?.length && !root.querySelector('.rv-sec')) {
+    const after = path === '/' ? root.querySelector('section.bmlp') : null;
+    const html = reviewsHTML(S.reviews, {limit: path === '/' ? 6 : 3});
+    if (after) after.insertAdjacentHTML('afterend', html); else (root.querySelector('section.bmlp') || f).insertAdjacentHTML('beforebegin', html);
+  }
+  // ücretsiz rehber + bülten (footer'ın hemen üstü)
+  if (path !== '/rehber/' && path !== '/partner-ol/' && !/^\/(giris|kayit|sifre)/.test(path) && !root.querySelector('.nl-sec')) f.insertAdjacentHTML('beforebegin', subscribeHTML(path));
+  // paket fiyatları (/fiyatlar/ ve hizmet sayfalarındaki data-price)
+  const P = S.prices || {};
+  root.querySelectorAll('[data-price]').forEach(el => { const v = P[el.getAttribute('data-price')]; if (v) { el.set_content(esc(v)); el.setAttribute('class', (el.getAttribute('class') || '') + ' has-price'); } });
+  if (P.note) root.querySelectorAll('[data-price-note]').forEach(el => el.set_content(esc(P.note)));
+  // partner payları (yönetici oranları değiştirirse /partner-ol/ güncel kalır)
+  if (S.splits) {
+    root.querySelectorAll('[data-split]').forEach(el => { const v = S.splits[el.getAttribute('data-split')]?.advisor; if (v != null) el.set_content('%' + v); });
+    root.querySelectorAll('[data-split-ex]').forEach(el => { const v = S.splits[el.getAttribute('data-split-ex')]?.advisor; if (v != null) el.set_content(Math.round(2000 * v / 100).toLocaleString('tr-TR') + ' USD'); });
+  }
+}
+// Performans: WebP karşılığı varsa onu kullan, ilk iki görsel dışında tembel yükleme
+let webpSet = null;
+function webpExists(src) {
+  if (!webpSet) { webpSet = new Set(); try { const walk = (dir, rel) => { for (const n of readdirSync(dir, {withFileTypes: true})) { if (n.isDirectory()) { if (!/^(admin|panel|partner|avukat|kyc|gorusme|node_modules)$/.test(n.name)) walk(dir + '/' + n.name, rel + n.name + '/'); } else if (n.name.endsWith('.webp')) webpSet.add('/' + rel + n.name); } }; walk(PUBLIC(), ''); } catch {} }
+  return webpSet.has(src);
+}
+function applyPerf(root) {
+  let i = 0;
+  root.querySelectorAll('img').forEach(img => {
+    const src = img.getAttribute('src') || ''; i++;
+    const m = src.match(/^(\/[^?#]+)\.(png|jpe?g)(\?[^#]*)?$/i);
+    if (m && webpExists(m[1] + '.webp')) img.setAttribute('src', m[1] + '.webp' + (m[3] || ''));
+    if (i > 2 && !img.getAttribute('loading')) img.setAttribute('loading', 'lazy');
+    if (!img.getAttribute('decoding')) img.setAttribute('decoding', 'async');
+  });
+  // CSS arka plan görselleri: inline style içindeki png/jpg → webp
+  root.querySelectorAll('[style*="url("]').forEach(el => { const st = el.getAttribute('style'); const n = st.replace(/url\((['"]?)(\/[^)'"?]+)\.(png|jpe?g)(\?[^)'"]*)?\1\)/gi, (all, q, p, ext, qs) => webpExists(p + '.webp') ? `url(${q}${p}.webp${qs || ''}${q})` : all); if (n !== st) el.setAttribute('style', n); });
 }
 
 // ---------- Analiz ve doğrulama (Genel Ayarlar → Analiz & Doğrulama) ----------
@@ -428,7 +485,7 @@ export async function renderPage(db, path, {editor = false, preview = null} = {}
   else return {status: 404, html: await notFound(db)};
   if (!root) return {status: 404, html: await notFound(db)};
   if (st?.menu || preview) applyMenu(root, (st || await siteState(db)).menu);
-  try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); if (!editor) { applyGlobalSeo(root, path, S.seo || {}); applyAnalytics(root, S.analytics || {}, path); applyLivePromo(root, path); } } catch (e) { console.error('[site]', e.message); }
+  try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); if (!editor) { applyGlobalSeo(root, path, S.seo || {}); applyAnalytics(root, S.analytics || {}, path); applyLivePromo(root, path); applyGrowth(root, path, S); applyPerf(root); } } catch (e) { console.error('[site]', e.message); }
   if (path === '/' && !editor && st) { const why = root.querySelector('section.why'); const hb = homeBlogHTML(Object.values(st.blog || {}).filter(p => p.published)); const ft = root.querySelector('footer.site-footer'); if (ft && hb) { ft.insertAdjacentHTML('beforebegin', hb); root.querySelector('head')?.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/blog.css?v=1">'); } }
   let html = '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
   if (siteUrl()) html = html.replace(OLD_HOSTS, siteUrl());

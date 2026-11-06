@@ -136,3 +136,10 @@
 
 .bmv-main::after{content:"";position:absolute;left:0;right:0;bottom:0;height:46%;background:linear-gradient(0deg,rgba(6,20,12,.75),transparent);z-index:1}
 .bmv-cap,.bmv-ctl{z-index:4}
+/* CNPJ doğrulama rozeti (footer güvenceler) */
+.a-cnpj{width:auto;text-decoration:none}
+.cnpj-b{display:grid;gap:1px;padding:9px 13px;border-radius:12px;border:1.5px solid #c9a24a;background:linear-gradient(160deg,#fffdf5,#f6ecd2);color:#5a4413;text-align:left;min-width:150px}
+.cnpj-b b{font-size:10.5px;letter-spacing:.14em;color:#8a6a1e}
+.cnpj-b span{font:700 13px ui-monospace,Menlo,monospace;color:#3b2c0c}
+.cnpj-b small{display:flex;align-items:center;gap:4px;font-size:10.5px;color:#1b5e20;font-weight:700}
+[data-theme=dark] .cnpj-b{background:linear-gradient(160deg,#2a2412,#1d190d);color:#e8d9ac}[data-theme=dark] .cnpj-b span{color:#f3e7c4}

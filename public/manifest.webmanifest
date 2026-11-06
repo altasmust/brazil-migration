@@ -1,0 +1,21 @@
+{
+  "name": "Brazil Migration",
+  "short_name": "Brazil Migration",
+  "description": "Brezilya oturum izni, vatandaşlık ve şirket kuruluşu; müşteri paneli ve canlı çevirili görüşme.",
+  "lang": "tr",
+  "dir": "ltr",
+  "start_url": "/?kaynak=uygulama",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f8f3",
+  "theme_color": "#1b5e20",
+  "icons": [
+    {"src": "/bm/pwa/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/bm/pwa/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "/bm/pwa/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Müşteri paneli", "url": "/panel/", "icons": [{"src": "/bm/pwa/icon-192.png", "sizes": "192x192"}]},
+    {"name": "Görüşmeye katıl", "url": "/gorusme/", "icons": [{"src": "/bm/pwa/icon-192.png", "sizes": "192x192"}]}
+  ]
+}

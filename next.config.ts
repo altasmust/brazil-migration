@@ -18,6 +18,9 @@ const nextConfig: NextConfig = {
       {source: '/brezilya-evlilik-oturum-izni/:path*', destination: '/brezilya-oturum-izni/', permanent: true},
     ];
   },
+  async rewrites() {
+    return [{source: '/api/health', destination: '/api/auth/health'}];
+  },
   async headers() {
     return [{source: '/:path*', headers: [
       {key: 'X-Content-Type-Options', value: 'nosniff'},
@@ -33,6 +36,8 @@ const nextConfig: NextConfig = {
     // static assets: images/fonts cached for a week, scripts/styles for an hour (they are versioned with ?v=)
     {source: '/:all*(png|jpg|jpeg|webp|svg|ico|woff2)', headers: [{key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400'}]},
     {source: '/:all*(js|css)', headers: [{key: 'Cache-Control', value: 'public, max-age=3600, stale-while-revalidate=86400'}]},
+    {source: '/sw.js', headers: [{key: 'Cache-Control', value: 'no-cache'}, {key: 'Service-Worker-Allowed', value: '/'}]},
+    {source: '/manifest.webmanifest', headers: [{key: 'Cache-Control', value: 'public, max-age=86400'}, {key: 'Content-Type', value: 'application/manifest+json'}]},
     ];
   },
 };

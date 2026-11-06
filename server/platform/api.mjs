@@ -5,6 +5,8 @@ import {
   createImpersonationSession, isImpersonated, readCookie,
 } from './auth.mjs';
 import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
+import {growthPublic, growthAdmin} from './growth.mjs';
+import {ensureBackups, backupAdmin, health} from './backup.mjs';
 import {translateText, translateStats, parseGlossary, DEFAULT_GLOSSARY} from './translate.mjs';
 import {applyConfig} from './config.mjs';
 import {loadSplits, cleanSplits, splitFor, serviceKey, SPLIT_DEFAULTS} from './commission.mjs';
@@ -189,9 +191,11 @@ export function ensureReminders(env) {
 export {runReminders};
 
 export async function handleAuth(req, env, route) {
-  const db = env.DB; ensureReminders(env);
+  const db = env.DB; ensureReminders(env); ensureBackups(env);
   route = route.replace(/^admin\//, '');
+  if (route === 'health' && req.method === 'GET') return health(db);
   if (req.method !== 'GET') sameOrigin(req);
+  { const g = await growthPublic(req, db, route); if (g) return g; }
   if (route === 'payment-methods' && req.method === 'GET') return json({methods: enabledMethods(await loadPayments(db)).map(m => m.id === 'havale' ? m : {id: m.id, name: m.name})});
   if (route === 'cities' && req.method === 'GET') return json({countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES});
   if (route === 'config' && req.method === 'GET') return json({mail: mailConfigured(), verifier: verifierConfigured(), adminSeparate: adminHosts().length > 0, whatsapp: (process.env.WHATSAPP_NUMBER || '').replace(/\D/g, '') || null});
@@ -614,11 +618,13 @@ function validPerms(ps) {
   return out;
 }
 export async function handlePlatformAdmin(req, env, route, ctx = {}) {
-  const db = env.DB; ensureReminders(env);
+  const db = env.DB; ensureReminders(env); ensureBackups(env);
   if (req.method !== 'GET') sameOrigin(req);
   const u = await currentUser(db, req);
   if (!u || u.email !== OWNER_EMAIL()) fail(401, 'Yönetici girişi gerekli.');
   const actor = 'Yönetici';
+  { const g = await growthAdmin(req, db, route); if (g) return g; }
+  { const g = await backupAdmin(req, env, route); if (g) return g; }
 
   if (route === 'meta' && req.method === 'GET') return json({types: ACCOUNT_TYPES, perms: PERMS, permLabels: PERM_LABELS, defaults: DEFAULT_PERMS, panels: PANELS, countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES, mail: mailConfigured(), verifier: verifierConfigured()});
 
