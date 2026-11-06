@@ -27,6 +27,14 @@ const DEFAULT_PERMS = {
 // Çevirili görüşme modülü (/gorusme). Ayar: items 'config-meeting'.
 export const MEETING_DEFAULTS = {enabled: true, inBooking: true, teamLang: 'pt', from: 'Brazil Migration <bilgi@brazilmigration.com>'};
 export async function translateConfig(db) { const r = await db.prepare("SELECT data FROM items WHERE id='config-translate'").first(); let d = {}; try { d = JSON.parse(r?.data || '{}') || {}; } catch {} const gr = await db.prepare("SELECT data, updated FROM items WHERE id='config-glossary'").first(); let gt = null; try { gt = gr ? JSON.parse(gr.data).text : null; } catch {} return {provider: '', key: '', region: '', ...d, email: 'bilgi@brazilmigration.com', glossary: parseGlossary(gt ?? DEFAULT_GLOSSARY), gv: gr?.updated || 0}; }
+// Ek TURN/STUN sunucuları: satır başına "adres | kullanıcı | şifre" (turn:, turns:, stun:)
+export function parseIce(text) {
+  return String(text || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#')).slice(0, 12).map(l => {
+    const [u, username, credential] = l.split('|').map(x => x.trim());
+    const urls = (u || '').split(/[\s,]+/).filter(x => /^(turns?|stun):[^\s]{3,200}$/i.test(x)).slice(0, 4);
+    return urls.length ? {urls, ...(username ? {username: username.slice(0, 200)} : {}), ...(credential ? {credential: credential.slice(0, 300)} : {})} : null;
+  }).filter(Boolean);
+}
 export async function meetingConfig(db) { const r = await db.prepare("SELECT data FROM items WHERE id='config-meeting'").first(); let d = {}; try { d = JSON.parse(r?.data || '{}') || {}; } catch {} return {...MEETING_DEFAULTS, ...d}; }
 const roomCode = () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = crypto.getRandomValues(new Uint8Array(8)); return [...r].map(x => a[x % a.length]).join(''); };
 export const roomLink = (base, code, lang) => `${base}/gorusme/?oda=${encodeURIComponent(code)}&dil=${lang}&otomatik=1`;
@@ -219,7 +227,7 @@ export async function handleAuth(req, env, route) {
     return json({ok: true, verifyRequired: true, mailSent: mail.sent, devLink: mail.devLink});
   }
 
-  if (route === 'meeting' && req.method === 'GET') { const mc = await meetingConfig(db); return json({enabled: !!mc.enabled}); }
+  if (route === 'meeting' && req.method === 'GET') { const mc = await meetingConfig(db), tc = (await getItem(db, 'config-turn'))?.data; return json({enabled: !!mc.enabled, ice: parseIce(tc?.text)}); }
   if (route === 'translate' && req.method === 'POST') { // görüşme çevirisi (yalnız kendi sitemizden)
     const origin = req.headers.get('origin') || req.headers.get('referer') || '';
     let host = ''; try { host = new URL(origin).host; } catch {}
@@ -1145,6 +1153,13 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     return json({translate: {provider, region: data.region, key: data.key ? MASK : ''}, stats: translateStats()});
   }
   if (route === 'settings/meeting' && req.method === 'GET') return json({meeting: await meetingConfig(db), url: siteUrl(req) + '/gorusme/', mail: mailConfigured()});
+  if (route === 'settings/turn' && req.method === 'GET') { const tc = (await getItem(db, 'config-turn'))?.data; return json({text: tc?.text || '', count: parseIce(tc?.text).length}); }
+  if (route === 'settings/turn' && req.method === 'POST') {
+    const text = String(b.text || '').slice(0, 4000), n = parseIce(text).length;
+    if (text.trim() && !n) fail(400, 'Geçerli sunucu bulunamadı. Satır biçimi: turns:adres:443?transport=tcp | kullanıcı | şifre');
+    await db.batch([putItem(db, 'config-turn', 'config', 'owner', {text, updated: now()}), audit(db, actor, 'settings.turn', String(n))]);
+    return json({text, count: n});
+  }
   if (route === 'settings/meeting' && req.method === 'POST') {
     const from = clean(b.from, 160);
     if (from && !/^[^<>]*<[^@\s<>]+@[^@\s<>]+\.[a-z]{2,}>$|^[^@\s<>]+@[^@\s<>]+\.[a-z]{2,}$/i.test(from)) fail(400, 'Gönderen adresi “Ad <adres@alanadi.com>” biçiminde olmalı.');

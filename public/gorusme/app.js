@@ -545,6 +545,12 @@ async function onData(m){
     case 'net':
       if (window.bmNetPeer) window.bmNetPeer(m);
       break;
+    case 'lang':
+      if (LANGS[m.lang]){ S.peerLang = m.lang; $('pairText').textContent = LANGS[S.me].short + ' ⇄ ' + LANGS[m.lang].short; }
+      break;
+    case 'lowdata':
+      if (window.bmLowPeer) window.bmLowPeer(!!m.on);
+      break;
     case 'bye':
       onPeerLeft();
       break;
@@ -576,7 +582,7 @@ $('chatFoot').addEventListener('submit', async e => {
 function setConn(kind, text){ $('connDot').className = 'dot ' + (kind || ''); $('connText').textContent = text; }
 function inviteLink(){
   const u = new URL(location.href); u.search = ''; u.hash = '';
-  u.searchParams.set('oda', S.room); u.searchParams.set('dil', S.me === 'tr' ? 'pt' : 'tr');
+  u.searchParams.set('oda', S.room);
   return u.toString();
 }
 function wireConn(c){
@@ -584,32 +590,38 @@ function wireConn(c){
   if (oldC && oldC !== c){ try { oldC.close(); } catch(e){} }
   c.on('open', () => { c.send({ type:'hello', name:S.name || t('speakerDefault'), lang:S.me }); sendState(); });
   c.on('data', onData);
-  c.on('close', () => { if (S.conn === c) onPeerLeft(); });
+  c.on('close', () => { if (S.conn === c) graceLeft(); });
   c.on('error', () => {});
 }
 function wireCall(c){
   const oldCall = S.call; S.call = c;
   if (oldCall && oldCall !== c){ try { oldCall.close(); } catch(e){} }
   c.on('stream', rs => {
+    clearTimeout(S.leftT); S.leftT = 0; clearTimeout(S.retryT); S.retryN = 0;
     $('vRemote').srcObject = rs;
     $('waiting').hidden = true;
     setConn('ok', t('connected'));
     startTimer();
     $('vRemote').play().catch(() => {});
   });
-  c.on('close', () => { if (S.call === c) onPeerLeft(); });
+  c.on('close', () => { if (S.call === c) graceLeft(); });
   c.on('error', () => {});
   // watch ICE health
   const pcWatch = setInterval(() => {
     const pc = c.peerConnection; if (!pc){ return; }
     const st = pc.iceConnectionState;
-    if (st === 'disconnected') setConn('warn', t('reconnecting'));
+    if (st === 'disconnected'){
+      setConn('warn', t('reconnecting'));
+      c._discAt = c._discAt || Date.now();
+      // 7 sn içinde toparlanmazsa misafir aramayı yeniler (zayıf/değişen ağ)
+      if (S.role === 'guest' && Date.now() - c._discAt > 7000 && S.call === c && !c._renewed){ c._renewed = true; S.call = null; try { c.close(); } catch(e){} connectToHost(); }
+    }
     else if (st === 'failed'){
       setConn('bad', t('reconnecting')); clearInterval(pcWatch);
       // ağ değişti / koptu: misafir taraf aramayı otomatik yeniler
       if (S.role === 'guest' && S.call === c) setTimeout(() => { if (S.peer && !S.peer.destroyed && S.call === c){ S.call = null; connectToHost(); } }, 1000);
     }
-    else if (st === 'connected' || st === 'completed'){ if ($('connText').textContent !== t('connected')) setConn('ok', t('connected')); }
+    else if (st === 'connected' || st === 'completed'){ c._discAt = 0; if ($('connText').textContent !== t('connected')) setConn('ok', t('connected')); }
     if (S.call !== c) clearInterval(pcWatch);
   }, 1500);
 }
@@ -621,12 +633,38 @@ function onPeerLeft(){
   $('waitTitle').textContent = t('left');
   $('waiting').hidden = false;
   S.conn = null; S.call = null;
-  if (S.role === 'guest'){ setTimeout(() => S.peer && !S.peer.destroyed && connectToHost(), 3000); }
+  if (S.role === 'guest') retryHost();
+}
+function graceLeft(){
+  setConn('warn', t('reconnecting'));
+  if (S.role === 'guest' && !S.retryT) retryHost();
+  clearTimeout(S.leftT);
+  S.leftT = setTimeout(() => { S.leftT = 0; if (!S.call || !S.call.open) onPeerLeft(); }, 15000);
+}
+function retryHost(){
+  clearTimeout(S.retryT);
+  const n = S.retryN = (S.retryN || 0) + 1, wait = Math.min(15000, 1500 * Math.pow(1.6, n - 1));
+  S.retryT = setTimeout(() => {
+    S.retryT = 0;
+    if (!S.peer || S.peer.destroyed || $('call').hidden) return;
+    if (S.call && S.call.open) { S.retryN = 0; return; }
+    if (S.peer.disconnected){ try { S.peer.reconnect(); } catch(e){} }
+    connectToHost(); retryHost();
+  }, wait);
 }
 function connectToHost(){
   setConn('warn', t('connecting'));
   wireConn(S.peer.connect(CONFIG.peerPrefix + S.room, { reliable:true }));
-  wireCall(S.peer.call(CONFIG.peerPrefix + S.room, outgoingStream()));
+  wireCall(S.peer.call(CONFIG.peerPrefix + S.room, outgoingStream(), { sdpTransform:sdpOpus }));
+}
+function sdpOpus(sdp){
+  try {
+    const m = sdp.match(/a=rtpmap:(\d+) opus\/48000[^\r\n]*/i); if (!m) return sdp;
+    const pt = m[1], add = { useinbandfec:'1', usedtx:'1', maxaveragebitrate:'32000', stereo:'0' };
+    const re = new RegExp('a=fmtp:' + pt + ' ([^\\r\\n]*)');
+    if (re.test(sdp)) return sdp.replace(re, (all, p) => { const kv = {}; p.split(';').forEach(x => { const [k, v] = x.trim().split('='); if (k) kv[k] = v; }); Object.assign(kv, add); return 'a=fmtp:' + pt + ' ' + Object.entries(kv).map(([k, v]) => k + '=' + v).join(';'); });
+    return sdp.replace(m[0], m[0] + '\r\na=fmtp:' + pt + ' ' + Object.entries(add).map(([k, v]) => k + '=' + v).join(';'));
+  } catch(e){ return sdp; }
 }
 function outgoingStream(){
   if (!S.screenStream) return S.stream;
@@ -652,8 +690,9 @@ async function begin(role){
   if (!S.stream && !(await startPreview())) return;
   const btn = role === 'host' ? $('createBtn') : $('joinBtn'); btn.disabled = true;
 
-  const peer = role === 'host' ? new Peer(CONFIG.peerPrefix + code, { config:{ iceServers:CONFIG.iceServers } })
-                               : new Peer({ config:{ iceServers:CONFIG.iceServers } });
+  if (S.iceReady) await Promise.race([S.iceReady, new Promise(r => setTimeout(r, 2500))]);
+  const pcfg = { config:{ iceServers:CONFIG.iceServers, iceCandidatePoolSize:4 }, pingInterval:4000 };
+  const peer = role === 'host' ? new Peer(CONFIG.peerPrefix + code, pcfg) : new Peer(pcfg);
   S.peer = peer;
   peer.on('open', () => {
     btn.disabled = false;
@@ -661,7 +700,7 @@ async function begin(role){
     if (role === 'guest') connectToHost();
   });
   peer.on('connection', c => wireConn(c));
-  peer.on('call', c => { c.answer(outgoingStream()); wireCall(c); });
+  peer.on('call', c => { c.answer(outgoingStream(), { sdpTransform:sdpOpus }); wireCall(c); });
   peer.on('disconnected', () => { if (!peer.destroyed) setTimeout(() => { try { peer.reconnect(); } catch(e){} }, 1500); });
   peer.on('error', e => {
     btn.disabled = false;
@@ -842,6 +881,12 @@ window.addEventListener('beforeunload', () => send({ type:'bye' }));
 (function init(){
   const qs = new URLSearchParams(location.search);
   if (qs.get('otomatik') === '1') S.auto = true;
+  // dil: link > kayıtlı seçim > tarayıcı dili / saat dilimi (İran → Farsça)
+  const guess = (() => { const ls = (navigator.languages || [navigator.language || '']).map(x => String(x).slice(0, 2).toLowerCase());
+    for (const l of ls) if (LANGS[l]) return l;
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+    return tz === 'Asia/Tehran' ? 'fa' : /America\/(Sao_Paulo|Fortaleza|Recife|Bahia|Manaus|Belem)/.test(tz) ? 'pt' : tz === 'Europe/Istanbul' ? 'tr' : null; })();
+  if (guess) S.me = guess;
   const sl = store.get('lang'); if (sl && LANGS[sl]) S.me = sl;
   if (qs.get('dil') && LANGS[qs.get('dil')]) S.me = qs.get('dil');
   if (store.get('name')) $('name').value = store.get('name');
@@ -948,6 +993,16 @@ window.addEventListener('beforeunload', () => send({ type:'bye' }));
   }
   window.bmNetPeer = m => { peerQ = Math.max(0, Math.min(3, m.q | 0)); peerSeen = Date.now(); paint('netThem', peerQ, S.peerName || '—'); };
 
+  let lowN = 0, highN = 0;
+  window.bmSetLow = async (on, quiet) => {
+    if (!!S.lowData === !!on && !quiet) return;
+    S.lowData = !!on; applied = null;
+    const pc = S.call && S.call.peerConnection;
+    if (pc) for (const snd of pc.getSenders()){ if (!snd.track || snd.track.kind !== 'video') continue; try { const p = snd.getParameters(); if (!p.encodings || !p.encodings.length) p.encodings = [{}]; p.encodings[0].active = !S.lowData; await snd.setParameters(p); } catch(e){} }
+    send({ type:'lowdata', on:S.lowData });
+    $('lowBtn').setAttribute('aria-checked', S.lowData);
+    if (!quiet) toast(S.lowData ? LOWTX().on : LOWTX().off);
+  };
   async function tune(target){
     const pc = S.call && S.call.peerConnection; if (!pc || applied === target) return;
     const p = PROFILES[target];
@@ -962,6 +1017,7 @@ window.addEventListener('beforeunload', () => send({ type:'bye' }));
           prm.encodings[0].scaleResolutionDownBy = S.screenStream ? 1 : p.scale;
           prm.encodings[0].maxFramerate = S.screenStream ? 10 : p.fps;
           prm.encodings[0].priority = 'low';
+          prm.encodings[0].active = !S.lowData;
         }
         await snd.setParameters(prm);
       } catch(e){}
@@ -997,6 +1053,10 @@ window.addEventListener('beforeunload', () => send({ type:'bye' }));
     if (peerSeen && Date.now() - peerSeen > 8000){ peerQ = 0; paint('netThem', 0, S.peerName || '—'); }
     // Gönderdiğim görüntünün kalitesi: iki taraftan kötü olanına göre; düşüş hemen, yükseliş 3 ölçüm sonra
     const target = Math.min(myQ, peerQ == null ? 3 : peerQ);
+    // çok zayıf bağlantıda görüntüyü durdur, ses kesintisiz sürsün; düzelince görüntü geri gelir
+    lowN = target <= 1 ? lowN + 1 : 0; highN = target >= 2 ? highN + 1 : 0;
+    if (!S.lowData && (S.forceLow || lowN >= 3)) await window.bmSetLow(true);
+    else if (S.lowData && !S.forceLow && highN >= 5) await window.bmSetLow(false);
     if (applied == null || target < applied){ goodStreak = 0; await tune(target); }
     else if (target > applied){ if (++goodStreak >= 3){ goodStreak = 0; await tune(Math.min(3, applied + 1)); } }
     const worst = Math.min(myQ, peerQ == null ? 3 : peerQ);
@@ -1097,3 +1157,35 @@ function removeCap(slot){ const el = capEls[slot]; if (el){ el.remove(); delete 
     } catch(e){ toast(tx().err + ': ' + e.message, true); b.disabled = false; $('endSaveT').textContent = tx().save; }
   };
 })();
+
+
+/* ---------- Düşük veri modu arayüzü + görüşme içinde dil değiştirme ---------- */
+const LOWL = { tr:{ lbl:'Düşük veri modu (yalnız ses)', on:'Bağlantı çok zayıf: yalnız ses moduna geçildi, görüntü bağlantı düzelince geri gelir', off:'Görüntü yeniden açıldı', peer:'Bağlantı zayıf · yalnız ses', lang:'Konuştuğum dil' },
+  pt:{ lbl:'Modo de poucos dados (só áudio)', on:'Conexão muito fraca: modo só áudio; o vídeo volta quando melhorar', off:'Vídeo reativado', peer:'Conexão fraca · só áudio', lang:'Idioma em que falo' },
+  en:{ lbl:'Low-data mode (audio only)', on:'Very weak connection: switched to audio only; video returns when it improves', off:'Video resumed', peer:'Weak connection · audio only', lang:'Language I speak' },
+  fa:{ lbl:'حالت کم‌مصرف (فقط صدا)', on:'اتصال بسیار ضعیف: فقط صدا؛ با بهتر شدن اتصال تصویر برمی‌گردد', off:'تصویر دوباره فعال شد', peer:'اتصال ضعیف · فقط صدا', lang:'زبانی که صحبت می‌کنم' } };
+const LOWTX = () => LOWL[S.me] || LOWL.tr;
+(function bmLow(){
+  const tile = $('tileRemote'), ph = document.createElement('div');
+  ph.className = 'lowdata-ph'; ph.hidden = true; ph.innerHTML = '<svg class="i"><use href="#i-mic"/></svg><span></span>';
+  tile.appendChild(ph);
+  window.bmLowPeer = on => { ph.hidden = !on; ph.querySelector('span').textContent = LOWTX().peer; };
+  $('lowBtn').onclick = () => { S.forceLow = !S.forceLow; window.bmSetLow(S.forceLow); };
+  const paint = () => {
+    $('lowLbl').textContent = LOWTX().lbl; $('myLangLbl').textContent = LOWTX().lang;
+    document.querySelectorAll('#langSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.l === S.me));
+  };
+  document.querySelectorAll('#langSeg button').forEach(b => b.onclick = () => {
+    if (S.me === b.dataset.l) return;
+    S.me = b.dataset.l; store.set('lang', S.me); applyLang(); paint();
+    send({ type:'lang', lang:S.me });
+    // konuşma tanıma yeni dilde yeniden başlasın
+    if (S.rec){ try { S.rec.onend = null; S.rec.abort(); } catch(e){} S.rec = null; if (typeof startRecognition === 'function') startRecognition(); }
+  });
+  paint(); new MutationObserver(paint).observe($('menu'), { attributes:true, attributeFilter:['hidden'] });
+})();
+
+/* Yöneticinin eklediği TURN sunucuları (zayıf/filtreli ağlar için) — önce bunlar denenir */
+S.iceReady = fetch('/api/auth/meeting', { cache:'no-store' }).then(r => r.ok ? r.json() : null).then(d => {
+  if (d && Array.isArray(d.ice) && d.ice.length) CONFIG.iceServers.unshift(...d.ice);
+}).catch(() => {});

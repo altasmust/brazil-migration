@@ -48,7 +48,17 @@
           <button class="btn primary small" id="bmg-save">${ic('check')} Kaydet</button></section>
         <section class="bmw-card"><h3>${ic('link')} Kullanım</h3><p class="bmw-hint">Müşteri ve danışman panellerinde “Görüşmeye katıl” bağlantısı vardır; yaklaşan bir ön görüşmesi olan müşteri doğrudan kendi odasına yönlenir. Planlı linklerde ilk giren odayı açar, diğeri otomatik katılır. En iyi sonuç için Chrome veya Edge önerilir.</p><a class="btn small" href="${esc(d.url)}" target="_blank" rel="noopener">${ic('arrow-up-right')} Görüşme sayfasını aç</a></section>
         <section class="bmw-card" id="bmt-card"><h3>${ic('globe')} Çeviri servisi</h3><div class="loading">Yükleniyor…</div></section>
+        <section class="bmw-card" id="bmturn-card"><h3>${ic('wifi')} Bağlantı güçlendirme (TURN sunucusu)</h3><div class="loading">Yükleniyor…</div></section>
         <section class="bmw-card" id="bmgl-card"><h3>${ic('book')} Hukuki terim sözlüğü</h3><div class="loading">Yükleniyor…</div></section>`;
+      (async () => {
+        const card = $('#bmturn-card'); let g;
+        try { g = await A('settings/turn'); } catch (e) { card.insertAdjacentHTML('beforeend', `<div class="bmc-err">${esc(e.message)}</div>`); return; }
+        card.innerHTML = `<h3>${ic('wifi')} Bağlantı güçlendirme (TURN sunucusu) <small style="margin-left:auto;font-weight:500">${g.count ? g.count + ' sunucu etkin' : 'yalnız ücretsiz ortak sunucu'}</small></h3>
+          <p class="bmw-hint">Zayıf veya filtreli ağlardan (ör. İran, bazı mobil operatörler) gelen kullanıcılarda doğrudan bağlantı kurulamazsa görüntü ve ses bu sunucu üzerinden aktarılır. En iyi sonuç için 443 portunda TLS (turns:) adresi ekleyin; bu trafik sıradan HTTPS gibi görünür ve filtrelerden daha az etkilenir. Her satır: <code>adres | kullanıcı adı | şifre</code></p>
+          <textarea id="bmturn-t" class="bmi-in" rows="4" spellcheck="false" placeholder="turns:sunucu.ornek.com:443?transport=tcp | kullanici | sifre&#10;turn:sunucu.ornek.com:80 | kullanici | sifre" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px">${esc(g.text)}</textarea>
+          <button class="btn primary small" id="bmturn-save" style="margin-top:10px">${ic('check')} Kaydet</button>`;
+        $('#bmturn-save').onclick = async () => { try { const r = await A('settings/turn', 'POST', {text: $('#bmturn-t').value}); say(r.count ? r.count + ' sunucu kaydedildi.' : 'Kaydedildi.'); meetingPage.reload(); } catch (e) { say(e.message); } };
+      })();
       (async () => {
         const card = $('#bmgl-card'); let g;
         try { g = await A('settings/glossary'); } catch (e) { card.insertAdjacentHTML('beforeend', `<div class="bmc-err">${esc(e.message)}</div>`); return; }

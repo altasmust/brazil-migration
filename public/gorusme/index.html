@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="/gorusme/app.css?v=6">
+<link rel="stylesheet" href="/gorusme/app.css?v=7">
 </head>
 <body>
 <div id="bm-intro" aria-live="polite"><div class="in-wrap"><img class="in-logo" src="/brazil-migration-logo.png" alt="Brazil Migration"><div class="in-line"></div><div class="in-tag">Tercümanlı görüntülü görüşme</div><div class="in-load"><div class="in-ring"></div><div class="in-bar"><i></i></div><div class="in-txt">Görüşme hazırlanıyor… <b id="bm-pct">0%</b></div></div></div></div>
@@ -174,6 +174,8 @@
           <div class="mi"><span data-i="capSize">Altyazı boyutu</span><span class="seg" id="capSeg"><button type="button" data-s="18">A</button><button type="button" data-s="22">A</button><button type="button" data-s="28">A</button></span></div>
           <button class="mi" id="ownCapsBtn" role="switch" aria-checked="true"><span data-i="ownCaps">Kendi altyazımı göster</span><span class="switch"></span></button>
           <button class="mi" id="origBtn" role="switch" aria-checked="true"><span data-i="showOrig">Orijinal metni göster</span><span class="switch"></span></button>
+          <div class="mi"><span id="myLangLbl">Konuştuğum dil</span><span class="seg flags" id="langSeg"><button type="button" data-l="tr" title="Türkçe"><span class="swatch sw-tr"></span></button><button type="button" data-l="pt" title="Português"><span class="swatch sw-pt"></span></button><button type="button" data-l="en" title="English"><span class="swatch sw-en"></span></button><button type="button" data-l="fa" title="فارسی"><span class="swatch sw-fa"></span></button></span></div>
+          <button class="mi" id="lowBtn" role="switch" aria-checked="false"><span id="lowLbl">Düşük veri modu (yalnız ses)</span><span class="switch"></span></button>
           <hr>
           <button class="mi" id="copyLinkBtn"><span data-i="copyLink">Davet linkini kopyala</span><svg class="i" style="width:17px;height:17px"><use href="#i-link"/></svg></button>
           <button class="mi" id="fullBtn"><span data-i="fullscreen">Tam ekran</span><svg class="i" style="width:17px;height:17px"><use href="#i-full"/></svg></button>
@@ -209,6 +211,6 @@
 <div class="toasts" id="toasts" aria-live="assertive"></div>
 
 <script src="/gorusme/peerjs.min.js?v=1.5.4"></script>
-<script src="/gorusme/app.js?v=6"></script>
+<script src="/gorusme/app.js?v=7"></script>
 </body>
 </html>
