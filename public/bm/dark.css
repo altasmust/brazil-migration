@@ -28,3 +28,8 @@
 :root[data-theme=dark] .skip{background:var(--d-card);color:var(--ink)}
 /* stack etiketi */
 :root[data-theme=dark] .stack-label:before{background:#3f6b4a99}:root[data-theme=dark] .stack-label:after{background:#2c4a3466}
+/* hizmet kartları (son kart açık zeminliydi) ve açık yeşil butonlar koyu temada */
+[data-theme=dark] .service-card,[data-theme=dark] .service-card:last-child,[data-theme=dark] .service-card.bm-live{background:#14241c;border-color:#2a3e33}
+[data-theme=dark] .service-card:hover,[data-theme=dark] .service-card.bm-live:hover{background:#1a2e22;border-color:#3f6150}
+[data-theme=dark] .service-card h3{color:#eaf3ec}[data-theme=dark] .service-card p{color:#b9cbbf}
+[data-theme=dark] .btn.lime,[data-theme=dark] .bmlp .btn,[data-theme=dark] .bmlp .btn:hover{color:#183b2c}

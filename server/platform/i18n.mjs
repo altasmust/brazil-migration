@@ -105,7 +105,7 @@ export function translateRoot(root, {lang = 'en', path = '/', trPath = '/', miss
         const {key, parts} = unitKey(c);
         const v = lookup(key, d);
         if (v != null) c.set_content(rebuild(v, parts));
-        else miss(key);
+        else { miss(key); if (parts.length) visit(c); } // bütün yoksa parçaları tek tek dene (dinamik içerik: fiyat vb.)
         continue;
       }
       visit(c);
@@ -123,6 +123,8 @@ export function translateRoot(root, {lang = 'en', path = '/', trPath = '/', miss
     });
   }
   if (body) visit(body);
+  // açılır liste seçenekleri (select boşluk/void kabul edildiği için birimlerin içinde kalır): metni çevir, value aynı kalır
+  root.querySelectorAll('option').forEach(o => { const k = norm(decode(o.innerHTML)); if (!k || !hasWord(k)) return; const v = lookup(k, d); if (v != null) o.set_content(esc(v)); else miss(k, 'option'); });
   // bağlantılar ve dil meta verisi
   root.querySelectorAll('a[href]').forEach(a => a.setAttribute('href', mapHref(a.getAttribute('href'), d)));
   const html = root.querySelector('html'); if (html) html.setAttribute('lang', lang);

@@ -276,7 +276,7 @@ function applyLivePromo(root, path) {
     <div class="bmlp-cta"><button class="btn" type="button" onclick="book()">Ücretsiz ön görüşme planla <span>↗</span></button><a class="bmlp-more" href="${LIVE.path}">Nasıl çalışır?</a></div></div>
     <div class="bmlp-art"><div class="bmv" data-bmv></div></div>
   </div></section>`);
-  const head = root.querySelector('head'); if (head && !head.querySelector('link[href^="/bm/live.css"]')) head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/live.css?v=5"><script src="/bm/live.js?v=3" defer></script>');
+  const head = root.querySelector('head'); if (head && !head.querySelector('link[href^="/bm/live.css"]')) head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/live.css?v=6"><script src="/bm/live.js?v=3" defer></script>');
 }
 
 // ---------- Yorumlar, bülten formu, paket fiyatları, PWA (büyüme) ----------

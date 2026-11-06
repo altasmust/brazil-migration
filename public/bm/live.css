@@ -11,7 +11,7 @@
 .bmlp-tag i{width:8px;height:8px;border-radius:50%;background:#7ee37a;box-shadow:0 0 0 0 rgba(126,227,122,.7);animation:blPulse 1.8s infinite}
 @keyframes blPulse{70%{box-shadow:0 0 0 9px rgba(126,227,122,0)}100%{box-shadow:0 0 0 0 rgba(126,227,122,0)}}
 .bmlp-cta{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px}
-.bmlp .btn{background:var(--lime,#d7eca4);color:var(--ink,#183b2c)}
+.bmlp .btn{background:var(--lime,#d7eca4);color:#183b2c}
 .bmlp .btn:hover{background:#e6f4c2}
 .bmlp-more{color:#fff;font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:4px}
 /* çizim: video penceresi + altyazı */

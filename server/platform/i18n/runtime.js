@@ -20,6 +20,8 @@
     if (el.nodeType === 3) { const k = norm(el.nodeValue); if (k && hasWord(k)) { const t = look(k); if (t != null && t !== k) el.nodeValue = el.nodeValue.replace(/\S[\s\S]*\S|\S/, t); else if (t == null) miss(k, 'text'); } return; }
     if (el.nodeType !== 1 || SKIP.has(el.tagName) || el.getAttribute('translate') === 'no' && el.tagName !== 'HTML' || el.classList.contains('notranslate')) return;
     attrs(el); el.querySelectorAll && el.querySelectorAll('a[href]').forEach(attrs);
+    const opt = o => { const k = norm(o.textContent); if (!k || !hasWord(k) || done.get(o) === o.textContent) return; const t = look(k); if (t != null) o.textContent = t; else miss(k, 'option'); done.set(o, o.textContent); };
+    if (el.tagName === 'OPTION') { opt(el); return; } el.querySelectorAll && el.querySelectorAll('option').forEach(opt);
     if (VOID.has(el.tagName)) return;
     if (el !== document.body && el.tagName !== 'HTML' && inlineOnly(el) && hasWord(el.textContent)) {
       if (done.get(el) === el.innerHTML) return;

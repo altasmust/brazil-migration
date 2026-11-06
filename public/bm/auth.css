@@ -13,7 +13,7 @@
 .bm-form label{display:grid;gap:7px;font-size:12.5px;font-weight:600;color:var(--ink)}
 .bm-form input,.bm-form select,.bm-form textarea{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:14px;font-weight:400}
 .bm-form input:focus,.bm-form select:focus,.bm-form textarea:focus{outline:2px solid color-mix(in srgb,var(--forest) 35%,transparent);border-color:var(--forest)}
-.bm-form .check{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:12.5px;line-height:1.55;color:var(--muted)}
+.bm-form .check{display:block;position:relative;padding-left:26px;font-weight:400;font-size:12.5px;line-height:1.55;color:var(--muted)}
 .bm-form .check input{width:auto;margin-top:3px}
 .bm-chips{display:flex;flex-wrap:wrap;gap:8px}
 .bm-chips label{display:inline-flex;gap:7px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:8px 13px;font-weight:500;cursor:pointer}
@@ -43,3 +43,4 @@
 @media (max-width:880px){.bm-auth{grid-template-columns:1fr;gap:30px;padding:28px 16px 60px}.bm-card{padding:24px}.bm-form .row{grid-template-columns:1fr}}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .bm-card,:root:not([data-theme=light]) .bm-steps li,:root:not([data-theme=light]) .bm-form input,:root:not([data-theme=light]) .bm-form select,:root:not([data-theme=light]) .bm-form textarea,:root:not([data-theme=light]) .bm-tabs button[aria-selected=true]{background:#13201b}}
 :root[data-theme=dark] .bm-card,:root[data-theme=dark] .bm-steps li,:root[data-theme=dark] .bm-form input,:root[data-theme=dark] .bm-form select,:root[data-theme=dark] .bm-form textarea,:root[data-theme=dark] .bm-tabs button[aria-selected=true]{background:#13201b}
+.bm-form .check input{position:absolute;left:0;top:2px;margin:0}
