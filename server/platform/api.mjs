@@ -35,6 +35,19 @@ export function parseIce(text) {
     return urls.length ? {urls, ...(username ? {username: username.slice(0, 200)} : {}), ...(credential ? {credential: credential.slice(0, 300)} : {})} : null;
   }).filter(Boolean);
 }
+// Cloudflare Realtime TURN: anahtar sunucuda kalır, tarayıcıya 24 saatlik geçici giriş bilgisi verilir (12 saat önbellek)
+async function cloudflareIce(cfg, force) {
+  if (!cfg?.cfKeyId || !cfg?.cfToken) return [];
+  const c = globalThis.__bmCfIce;
+  if (!force && c && c.k === cfg.cfKeyId && c.exp > Date.now()) return c.ice;
+  const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(cfg.cfKeyId)}/credentials/generate-ice-servers`, {method: 'POST', signal: AbortSignal.timeout(8000), headers: {Authorization: 'Bearer ' + cfg.cfToken, 'Content-Type': 'application/json'}, body: JSON.stringify({ttl: 86400})});
+  if (!r.ok) throw new Error('Cloudflare yanıtı: ' + r.status);
+  const j = await r.json();
+  // tarayıcılar 53 numaralı portu engeller → zaman kaybı olmasın diye çıkar
+  const ice = (j.iceServers || []).map(x => ({...x, urls: [].concat(x.urls || []).filter(u => !/:53(\?|$)/.test(u))})).filter(x => x.urls.length);
+  globalThis.__bmCfIce = {k: cfg.cfKeyId, ice, exp: Date.now() + 12 * 3600e3};
+  return ice;
+}
 export async function meetingConfig(db) { const r = await db.prepare("SELECT data FROM items WHERE id='config-meeting'").first(); let d = {}; try { d = JSON.parse(r?.data || '{}') || {}; } catch {} return {...MEETING_DEFAULTS, ...d}; }
 const roomCode = () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = crypto.getRandomValues(new Uint8Array(8)); return [...r].map(x => a[x % a.length]).join(''); };
 export const roomLink = (base, code, lang) => `${base}/gorusme/?oda=${encodeURIComponent(code)}&dil=${lang}&otomatik=1`;
@@ -227,7 +240,7 @@ export async function handleAuth(req, env, route) {
     return json({ok: true, verifyRequired: true, mailSent: mail.sent, devLink: mail.devLink});
   }
 
-  if (route === 'meeting' && req.method === 'GET') { const mc = await meetingConfig(db), tc = (await getItem(db, 'config-turn'))?.data; return json({enabled: !!mc.enabled, ice: parseIce(tc?.text)}); }
+  if (route === 'meeting' && req.method === 'GET') { const mc = await meetingConfig(db), tc = (await getItem(db, 'config-turn'))?.data; let cf = []; try { cf = await cloudflareIce(tc); } catch (e) { console.error('[turn]', e.message); } return json({enabled: !!mc.enabled, ice: [...cf, ...parseIce(tc?.text)]}); }
   if (route === 'translate' && req.method === 'POST') { // görüşme çevirisi (yalnız kendi sitemizden)
     const origin = req.headers.get('origin') || req.headers.get('referer') || '';
     let host = ''; try { host = new URL(origin).host; } catch {}
@@ -1153,12 +1166,19 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     return json({translate: {provider, region: data.region, key: data.key ? MASK : ''}, stats: translateStats()});
   }
   if (route === 'settings/meeting' && req.method === 'GET') return json({meeting: await meetingConfig(db), url: siteUrl(req) + '/gorusme/', mail: mailConfigured()});
-  if (route === 'settings/turn' && req.method === 'GET') { const tc = (await getItem(db, 'config-turn'))?.data; return json({text: tc?.text || '', count: parseIce(tc?.text).length}); }
+  if (route === 'settings/turn' && req.method === 'GET') { const tc = (await getItem(db, 'config-turn'))?.data || {}; return json({text: tc.text || '', count: parseIce(tc.text).length, cfKeyId: tc.cfKeyId || '', cfToken: tc.cfToken ? MASK : '', cf: !!(tc.cfKeyId && tc.cfToken)}); }
   if (route === 'settings/turn' && req.method === 'POST') {
-    const text = String(b.text || '').slice(0, 4000), n = parseIce(text).length;
+    const old = (await getItem(db, 'config-turn'))?.data || {};
+    const text = String(b.text ?? old.text ?? '').slice(0, 4000), n = parseIce(text).length;
     if (text.trim() && !n) fail(400, 'Geçerli sunucu bulunamadı. Satır biçimi: turns:adres:443?transport=tcp | kullanıcı | şifre');
-    await db.batch([putItem(db, 'config-turn', 'config', 'owner', {text, updated: now()}), audit(db, actor, 'settings.turn', String(n))]);
-    return json({text, count: n});
+    const cfKeyId = b.cfKeyId === undefined ? old.cfKeyId || '' : clean(b.cfKeyId, 80).replace(/[^a-zA-Z0-9_-]/g, '');
+    const cfToken = b.cfToken === undefined || b.cfToken === MASK ? (cfKeyId ? old.cfToken || '' : '') : clean(b.cfToken, 300);
+    if (!!cfKeyId !== !!cfToken) fail(400, 'Cloudflare için hem Token ID hem API Token gerekli.');
+    const data = {text, cfKeyId, cfToken, updated: now()};
+    let servers = 0;
+    if (cfKeyId) { try { servers = (await cloudflareIce(data, true)).reduce((a, x) => a + x.urls.length, 0); } catch (e) { fail(400, 'Cloudflare bilgileri doğrulanamadı (' + e.message + '). Token ID ve API Token değerlerini kontrol edin.'); } }
+    await db.batch([putItem(db, 'config-turn', 'config', 'owner', data), audit(db, actor, 'settings.turn', (cfKeyId ? 'cloudflare+' : '') + n)]);
+    return json({text, count: n, cf: !!cfKeyId, cfKeyId, cfToken: cfToken ? MASK : '', servers});
   }
   if (route === 'settings/meeting' && req.method === 'POST') {
     const from = clean(b.from, 160);

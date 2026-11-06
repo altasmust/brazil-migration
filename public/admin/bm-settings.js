@@ -53,10 +53,16 @@
       (async () => {
         const card = $('#bmturn-card'); let g;
         try { g = await A('settings/turn'); } catch (e) { card.insertAdjacentHTML('beforeend', `<div class="bmc-err">${esc(e.message)}</div>`); return; }
-        card.innerHTML = `<h3>${ic('wifi')} Bağlantı güçlendirme (TURN sunucusu) <small style="margin-left:auto;font-weight:500">${g.count ? g.count + ' sunucu etkin' : 'yalnız ücretsiz ortak sunucu'}</small></h3>
+        card.innerHTML = `<h3>${ic('wifi')} Bağlantı güçlendirme (TURN sunucusu) <small style="margin-left:auto;font-weight:500">${g.cf ? 'Cloudflare etkin' : g.count ? g.count + ' sunucu etkin' : 'yalnız ücretsiz ortak sunucu'}</small></h3>
+          <div style="border:1px solid #d6e6d0;background:#f6faf4;border-radius:12px;padding:12px 14px;margin:6px 0 14px"><b>Cloudflare Realtime TURN</b> <span class="bmw-hint">— ayda 1.000 GB ücretsiz; giriş bilgileri sunucuda her gün otomatik yenilenir.</span>
+          <label class="bmi-f" style="margin-top:8px">Turn Token ID<input id="bmcf-id" class="bmi-in" autocomplete="off" value="${esc(g.cfKeyId)}" placeholder="ör. 3f8c…"></label>
+          <label class="bmi-f">API Token<input id="bmcf-tok" class="bmi-in" type="password" autocomplete="off" value="${esc(g.cfToken)}" placeholder="Cloudflare'in bir kez gösterdiği uzun anahtar"><small>Yalnız sunucuda saklanır; kaydederken Cloudflare'e bağlanılıp doğrulanır.</small></label>
+          <div style="display:flex;gap:8px"><button class="btn primary small" id="bmcf-save">${ic('check')} Cloudflare'i kaydet</button>${g.cf ? `<button class="btn small" id="bmcf-off">Cloudflare'i kaldır</button>` : ''}</div></div>
           <p class="bmw-hint">Zayıf veya filtreli ağlardan (ör. İran, bazı mobil operatörler) gelen kullanıcılarda doğrudan bağlantı kurulamazsa görüntü ve ses bu sunucu üzerinden aktarılır. En iyi sonuç için 443 portunda TLS (turns:) adresi ekleyin; bu trafik sıradan HTTPS gibi görünür ve filtrelerden daha az etkilenir. Her satır: <code>adres | kullanıcı adı | şifre</code></p>
           <textarea id="bmturn-t" class="bmi-in" rows="4" spellcheck="false" placeholder="turns:sunucu.ornek.com:443?transport=tcp | kullanici | sifre&#10;turn:sunucu.ornek.com:80 | kullanici | sifre" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px">${esc(g.text)}</textarea>
           <button class="btn primary small" id="bmturn-save" style="margin-top:10px">${ic('check')} Kaydet</button>`;
+        $('#bmcf-save').onclick = async () => { const bt = $('#bmcf-save'); bt.disabled = true; try { const r = await A('settings/turn', 'POST', {cfKeyId: $('#bmcf-id').value.trim(), cfToken: $('#bmcf-tok').value.trim()}); say('Cloudflare TURN etkin: ' + r.servers + ' bağlantı adresi alındı.'); meetingPage.reload(); } catch (e) { say(e.message); bt.disabled = false; } };
+        if ($('#bmcf-off')) $('#bmcf-off').onclick = async () => { try { await A('settings/turn', 'POST', {cfKeyId: '', cfToken: ''}); say('Cloudflare kaldırıldı.'); meetingPage.reload(); } catch (e) { say(e.message); } };
         $('#bmturn-save').onclick = async () => { try { const r = await A('settings/turn', 'POST', {text: $('#bmturn-t').value}); say(r.count ? r.count + ' sunucu kaydedildi.' : 'Kaydedildi.'); meetingPage.reload(); } catch (e) { say(e.message); } };
       })();
       (async () => {
