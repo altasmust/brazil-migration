@@ -13,7 +13,7 @@
   const R = () => window.BMRoutes || {};
 
   // ---------- Genel Ayarlar / Güvenlik: yalnız çalışan sekmeler ----------
-  const PAGES = {general: {'Firma Bilgileri': 'company', 'E-posta (SMTP)': 'eposta', 'Google Meet': 'meet', 'Görüşme (çevirili)': 'gorusme'}, security: {'Güvenlik Duvarı': 'waf', 'KYC · Didit': 'kimlik'}};
+  const PAGES = {general: {'Firma Bilgileri': 'company', 'E-posta (SMTP)': 'eposta', 'Google Meet': 'meet', 'Görüşme (çevirili)': 'gorusme', 'Sunucu Modülleri': 'sunucu'}, security: {'Güvenlik Duvarı': 'waf', 'KYC · Didit': 'kimlik'}};
   const OLD = {eposta: ['general', 'E-posta (SMTP)'], meet: ['general', 'Google Meet'], kimlik: ['security', 'KYC · Didit']};
   let pending = null;
   for (const page of Object.keys(PAGES)) {
@@ -21,7 +21,7 @@
       if (pending && pending[0] === page) { tab = pending[1]; pending = null; }
       const T = Object.keys(PAGES[page]); if (!T.includes(tab)) tab = T[0];
       const key = PAGES[page][tab];
-      const inner = key === 'company' ? companyPage() : key === 'waf' ? wafPage() : key === 'gorusme' ? meetingPage() : R()[key] ? R()[key]() : '<div class="loading">Yükleniyor…</div>';
+      const inner = key === 'company' ? companyPage() : key === 'waf' ? wafPage() : key === 'gorusme' ? meetingPage() : key === 'sunucu' ? serversPage() : R()[key] ? R()[key]() : '<div class="loading">Yükleniyor…</div>';
       return heading() + `<section class="panel settings-revision">${T.length > 1 ? tabs(T) : ''}<div class="settings bms-tabembed">${inner}</div></section>`;
     };
     if (page === 'general') general = fn; else security = fn;
@@ -47,9 +47,25 @@
           <label class="bmi-f">Gönderen adres<input id="bmg-from" class="bmi-in" value="${esc(m.from)}"><small>SMTP hesabınız bu adresle göndermeye izinli olmalı (aynı posta kutusu veya takma ad). İzin yoksa e-posta varsayılan gönderenle gider.${d.mail ? '' : ' <b>E-posta henüz yapılandırılmadı</b> — Genel Ayarlar → E-posta (SMTP).'}</small></label>
           <button class="btn primary small" id="bmg-save">${ic('check')} Kaydet</button></section>
         <section class="bmw-card"><h3>${ic('link')} Kullanım</h3><p class="bmw-hint">Müşteri ve danışman panellerinde “Görüşmeye katıl” bağlantısı vardır; yaklaşan bir ön görüşmesi olan müşteri doğrudan kendi odasına yönlenir. Planlı linklerde ilk giren odayı açar, diğeri otomatik katılır. En iyi sonuç için Chrome veya Edge önerilir.</p><a class="btn small" href="${esc(d.url)}" target="_blank" rel="noopener">${ic('arrow-up-right')} Görüşme sayfasını aç</a></section>
-        <section class="bmw-card bmsv" id="bmsv-card"><div class="loading">Sunucu modülleri yükleniyor…</div></section>
+        <section class="bmw-card"><h3>${ic('settings')} Çeviri ve bağlantı sunucuları</h3><p class="bmw-hint">Azure / Google / DeepL çeviri servisleri ile Metered / Cloudflare TURN sunucuları artık <b>Sunucu Modülleri</b> sekmesinde.</p><button class="btn small" data-tab="Sunucu Modülleri">${ic('arrow-right')} Sunucu Modülleri'ni aç</button></section>
         <section class="bmw-card" id="bmgl-card"><h3>${ic('doc')} Hukuki terim sözlüğü</h3><div class="loading">Yükleniyor…</div></section>`;
       (async () => {
+        const card = $('#bmgl-card'); let g;
+        try { g = await A('settings/glossary'); } catch (e) { card.insertAdjacentHTML('beforeend', `<div class="bmc-err">${esc(e.message)}</div>`); return; }
+        card.innerHTML = `<h3>${ic('doc')} Hukuki terim sözlüğü <small style="margin-left:auto;font-weight:500">${g.count} terim</small></h3>
+          <p class="bmw-hint">Görüşmelerde bu terimler her zaman burada yazdığınız karşılıkla çevrilir. Her satıra bir terim yazın: <code>Türkçe | Português | English | فارسی</code>. Bir dili boş bırakabilirsiniz. # ile başlayan satırlar not olarak sayılır.</p>
+          <textarea id="bmgl-t" class="bmi-in" rows="12" spellcheck="false" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.6;resize:vertical;min-height:200px">${esc(g.text)}</textarea>
+          <div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary small" id="bmgl-save">${ic('check')} Sözlüğü kaydet</button><button class="btn small" id="bmgl-reset">Varsayılan listeye dön</button></div>`;
+        const go = async body => { try { const r = await A('settings/glossary', 'POST', body); say('Sözlük kaydedildi: ' + r.count + ' terim.'); meetingPage.reload(); } catch (e) { say(e.message); } };
+        $('#bmgl-save').onclick = () => go({text: $('#bmgl-t').value});
+        $('#bmgl-reset').onclick = () => { if (confirm('Sözlük varsayılan listeye dönsün mü? Eklediğiniz terimler silinir.')) go({reset: true}); };
+      })();
+      const save = async () => { try { await A('settings/meeting', 'POST', {enabled: $('#bmg-on').checked, inBooking: $('#bmg-book').checked, teamLang: $('#bmg-lang').value, from: $('#bmg-from').value.trim()}); say('Kaydedildi.'); meetingPage.reload(); } catch (e) { say(e.message); } };
+      $('#bmg-on').onchange = save; $('#bmg-save').onclick = save;
+    }, 0);
+    return '<div id="bmg-root" class="bmw"><div class="loading">Yükleniyor…</div></div>';
+  }
+  async function initServers() {
         const root = $('#bmsv-card'); if (!root) return;
         let SV, flt = {status: 'all', cat: ''};
         const tile = m => `<span class="bmy-ico" style="--c:${m.color}">${ic(m.icon)}</span>`;
@@ -87,23 +103,8 @@
         root.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('[data-sv-open]')) open(e.target.dataset.svOpen); });
         root.addEventListener('change', async e => { const t = e.target; if (!t.dataset?.svTog) return; const m = SV.modules.find(x => x.id === t.dataset.svTog); if (t.checked && !m.ready) { t.checked = false; open(m.id, 'Etkinleştirmek için önce bilgileri girin.'); return; } if (!await save({id: m.id, enabled: t.checked}, t) && t.checked === false) {} });
         try { SV = await A('settings/servers'); draw(); } catch (e) { root.innerHTML = `<div class="bmc-err">${esc(e.message)}</div>`; }
-      })();
-      (async () => {
-        const card = $('#bmgl-card'); let g;
-        try { g = await A('settings/glossary'); } catch (e) { card.insertAdjacentHTML('beforeend', `<div class="bmc-err">${esc(e.message)}</div>`); return; }
-        card.innerHTML = `<h3>${ic('doc')} Hukuki terim sözlüğü <small style="margin-left:auto;font-weight:500">${g.count} terim</small></h3>
-          <p class="bmw-hint">Görüşmelerde bu terimler her zaman burada yazdığınız karşılıkla çevrilir. Her satıra bir terim yazın: <code>Türkçe | Português | English | فارسی</code>. Bir dili boş bırakabilirsiniz. # ile başlayan satırlar not olarak sayılır.</p>
-          <textarea id="bmgl-t" class="bmi-in" rows="12" spellcheck="false" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.6;resize:vertical;min-height:200px">${esc(g.text)}</textarea>
-          <div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary small" id="bmgl-save">${ic('check')} Sözlüğü kaydet</button><button class="btn small" id="bmgl-reset">Varsayılan listeye dön</button></div>`;
-        const go = async body => { try { const r = await A('settings/glossary', 'POST', body); say('Sözlük kaydedildi: ' + r.count + ' terim.'); meetingPage.reload(); } catch (e) { say(e.message); } };
-        $('#bmgl-save').onclick = () => go({text: $('#bmgl-t').value});
-        $('#bmgl-reset').onclick = () => { if (confirm('Sözlük varsayılan listeye dönsün mü? Eklediğiniz terimler silinir.')) go({reset: true}); };
-      })();
-      const save = async () => { try { await A('settings/meeting', 'POST', {enabled: $('#bmg-on').checked, inBooking: $('#bmg-book').checked, teamLang: $('#bmg-lang').value, from: $('#bmg-from').value.trim()}); say('Kaydedildi.'); meetingPage.reload(); } catch (e) { say(e.message); } };
-      $('#bmg-on').onchange = save; $('#bmg-save').onclick = save;
-    }, 0);
-    return '<div id="bmg-root" class="bmw"><div class="loading">Yükleniyor…</div></div>';
-  }
+      }
+  function serversPage() { setTimeout(initServers, 0); return '<div class="bmw"><section class="bmw-card bmsv" id="bmsv-card"><div class="loading">Sunucu modülleri yükleniyor…</div></section></div>'; }
   meetingPage.reload = () => { const r = $('#bmg-root'); if (r) r.outerHTML = meetingPage(); };
 
   // ---------- Güvenlik Duvarı (WAF) ----------
