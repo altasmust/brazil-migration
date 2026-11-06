@@ -1,7 +1,7 @@
 import type {NextConfig} from 'next';
 
 const CSP = [
-  "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "default-src 'self'", "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.clarity.ms https://*.clarity.ms", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com", "img-src 'self' data: blob: https:", "media-src 'self' blob: https:",
   "connect-src 'self' https: wss://0.peerjs.com", "frame-src 'self' https:", "frame-ancestors 'self'", "form-action 'self' https:",
   "base-uri 'self'", "object-src 'none'", "worker-src 'self' blob:",

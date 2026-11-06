@@ -133,3 +133,10 @@ textarea.bmy-in{height:auto;padding:10px 12px;resize:vertical}.bmy-in.mono{font-
 .bmi-rt input{width:76px}.bmi-rt td,.bmi-rt th{padding:8px}.bmi-sum{font-weight:700}
 .bmi-rt .bmi-in{width:78px!important;min-width:0!important}.bmi-rt th:first-child{min-width:130px}
 .bmc-table table.bmi-rt{min-width:0!important;width:100%}
+#bmseo-form .bmco-grid{grid-template-columns:repeat(2,1fr)}
+@media (max-width:900px){#bmseo-form .bmco-grid{grid-template-columns:1fr}}
+.bmseo-prev{border:1px solid #e6ebe4;border-radius:12px;padding:12px 14px;background:#fafcf9;display:grid;gap:3px;margin-top:6px}
+.bmseo-prev small{color:#8a978d;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.bmseo-prev b{color:#1a0dab;font-size:16px;font-weight:500}
+.bmseo-prev span{color:#1e6b34;font-size:12.5px}
+.bmseo-prev p{margin:0;color:#4d5156;font-size:13px;line-height:1.5}

@@ -13,7 +13,7 @@
   const R = () => window.BMRoutes || {};
 
   // ---------- Genel Ayarlar / Güvenlik: yalnız çalışan sekmeler ----------
-  const PAGES = {general: {'Firma Bilgileri': 'company', 'E-posta (SMTP)': 'eposta', 'Google Meet': 'meet', 'Görüşme (çevirili)': 'gorusme', 'Sunucu Modülleri': 'sunucu'}, security: {'Güvenlik Duvarı': 'waf', 'KYC · Didit': 'kimlik'}};
+  const PAGES = {general: {'Firma Bilgileri': 'company', 'E-posta (SMTP)': 'eposta', 'Google Meet': 'meet', 'Görüşme (çevirili)': 'gorusme', 'Sunucu Modülleri': 'sunucu', 'Analiz & Doğrulama': 'analiz', 'SEO': 'seo'}, security: {'Güvenlik Duvarı': 'waf', 'KYC · Didit': 'kimlik'}};
   const OLD = {eposta: ['general', 'E-posta (SMTP)'], meet: ['general', 'Google Meet'], kimlik: ['security', 'KYC · Didit']};
   let pending = null;
   for (const page of Object.keys(PAGES)) {
@@ -21,7 +21,7 @@
       if (pending && pending[0] === page) { tab = pending[1]; pending = null; }
       const T = Object.keys(PAGES[page]); if (!T.includes(tab)) tab = T[0];
       const key = PAGES[page][tab];
-      const inner = key === 'company' ? companyPage() : key === 'waf' ? wafPage() : key === 'gorusme' ? meetingPage() : key === 'sunucu' ? serversPage() : R()[key] ? R()[key]() : '<div class="loading">Yükleniyor…</div>';
+      const inner = key === 'company' ? companyPage() : key === 'waf' ? wafPage() : key === 'gorusme' ? meetingPage() : key === 'sunucu' ? serversPage() : key === 'analiz' ? analyticsPage() : key === 'seo' ? seoPage() : R()[key] ? R()[key]() : '<div class="loading">Yükleniyor…</div>';
       return heading() + `<section class="panel settings-revision">${T.length > 1 ? tabs(T) : ''}<div class="settings bms-tabembed">${inner}</div></section>`;
     };
     if (page === 'general') general = fn; else security = fn;
@@ -156,6 +156,80 @@
       };
     }, 0);
     return '<div id="bmco-root"><div class="loading">Yükleniyor…</div></div>';
+  }
+
+  // ---------- Analiz & Doğrulama (Google Analytics, Search Console, Bing, Yandex, Meta, Clarity…) ----------
+  const ANL = [
+    {k: 'gsc', name: 'Google Search Console', cat: 'Doğrulama', color: '#4285f4', icon: 'search', ph: 'ör. AbC123xyz… veya tüm <meta …> etiketi', label: 'Doğrulama kodu (HTML etiketi)', help: 'Search Console → Mülk ekle → URL öneki: https://brazilmigration.com → Diğer doğrulama yöntemleri → HTML etiketi. Etiketin tamamını yapıştırabilirsiniz; yalnız kod saklanır. Kaydettikten sonra Search Console’da “Doğrula”ya basın, ardından Site haritaları bölümüne sitemap.xml ekleyin.'},
+    {k: 'ga4', name: 'Google Analytics 4', cat: 'Analiz', color: '#e37400', icon: 'target', ph: 'G-XXXXXXXXXX', label: 'Ölçüm kimliği (Measurement ID)', help: 'Analytics → Yönetici → Veri akışları → Web akışı → Ölçüm kimliği (G- ile başlar). Ziyaretçi çerez izni verdiğinde yüklenir; ön görüşme butonu tıklamaları “begin_booking” etkinliği olarak sayılır.'},
+    {k: 'gtm', name: 'Google Tag Manager', cat: 'Analiz', color: '#246fdb', icon: 'settings', ph: 'GTM-XXXXXXX', label: 'Kapsayıcı kimliği', help: 'Tag Manager → Kapsayıcı kimliği (GTM- ile başlar). Google Ads dönüşümleri vb. için. Analytics’i Tag Manager içinden kuruyorsanız yukarıdaki G- kimliğini boş bırakın (çift sayım olmasın).'},
+    {k: 'bing', name: 'Bing Webmaster Tools', cat: 'Doğrulama', color: '#008373', icon: 'search', ph: 'msvalidate.01 kodu', label: 'Doğrulama kodu', help: 'Bing Webmaster → Site ekle → HTML Meta etiketi. Search Console’dan içe aktarma seçeneğiyle kod gerekmeden de eklenebilir.'},
+    {k: 'yandex', name: 'Yandex Webmaster', cat: 'Doğrulama', color: '#fc3f1d', icon: 'search', ph: 'yandex-verification kodu', label: 'Doğrulama kodu', help: 'Yandex Webmaster → Site ekle → Meta etiketi.'},
+    {k: 'clarity', name: 'Microsoft Clarity', cat: 'Analiz', color: '#5c2d91', icon: 'eye', ph: 'ör. abc123def4', label: 'Proje kimliği', help: 'clarity.microsoft.com → Proje → Ayarlar → Kurulum → proje kimliği. Ücretsiz ısı haritası ve oturum kaydı; çerez izniyle yüklenir.'},
+    {k: 'metaPixel', name: 'Meta Pixel (Facebook / Instagram)', cat: 'Reklam ölçümü', color: '#1877f2', icon: 'target', ph: 'ör. 123456789012345', label: 'Pixel kimliği', help: 'Meta Events Manager → Veri kaynakları → Pixel kimliği (yalnız rakam). Çerez izniyle yüklenir; çerez politikası sayfası otomatik güncellenir.'},
+    {k: 'facebook', name: 'Meta alan adı doğrulama', cat: 'Doğrulama', color: '#1877f2', icon: 'shield-check', ph: 'facebook-domain-verification kodu', label: 'Doğrulama kodu', help: 'Meta Business → Marka güvenliği → Alan adları → Meta etiketi.'},
+    {k: 'pinterest', name: 'Pinterest doğrulama', cat: 'Doğrulama', color: '#e60023', icon: 'shield-check', ph: 'p:domain_verify kodu', label: 'Doğrulama kodu', help: 'Pinterest → Ayarlar → Hesabı talep et → HTML etiketi.'},
+  ];
+  function analyticsPage() {
+    setTimeout(async () => {
+      const root = $('#bman-root'); if (!root) return;
+      let a; try { a = (await A('settings/analytics')).analytics || {}; } catch (e) { root.innerHTML = `<div class="bmc-err">${esc(e.message)}</div>`; return; }
+      const tile = m => `<span class="bmy-ico" style="--c:${m.color}">${ic(m.icon)}</span>`;
+      const draw = () => {
+        const on = ANL.filter(m => a[m.k]);
+        root.innerHTML = `<div class="bmy-all"><aside class="bmy-filters"><h3>Durum</h3><div class="bmy-count"><div><b>${ANL.length}</b><small>Araç</small></div><div class="ok"><b>${on.length}</b><small>Bağlı</small></div></div>
+            <p class="bmw-hint" style="margin-top:14px">Analiz ve reklam araçları yalnız ziyaretçi çerez izni verdiğinde yüklenir (KVKK/LGPD). Doğrulama kodları her sayfanın &lt;head&gt; bölümüne eklenir. Site haritası: <a href="/sitemap.xml" target="_blank" rel="noopener">/sitemap.xml</a></p></aside>
+          <div><div class="bmy-head"><span class="bmy-hico">${ic('target')}</span><div><b>Analiz &amp; Doğrulama</b><small>Google Analytics, Search Console ve diğer araçları bağlayın. Bir karta tıklayarak kimliği girin.</small></div></div>
+          <div class="bmy-grid">${ANL.map(m => `<article class="bmy-card ${a[m.k] ? 'on' : ''}" data-an="${m.k}" tabindex="0">${tile(m)}<div class="bmy-top">${a[m.k] ? `<span class="bmy-pill on">${ic('check')} Bağlı</span>` : `<span class="bmy-pill">${ic('power')} Bağlı değil</span>`}</div><b>${esc(m.name)}</b><small>${esc(m.cat)}</small><p class="mono" style="word-break:break-all">${a[m.k] ? esc(a[m.k]) : esc(m.label)}</p><div class="bmy-foot"><span class="bmy-cfg">${ic('settings')} ${a[m.k] ? 'Düzenle' : 'Bağla'}</span></div></article>`).join('')}</div></div></div>`;
+      };
+      const open = k => {
+        const m = ANL.find(x => x.k === k); if (!m) return;
+        $('#modal-title').textContent = m.name;
+        $('#modal-body').innerHTML = `<form class="bmy-form" id="bman-form"><div class="bmy-mhead">${tile(m)}<div><b>${esc(m.name)}</b><small>${esc(m.cat)}</small></div></div>
+          <div class="bmy-fields"><label class="bmy-f full"><span>${esc(m.label)}</span><input class="bmy-in mono" name="v" autocomplete="off" value="${esc(a[m.k] || '')}" placeholder="${esc(m.ph)}"></label></div>
+          <p class="bmy-help">${ic('info')} <span>${esc(m.help)}</span></p>
+          <div class="form-actions">${a[m.k] ? `<button type="button" class="btn" id="bman-del">${ic('x')} Bağlantıyı kaldır</button>` : ''}<button type="button" class="btn" data-action="close">Vazgeç</button><button class="btn primary" type="submit">${ic('check')} Kaydet</button></div></form>`;
+        if (!$('#modal').open) $('#modal').showModal();
+        const save = async v => { try { a = (await A('settings/analytics', 'POST', {...a, [k]: v})).analytics; $('#modal').close(); say(v ? m.name + ' bağlandı.' : m.name + ' kaldırıldı.'); draw(); } catch (e) { say(e.message); } };
+        $('#bman-form').onsubmit = e => { e.preventDefault(); save(new FormData(e.target).get('v').trim()); };
+        if ($('#bman-del')) $('#bman-del').onclick = () => save('');
+      };
+      root.addEventListener('click', e => { const c = e.target.closest('[data-an]'); if (c) open(c.dataset.an); });
+      root.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('[data-an]')) open(e.target.dataset.an); });
+      draw();
+    }, 0);
+    return '<div class="bmw"><section class="bmw-card" id="bman-root"><div class="loading">Yükleniyor…</div></section></div>';
+  }
+
+  // ---------- SEO (site geneli) ----------
+  function seoPage() {
+    setTimeout(async () => {
+      const root = $('#bmseo-root'); if (!root) return;
+      let r; try { r = await A('settings/seo'); } catch (e) { root.innerHTML = `<div class="bmc-err">${esc(e.message)}</div>`; return; }
+      const g = r.seo || {}, site = r.site || '';
+      const f = (k, l, v, ph = '', hint = '', max = '') => `<label class="bmy-f full"><span>${l}</span><input class="bmy-in" name="${k}" value="${esc(v || '')}" placeholder="${esc(ph)}" ${max ? `maxlength="${max}"` : ''}>${hint ? `<small>${hint}</small>` : ''}</label>`;
+      root.innerHTML = `<form class="bmco" id="bmseo-form"><div class="bmco-grid">
+        <section><h3>${ic('search')} Genel</h3>${f('siteName', 'Site adı', g.siteName, 'Brazil Migration', 'Arama sonuçlarında ve paylaşım kartlarında görünür (og:site_name).', 60)}
+          ${f('titleSuffix', 'Başlık eki (isteğe bağlı)', g.titleSuffix, '| Brazil Migration', 'Doluysa, adı içermeyen sayfa başlıklarının sonuna eklenir. Başlıklar 60 karakteri geçmesin.', 40)}
+          <label class="bmy-f full"><span>Varsayılan açıklama</span><textarea class="bmy-in" name="description" rows="3" maxlength="300" placeholder="Açıklaması olmayan sayfalarda kullanılır (150–160 karakter önerilir).">${esc(g.description || '')}</textarea><small><b id="bmseo-n">${(g.description || '').length}</b> karakter</small></label></section>
+        <section><h3>${ic('eye')} Paylaşım (sosyal medya)</h3>${f('ogImage', 'Varsayılan paylaşım görseli', g.ogImage, '/sao-paulo-day-hq.png veya https://…', 'Görseli olmayan sayfalarda kullanılır. Önerilen 1200×630 px.', 400)}
+          ${f('twitter', 'X (Twitter) kullanıcı adı', g.twitter, '@brazilmigration', '', 40)}
+          <div class="bmseo-prev"><small>Google önizlemesi</small><b>Brezilya Göçmenlik ve Şirket Kuruluşu | São Paulo 2026</b><span>${esc(site || 'https://brazilmigration.com')}/</span><p>${esc(g.description || 'Brezilya oturum izni, aile birleşimi, vatandaşlık ve şirket kuruluşu. Dil engeli olmadan, canlı çevirili 15 dakikalık ücretsiz ön görüşme.')}</p></div></section>
+        <section><h3>${ic('shield')} Dizinleme</h3>
+          <label class="bmy-check" style="display:flex;gap:10px;align-items:flex-start;margin:4px 0 12px"><input type="checkbox" name="noindexAll" ${g.noindexAll ? 'checked' : ''}><span><b>Tüm siteyi arama motorlarından gizle</b><br><small class="bmw-hint">Yalnız bakım/test sırasında kullanın. Açıkken Google siteyi listelemez.</small></span></label>
+          <label class="bmy-f full"><span>robots.txt ek kuralları (isteğe bağlı)</span><textarea class="bmy-in mono" name="robotsExtra" rows="3" placeholder="Disallow: /ornek-gizli-sayfa/">${esc(g.robotsExtra || '')}</textarea><small>Panel, yönetim ve API yolları zaten kapalı.</small></label>
+          <p class="bmw-hint">Hızlı bağlantılar: <a href="/sitemap.xml" target="_blank" rel="noopener">sitemap.xml</a> · <a href="/robots.txt" target="_blank" rel="noopener">robots.txt</a> · Sayfa bazında başlık/açıklama: Site Yönetimi → Sayfalar → SEO</p></section>
+        <section><h3>${ic('check')} Otomatik yapılanlar</h3><ul class="bmw-hint" style="margin:0;padding-left:18px;line-height:1.8">
+          <li>Her sayfada canonical, Open Graph ve X (Twitter) kartı etiketleri</li><li>Site haritası (sayfalar + blog) ve robots.txt</li>
+          <li>Kuruluş şeması (ProfessionalService) + ücretsiz ön görüşme teklifi ve konuşulan diller</li><li>Blog yazılarında makale şeması, canlı görüşme sayfasında SSS (FAQ) şeması</li>
+          <li>Panel, yönetim ve görüşme odaları arama motorlarına kapalı</li></ul></section>
+      </div><div class="form-actions"><button class="btn primary" type="submit">${ic('check')} Kaydet</button>${g.updated ? `<small class="bmw-hint">Son kayıt: ${new Date(g.updated).toLocaleString('tr-TR')}</small>` : ''}</div></form>`;
+      const ta = root.querySelector('[name=description]'); ta.oninput = () => { $('#bmseo-n').textContent = ta.value.length; root.querySelector('.bmseo-prev p').textContent = ta.value || '—'; };
+      $('#bmseo-form').onsubmit = async e => { e.preventDefault(); const fd = new FormData(e.target); const body = Object.fromEntries(fd); body.noindexAll = !!fd.get('noindexAll');
+        if (body.noindexAll && !confirm('Tüm site arama motorlarından gizlenecek. Emin misiniz?')) return;
+        try { await A('settings/seo', 'POST', body); say('SEO ayarları kaydedildi.'); render(); } catch (err) { say(err.message); } };
+    }, 0);
+    return '<div class="bmw"><section class="bmw-card" id="bmseo-root"><div class="loading">Yükleniyor…</div></section></div>';
   }
 
   // ---------- Başlangıç (gösterge paneli) ----------

@@ -14,7 +14,7 @@
     if (document.querySelector('.bm-cc')) return;
     if (!document.getElementById('bm-cc-css')) { const s = document.createElement('style'); s.id = 'bm-cc-css'; s.textContent = css; document.head.appendChild(s); }
     const d = document.createElement('div'); d.className = 'bm-cc'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-label', 'Çerez tercihleri');
-    d.innerHTML = '<h2>Çerez tercihiniz</h2><p>Sitenin çalışması için zorunlu çerezler kullanılır. İzin verirseniz, siteyi geliştirmek için anonim ziyaret istatistikleri de toplarız. Reklam çerezi kullanmıyoruz. Ayrıntılar: <a href="/cerez-politikasi/">Çerez Politikası</a> · <a href="/gizlilik-politikasi/">Gizlilik</a></p><div class="bm-cc-b"><button type="button" data-v="necessary">Yalnızca zorunlu</button><button type="button" class="ok" data-v="all">Kabul et</button></div>';
+    d.innerHTML = '<h2>Çerez tercihiniz</h2><p>Sitenin çalışması için zorunlu çerezler kullanılır. İzin verirseniz, siteyi geliştirmek için ziyaret istatistikleri ve analiz araçları (ör. Google Analytics) da kullanılır; bunlar ve varsa reklam ölçüm çerezleri yalnızca izninizle çalışır. Ayrıntılar: <a href="/cerez-politikasi/">Çerez Politikası</a> · <a href="/gizlilik-politikasi/">Gizlilik</a></p><div class="bm-cc-b"><button type="button" data-v="necessary">Yalnızca zorunlu</button><button type="button" class="ok" data-v="all">Kabul et</button></div>';
     d.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; set(b.dataset.v); d.remove(); });
     document.body.appendChild(d);
   }

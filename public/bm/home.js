@@ -33,7 +33,7 @@
     c.insertAdjacentHTML('afterbegin', `<span class="bm-thumb" aria-hidden="true"><img src="/images/marketing-v2/${m[1]}-768.webp" srcset="/images/marketing-v2/${m[1]}-768.webp 768w, /images/marketing-v2/${m[1]}.webp 1536w" sizes="(max-width: 760px) 92vw, 420px" width="768" height="512" alt="" loading="lazy" decoding="async"></span>${ico(m[0])}`);
   });
 
-  const WHY = ['home', 'scale', 'leaf'];
+  const WHY = ['home', 'scale', 'leaf', 'chat'];
   $$('.why .why-grid article').forEach((a, i) => { a.classList.add('bm-live'); a.insertAdjacentHTML('afterbegin', ico(WHY[i] || 'shield', i === 1 ? 'gold' : '')); });
 
   const sl = $('.settling-list');

@@ -12,7 +12,7 @@ import {wafState, unban, clearEvents, cleanIps, clientIp} from '../waf.mjs';
 import {cleanPost, readMinutes} from './blog.mjs';
 import {loadPayments, publicView as paymentsView, savePayment, enabledMethods} from './payments.mjs';
 import {startCheckout, finishCheckout} from './iyzico.mjs';
-import {staticPages, siteState, invalidateSite, editorHTML, readStatic, buildOverrides, extractMenu, renderPage, hash as shash, PANEL} from './site.mjs';
+import {staticPages, siteState, invalidateSite, editorHTML, readStatic, buildOverrides, extractMenu, renderPage, hash as shash, PANEL, cleanAnalytics, cleanSeo} from './site.mjs';
 import {creditState, creditRecord, saveCredit, monthKey, monthStart as creditMonthStart, DEFAULT_MONTHLY} from './credits.mjs';
 import {CITIES, locate, fromRequest, distanceKm} from './geo.mjs';
 import {PARTNER_DOCS, verifyPartner, verifyCustomerDocument, verifierConfigured} from './verify.mjs';
@@ -685,6 +685,8 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const it = await one(db, "SELECT COUNT(*) AS n FROM items WHERE owner IN ('demo-partner','demo-customer')");
     return json({accounts: Number(n?.n || 0), items: Number(it?.n || 0), cleared: !!(await getItem(db, 'demo-cleared'))});
   }
+  if (route === 'settings/analytics' && req.method === 'GET') return json({analytics: (await getItem(db, 'config-analytics'))?.data || {}});
+  if (route === 'settings/seo' && req.method === 'GET') return json({seo: {siteName: 'Brazil Migration', ...((await getItem(db, 'config-seo'))?.data || {})}, site: siteUrl(req)});
   if (route === 'settings/company' && req.method === 'GET') return json({company: (await getItem(db, 'config-company'))?.data || {}});
   if (route === 'invoices' && req.method === 'GET') {
     const list = await rows(db, "SELECT i.id, i.owner, i.data, i.created, p.name, p.email, p.role FROM items i LEFT JOIN people p ON p.id=i.owner WHERE i.kind='invoice' ORDER BY i.created DESC LIMIT 1000");
@@ -977,6 +979,8 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     ]);
     return json({ok: true});
   }
+  if (route === 'settings/analytics' && req.method === 'POST') { let d; try { d = cleanAnalytics(b); } catch (e) { fail(400, e.message); } d.updated = now(); await db.batch([putItem(db, 'config-analytics', 'config', 'owner', d), audit(db, actor, 'settings.analytics', Object.keys(d).filter(k => d[k] && k !== 'updated').join(',') || 'none')]); invalidateSite(); return json({analytics: d}); }
+  if (route === 'settings/seo' && req.method === 'POST') { const d = cleanSeo(b); d.updated = now(); await db.batch([putItem(db, 'config-seo', 'config', 'owner', d), audit(db, actor, 'settings.seo', d.noindexAll ? 'noindex' : 'index')]); invalidateSite(); return json({seo: d}); }
   if (route === 'settings/company' && req.method === 'POST') {
     const T = (k, n = 200) => clean(b[k], n), url = k => { const v = clean(b.socials?.[k], 300); return /^https:\/\//.test(v) ? v : ''; };
     const data = {brand: T('brand', 80) || 'Brazil Migration', legalName: T('legalName', 200), taxId: T('taxId', 80), address: T('address', 300), email: validEmail(T('email', 254)) ? T('email', 254) : '', phone: T('phone', 40), whatsapp: T('whatsapp', 40).replace(/[^\d+ ()-]/g, '').trim(), hours: T('hours', 120), showWhatsapp: !!b.showWhatsapp, socials: {instagram: url('instagram'), linkedin: url('linkedin'), facebook: url('facebook'), youtube: url('youtube'), x: url('x')}, updated: now()};

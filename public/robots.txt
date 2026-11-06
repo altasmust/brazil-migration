@@ -1,3 +1,7 @@
 User-agent: *
 Allow: /
-Sitemap: https://brasil-yeni-baslangic.fatih-altas.chatgpt.site/sitemap.xml
+Disallow: /admin/
+Disallow: /panel/
+Disallow: /partner/
+Disallow: /api/
+Sitemap: https://brazilmigration.com/sitemap.xml

@@ -82,7 +82,7 @@ export function site() {
         return new Response(obj.body, {headers: {'Content-Type': type, 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff', ...(ext === 'svg' ? {'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox"} : {})}});
       }
       if (route === 'sitemap') return new Response(await sitemapXML(db), {headers: {'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}});
-      if (route === 'robots') { const base = (process.env.SITE_URL || url.origin).replace(/\/$/, ''); return new Response(`User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /panel/\nDisallow: /partner/\nDisallow: /avukat/\nDisallow: /kyc/\nDisallow: /api/\nSitemap: ${base}/sitemap.xml\n`, {headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}}); }
+      if (route === 'robots') { const base = (process.env.SITE_URL || url.origin).replace(/\/$/, ''); const {siteState, robotsTXT} = await import('./site.mjs'); let g = {}; try { g = (await siteState(db)).seo || {}; } catch {} return new Response(robotsTXT(base, g), {headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}}); }
       return new Response('Not found', {status: 404});
     } catch (e) {
       console.error('[site]', e);

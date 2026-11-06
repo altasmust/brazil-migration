@@ -51,7 +51,7 @@ let state = null, stateAt = 0;
 export function invalidateSite() { stateAt = 0; renderCache.clear(); }
 export async function siteState(db) {
   if (state && Date.now() - stateAt < 15000) return state;
-  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post') OR id IN ('config-company','config-payments','config-didit')").all()).results || [];
+  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post') OR id IN ('config-company','config-payments','config-didit','config-analytics','config-seo')").all()).results || [];
   const s = {menu: null, pages: {}, custom: {}, blog: {}, company: null, stamp: ''};
   let stamp = rows.length;
   for (const r of rows) {
@@ -63,6 +63,8 @@ export async function siteState(db) {
     if (r.id === 'config-company') s.company = d;
     if (r.id === 'config-payments') s.payments = d;
     if (r.id === 'config-didit') s.didit = d;
+    if (r.id === 'config-analytics') s.analytics = d;
+    if (r.id === 'config-seo') s.seo = d;
   }
   s.stamp = hash(stamp);
   if (state?.stamp !== s.stamp) renderCache.clear();
@@ -222,7 +224,7 @@ function applyCompany(root, co) {
   if (fb && socials.length) fb.insertAdjacentHTML('beforeend', `<div class="footer-social">${socials.map(([k, v]) => `<a href="${esc(v)}" target="_blank" rel="noopener" aria-label="${SOC[k]}">${SOC[k]}</a>`).join('')}</div>`);
   if (co.whatsapp && co.showWhatsapp) root.querySelector('body')?.insertAdjacentHTML('beforeend', `<a class="bm-wa" href="${esc(waHref(co.whatsapp, 'Merhaba, Brezilya süreci hakkında bilgi almak istiyorum.'))}" target="_blank" rel="noopener" aria-label="WhatsApp ile yazın">${ic('chat')}<span>WhatsApp</span></a>`);
   const head = root.querySelector('head');
-  if (head && root.querySelector('body')?.getAttribute('data-page') !== 'blog') head.insertAdjacentHTML('beforeend', `<script type="application/ld+json">${JSON.stringify({'@context': 'https://schema.org', '@type': 'ProfessionalService', name: brand, legalName: co.legalName || undefined, url: siteUrl() || undefined, logo: (siteUrl() || '') + '/brazil-migration-logo.png', email: co.email || undefined, telephone: co.phone || undefined, address: co.address ? {'@type': 'PostalAddress', streetAddress: co.address} : undefined, areaServed: ['BR', 'TR'], sameAs: socials.map(([, v]) => v)}).replace(/</g, '\\u003c')}</script>`);
+  if (head && root.querySelector('body')?.getAttribute('data-page') !== 'blog') head.insertAdjacentHTML('beforeend', `<script type="application/ld+json">${JSON.stringify({'@context': 'https://schema.org', '@type': 'ProfessionalService', name: brand, legalName: co.legalName || undefined, url: siteUrl() || undefined, logo: (siteUrl() || '') + '/brazil-migration-logo.png', email: co.email || undefined, telephone: co.phone || undefined, address: co.address ? {'@type': 'PostalAddress', streetAddress: co.address} : undefined, areaServed: ['BR', 'TR', 'IR'], knowsLanguage: ['tr', 'pt-BR', 'en', 'fa'], makesOffer: {'@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Dil engeli olmadan ücretsiz ön görüşme', description: '15 dakikalık, canlı çevirili (Türkçe, Portekizce, İngilizce, Farsça) çevrim içi ön görüşme', url: (siteUrl() || '') + '/canli-cevirili-gorusme/'}, sameAs: socials.map(([, v]) => v)}).replace(/</g, '\\u003c')}</script>`);
 }
 
 // ---------- footer güven şeridi (her sayfada, footer alt satırının üstünde) ----------
@@ -241,6 +243,87 @@ function applyTrust(root, st) {
     `<span class="aw a-kv" title="KVKK &amp; LGPD uyumlu">${kvkkRosette({year, p: 'twv'})}</span>`,
   ].filter(Boolean).join('');
   fb.insertAdjacentHTML('beforebegin', `<div class="footer-trust"><div class="ft-head"><span class="ft-line"></span><span class="kicker">Güvenceler &amp; Sertifikalar</span><span class="ft-line"></span></div><div class="ft-awards">${items}</div><p class="ft-legal">${ic('scale')}<span>Başvurularınız Polícia Federal ve Ministério da Justiça nezdinde, resmî kanallardan yürütülür. Hukuki işlemler <b>${LAW.firm} · ${LAW.lawyer} (${LAW.oab})</b> tarafından yürütülür. <a href="${LAW.verify}" target="_blank" rel="noopener">OAB kaydını doğrula</a></span></p></div>`);
+}
+
+// ---------- Canlı çevirili ön görüşme vurgusu (tüm site sayfalarında, footer'dan önce) ----------
+export const LIVE = {path: '/canli-cevirili-gorusme/', langs: 'Türkçe · Português · English · فارسی'};
+function applyLivePromo(root, path) {
+  const f = root.querySelector('footer.site-footer'); if (!f || root.querySelector('.bmlp') || path === LIVE.path) return;
+  const ic = n => `<bm-i class="ic ic-${n}" aria-hidden="true"></bm-i>`;
+  f.insertAdjacentHTML('beforebegin', `<section class="bmlp" aria-labelledby="bmlp-h"><div class="wrap bmlp-in">
+    <div class="bmlp-txt"><span class="bmlp-tag"><i></i> Canlı çeviri · Ücretsiz</span><h2 id="bmlp-h">Dil engeli olmadan ücretsiz ön görüşme</h2>
+    <p>Siz kendi dilinizde konuşun, Brezilya’daki avukatımız Portekizce. Görüntülü görüşmede söyledikleriniz anında karşı tarafın diline çevrilir; altyazı ve isterseniz sesli çeviriyle.</p>
+    <ul><li>${ic('chat')} Canlı altyazı + sesli çeviri</li><li>${ic('globe')} ${LIVE.langs}</li><li>${ic('lock')} Uygulama yok, tarayıcıdan katılın</li><li>${ic('clock')} 15 dakika · ücretsiz</li></ul>
+    <div class="bmlp-cta"><button class="btn" type="button" onclick="book()">Ücretsiz ön görüşme planla <span>↗</span></button><a class="bmlp-more" href="${LIVE.path}">Nasıl çalışır?</a></div></div>
+    <div class="bmlp-art" aria-hidden="true"><div class="bl-win"><div class="bl-v"><span class="bl-face"></span><span class="bl-cap"><b>Você</b>Bom dia! Como posso ajudar?<small>Günaydın! Size nasıl yardımcı olabilirim?</small></span></div><div class="bl-self"><span class="bl-face s"></span></div><div class="bl-bar"><i></i><i></i><i></i><i class="r"></i></div></div><span class="bl-chip c1"><img src="/bm/flags/tr.svg" alt="" width="18" height="13">TR</span><span class="bl-chip c2"><img src="/bm/flags/br.svg" alt="" width="18" height="13">PT</span><span class="bl-chip c3"><img src="/bm/flags/gb.svg" alt="" width="18" height="13">EN</span><span class="bl-chip c4"><img src="/bm/flags/ir.svg" alt="" width="18" height="13">FA</span></div>
+  </div></section>`);
+  const head = root.querySelector('head'); if (head && !head.querySelector('link[href^="/bm/live.css"]')) head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/live.css?v=2">');
+}
+
+// ---------- Analiz ve doğrulama (Genel Ayarlar → Analiz & Doğrulama) ----------
+const ID = {ga4: /^G-[A-Z0-9]{4,15}$/, gtm: /^GTM-[A-Z0-9]{4,12}$/, metaPixel: /^\d{6,20}$/, clarity: /^[a-z0-9]{6,20}$/i};
+export function cleanAnalytics(b = {}) {
+  const t = (v, n = 200) => String(v ?? '').trim().slice(0, n);
+  // doğrulama alanına tüm meta etiketi yapıştırılırsa yalnız content değerini al
+  const code = v => { const m = t(v, 400).match(/content=["']([^"']+)["']/i); return (m ? m[1] : t(v, 120)).replace(/[^A-Za-z0-9_\-=.]/g, ''); };
+  const o = {ga4: t(b.ga4, 20).toUpperCase(), gtm: t(b.gtm, 20).toUpperCase(), metaPixel: t(b.metaPixel, 20).replace(/\D/g, ''), clarity: t(b.clarity, 20).toLowerCase(),
+    gsc: code(b.gsc), bing: code(b.bing), yandex: code(b.yandex), pinterest: code(b.pinterest), facebook: code(b.facebook)};
+  for (const k of Object.keys(ID)) if (o[k] && !ID[k].test(o[k])) throw Object.assign(new Error({ga4: 'Google Analytics ölçüm kimliği G-XXXXXXX biçiminde olmalı.', gtm: 'Tag Manager kimliği GTM-XXXXXX biçiminde olmalı.', metaPixel: 'Meta Pixel kimliği yalnız rakamlardan oluşmalı.', clarity: 'Clarity proje kimliği geçersiz.'}[k]), {status: 400});
+  return o;
+}
+function applyAnalytics(root, a, path) {
+  const head = root.querySelector('head'); if (!head) return;
+  // Çerez politikası: etkin araçların çerezlerini tabloya ekle, "üçüncü taraf yok" cümlesini düzelt
+  if (path === '/cerez-politikasi/' && (a.ga4 || a.gtm || a.metaPixel || a.clarity)) {
+    const tb = root.querySelector('table tbody');
+    const rows = [a.ga4 && ['_ga, _ga_*', 'Analiz (izne bağlı) · Google Analytics', 'Sitenin nasıl kullanıldığını anonim olarak ölçer.', '2 yıla kadar'],
+      a.gtm && ['Google Tag Manager', 'Etiket yönetimi (izne bağlı)', 'İzin verilen ölçüm etiketlerini yükler; kendisi kişisel veri toplamaz.', '—'],
+      a.clarity && ['_clck, _clsk', 'Analiz (izne bağlı) · Microsoft Clarity', 'Sayfa kullanımını (tıklama, kaydırma) anonim olarak ölçer.', '1 yıla kadar'],
+      a.metaPixel && ['_fbp', 'Reklam ölçümü (izne bağlı) · Meta', 'Reklamlarımızın etkisini ölçer.', '3 ay']].filter(Boolean);
+    if (tb) tb.insertAdjacentHTML('beforeend', rows.map(r => `<tr><td><code>${r[0]}</code></td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join(''));
+    root.querySelectorAll('p').forEach(pp => { if (/^Reklam veya üçüncü taraf takip çerezi kullanmıyoruz\./.test(pp.text)) pp.set_content('Yukarıdaki analiz' + (a.metaPixel ? ' ve reklam ölçüm' : '') + ' araçları yalnızca çerez izni verdiğinizde çalışır; izin vermezseniz hiç yüklenmez. Gömülü harita, video veya ödeme sayfalarına geçtiğinizde ilgili hizmet sağlayıcının kendi çerez politikası geçerlidir.'); });
+  }
+  const meta = [['google-site-verification', a.gsc], ['msvalidate.01', a.bing], ['yandex-verification', a.yandex], ['p:domain_verify', a.pinterest], ['facebook-domain-verification', a.facebook]];
+  for (const [n, v] of meta) if (v) setMeta(head, 'name', n, v);
+  if (a.ga4 || a.gtm || a.metaPixel || a.clarity) head.insertAdjacentHTML('beforeend', `<script src="/bm/analytics.js?v=1" defer${a.ga4 ? ` data-ga4="${esc(a.ga4)}"` : ''}${a.gtm ? ` data-gtm="${esc(a.gtm)}"` : ''}${a.metaPixel ? ` data-pixel="${esc(a.metaPixel)}"` : ''}${a.clarity ? ` data-clarity="${esc(a.clarity)}"` : ''}></script>`);
+}
+
+// ---------- Genel SEO (Genel Ayarlar → SEO) + her sayfada eksik etiketleri tamamla ----------
+export function cleanSeo(b = {}) {
+  const t = (v, n) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
+  return {siteName: t(b.siteName, 60), titleSuffix: t(b.titleSuffix, 40), description: t(b.description, 300), ogImage: t(b.ogImage, 400), twitter: t(b.twitter, 40).replace(/^@?/, b.twitter ? '@' : '').replace(/[^@A-Za-z0-9_]/g, ''), noindexAll: !!b.noindexAll, robotsExtra: String(b.robotsExtra || '').slice(0, 2000)};
+}
+function applyGlobalSeo(root, path, g) {
+  const head = root.querySelector('head'); if (!head) return;
+  const base = siteUrl(), site = g.siteName || 'Brazil Migration';
+  const tEl = head.querySelector('title');
+  if (tEl && g.titleSuffix && !tEl.text.includes(g.titleSuffix.replace(/^[\s|·–-]+/, ''))) tEl.set_content(esc(tEl.text + ' ' + g.titleSuffix.trim()));
+  const title = tEl?.text || site;
+  let desc = head.querySelector('meta[name="description"]')?.getAttribute('content');
+  if (!desc && g.description) { desc = g.description; setMeta(head, 'name', 'description', desc); }
+  const get = (a, k) => head.querySelector(`meta[${a}="${k}"]`)?.getAttribute('content');
+  if (!get('property', 'og:title')) setMeta(head, 'property', 'og:title', title);
+  if (!get('property', 'og:description') && desc) setMeta(head, 'property', 'og:description', desc);
+  if (!get('property', 'og:type')) setMeta(head, 'property', 'og:type', 'website');
+  if (!get('property', 'og:locale')) setMeta(head, 'property', 'og:locale', 'tr_TR');
+  setMeta(head, 'property', 'og:site_name', site);
+  const img0 = get('property', 'og:image') || (g.ogImage ? (/^https?:/.test(g.ogImage) ? g.ogImage : base + g.ogImage) : base + '/sao-paulo-day-hq.png');
+  if (!get('property', 'og:image')) setMeta(head, 'property', 'og:image', img0);
+  if (base) {
+    if (!head.querySelector('link[rel="canonical"]')) head.insertAdjacentHTML('beforeend', `<link rel="canonical" href="${esc(base + path)}">`);
+    if (!get('property', 'og:url')) setMeta(head, 'property', 'og:url', base + path);
+  }
+  if (!get('name', 'twitter:card')) setMeta(head, 'name', 'twitter:card', 'summary_large_image');
+  setMeta(head, 'name', 'twitter:title', get('property', 'og:title') || title);
+  if (desc) setMeta(head, 'name', 'twitter:description', get('property', 'og:description') || desc);
+  setMeta(head, 'name', 'twitter:image', get('property', 'og:image') || img0);
+  if (g.twitter) setMeta(head, 'name', 'twitter:site', g.twitter);
+  if (g.noindexAll) setMeta(head, 'name', 'robots', 'noindex,nofollow');
+  else if (!get('name', 'robots')) setMeta(head, 'name', 'robots', 'index,follow,max-image-preview:large');
+}
+export function robotsTXT(base, g = {}) {
+  if (g.noindexAll) return `User-agent: *\nDisallow: /\n`;
+  return `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /panel/\nDisallow: /partner/\nDisallow: /avukat/\nDisallow: /kyc/\nDisallow: /api/\n${g.robotsExtra ? String(g.robotsExtra).trim() + '\n' : ''}Sitemap: ${base}/sitemap.xml\n`;
 }
 
 // ---------- SEO ----------
@@ -308,7 +391,8 @@ async function renderBlog(path, st, preview) {
   if (post) {
     applySeo(root, '/blog/' + post.slug + '/', {title: post.seo?.title || post.title + ' | Brazil Migration Blog', description: post.seo?.description || post.excerpt || '', image: post.cover, noindex: post.seo?.noindex || !!preview});
     const h = root.querySelector('head'); setMeta(h, 'property', 'og:type', 'article'); setMeta(h, 'property', 'article:published_time', post.date); if (post.modified) setMeta(h, 'property', 'article:modified_time', post.modified);
-  } else applySeo(root, '/blog/', {title: 'Blog: Brezilya’da oturum, vatandaşlık ve yaşam rehberi | Brazil Migration', description: 'Brezilya oturum izni, vatandaşlık, şirket kurulumu ve São Paulo’da yaşam üzerine kaynaklı, güncel Türkçe rehber yazılar.'});
+  } else { head.insertAdjacentHTML('beforeend', `<script type="application/ld+json">${JSON.stringify({'@context': 'https://schema.org', '@type': 'Blog', name: 'Brazil Migration Blog', url: (siteUrl() || '') + '/blog/', inLanguage: 'tr', publisher: {'@type': 'Organization', name: 'Brazil Migration', logo: {'@type': 'ImageObject', url: (siteUrl() || '') + '/brazil-migration-logo.png'}}}).replace(/</g, '\\u003c')}</script>`); }
+  if (!post) applySeo(root, '/blog/', {title: 'Blog: Brezilya Oturum, Vatandaşlık ve Yaşam Rehberi', description: 'Brezilya oturum izni, vatandaşlık, şirket kurulumu ve São Paulo’da yaşam üzerine kaynaklı, güncel Türkçe rehber yazılar.'});
   return root;
 }
 
@@ -341,7 +425,7 @@ export async function renderPage(db, path, {editor = false, preview = null} = {}
   else return {status: 404, html: await notFound(db)};
   if (!root) return {status: 404, html: await notFound(db)};
   if (st?.menu || preview) applyMenu(root, (st || await siteState(db)).menu);
-  try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); } catch {}
+  try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); if (!editor) { applyGlobalSeo(root, path, S.seo || {}); applyAnalytics(root, S.analytics || {}, path); applyLivePromo(root, path); } } catch (e) { console.error('[site]', e.message); }
   if (path === '/' && !editor && st) { const why = root.querySelector('section.why'); const hb = homeBlogHTML(Object.values(st.blog || {}).filter(p => p.published)); if (why && hb) { why.insertAdjacentHTML('afterend', hb); root.querySelector('head')?.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/blog.css?v=1">'); } }
   let html = '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
   if (siteUrl()) html = html.replace(OLD_HOSTS, siteUrl());
