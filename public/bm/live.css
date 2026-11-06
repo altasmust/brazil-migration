@@ -136,11 +136,3 @@
 
 .bmv-main::after{content:"";position:absolute;left:0;right:0;bottom:0;height:46%;background:linear-gradient(0deg,rgba(6,20,12,.75),transparent);z-index:1}
 .bmv-cap,.bmv-ctl{z-index:4}
-/* gerçek uygulama kaydı */
-.bmv-video{position:relative;border-radius:20px;overflow:hidden;background:#0c2216;border:1px solid rgba(255,255,255,.14);box-shadow:0 30px 70px rgba(0,0,0,.35);aspect-ratio:1280/760}
-.bmv-video video{display:block;width:100%;height:100%;object-fit:cover}
-.bmv-badge{position:absolute;left:12px;bottom:12px;display:inline-flex;align-items:center;gap:7px;background:rgba(0,0,0,.55);color:#fff;font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-.bmv-badge i{width:7px;height:7px;border-radius:50%;background:#e0473b;animation:bmvBlink 1.2s infinite}
-@keyframes bmvBlink{50%{opacity:.25}}
-.lp-hero .bmv-video{box-shadow:0 30px 70px rgba(16,41,28,.25)}
-@media (prefers-reduced-motion:reduce){.bmv-badge i{animation:none}}

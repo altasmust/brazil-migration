@@ -258,9 +258,9 @@ function applyLivePromo(root, path) {
     <p>Siz kendi dilinizde konuşun, Brezilya’daki avukatımız Portekizce. Görüntülü görüşmede söyledikleriniz anında karşı tarafın diline çevrilir; altyazı ve isterseniz sesli çeviriyle.</p>
     <ul><li>${ic('chat')} Canlı altyazı + sesli çeviri</li><li>${ic('globe')} ${LIVE.langs}</li><li>${ic('lock')} Uygulama yok, tarayıcıdan katılın</li><li>${ic('clock')} 15 dakika · ücretsiz</li></ul>
     <div class="bmlp-cta"><button class="btn" type="button" onclick="book()">Ücretsiz ön görüşme planla <span>↗</span></button><a class="bmlp-more" href="${LIVE.path}">Nasıl çalışır?</a></div></div>
-    <div class="bmlp-art"><div class="bmv-video"><video src="/bm/live/tanitim.mp4?v=1" poster="/bm/live/poster.jpg?v=1" autoplay muted loop playsinline preload="metadata" aria-label="Canlı çevirili görüşme uygulamasından ekran kaydı: dil seçimi, canlı altyazı ve çeviri, çevrilen sohbet ve görüşme özeti"></video><span class="bmv-badge"><i></i> Uygulamadan gerçek kayıt</span></div></div>
+    <div class="bmlp-art"><div class="bmv" data-bmv></div></div>
   </div></section>`);
-  const head = root.querySelector('head'); if (head && !head.querySelector('link[href^="/bm/live.css"]')) head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/live.css?v=6">');
+  const head = root.querySelector('head'); if (head && !head.querySelector('link[href^="/bm/live.css"]')) head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/live.css?v=5"><script src="/bm/live.js?v=2" defer></script>');
 }
 
 // ---------- Analiz ve doğrulama (Genel Ayarlar → Analiz & Doğrulama) ----------
