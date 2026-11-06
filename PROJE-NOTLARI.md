@@ -374,3 +374,4 @@
 - **Güvence** (`server/platform/backup.mjs`): günlük otomatik yedek → BUCKET `backups/` (gzip JSON, son 14), Ayarlar → Yedekler & Hata Kaydı (indir, şimdi yedekle, istemci JS hataları). `/api/health` (= `/api/auth/health`) → UptimeRobot için.
 - **CNPJ**: Firma Bilgileri → "Vergi / şirket numarası (CNPJ)"; geçerli CNPJ girilince footer'da Receita Federal doğrulama rozeti.
 - Git geçmişi temizlendi (yazar altasmust, AI satırları yok), force-push yapıldı; yerel yedek dalı `backup-before-rewrite`.
+- **Otomatik çeviri kapatıldı (2026-11-06):** Sitede ülkeye/IP'ye göre dil değiştiren kod yok; farklı dilde görünme tarayıcı (Chrome/Edge) otomatik çevirisiydi. applyGrowth tüm site sayfalarına `<html translate="no">` + `<meta name="google" content="notranslate">` ekler (Google arama sonucundaki "Bu sayfayı çevir" de kalkar). Görüşme modülü ve paneller etkilenmez.

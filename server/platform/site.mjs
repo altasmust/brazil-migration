@@ -281,6 +281,9 @@ function applyLivePromo(root, path) {
 const REVIEW_PAGES = new Set(['/', '/brezilya-oturum-izni/', '/brezilya-vatandasligi/', '/brezilyada-sirket-kurma/', '/fiyatlar/', '/canli-cevirili-gorusme/', '/hakkimizda/']);
 function applyGrowth(root, path, S) {
   const head = root.querySelector('head'), f = root.querySelector('footer.site-footer');
+  // Tarayıcı / Google otomatik çevirisini kapat: sayfa her ziyaretçiye ve arama motoruna aynı (Türkçe) içerikle sunulur.
+  const html = root.querySelector('html'); if (html) html.setAttribute('translate', 'no');
+  if (head && !head.querySelector('meta[name="google"]')) head.insertAdjacentHTML('afterbegin', '<meta name="google" content="notranslate">');
   if (head && !head.querySelector('link[rel="manifest"]')) head.insertAdjacentHTML('beforeend', '<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1b5e20"><link rel="apple-touch-icon" href="/bm/pwa/icon-192.png"><link rel="stylesheet" href="/bm/grow.css?v=1"><script src="/bm/grow.js?v=1" defer></script>');
   if (!f) return;
   // yorumlar: yalnız onaylı gerçek yorum varsa
