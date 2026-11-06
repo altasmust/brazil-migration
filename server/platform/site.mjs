@@ -12,7 +12,8 @@ import {BLOG_POST, blogIndexHTML, blogPostHTML, blogJsonLd, homeBlogHTML} from '
 const PUBLIC = () => join(/* turbopackIgnore: true */ process.cwd(), 'public');
 export const PANEL = /^\/(admin|panel|partner|avukat|kyc)(\/|$)/;
 const OLD_HOSTS = /https?:\/\/brasil-yeni-baslangic\.fatih-altas\.chatgpt\.site/g;
-const siteUrl = () => (process.env.SITE_URL || '').replace(/\/$/, '');
+// Eski önizleme alan adı (chatgpt.site) veya boş SITE_URL → asıl alan adı
+const siteUrl = () => { const u = (process.env.SITE_URL || '').replace(/\/$/, ''); return !u || /chatgpt\.site/.test(u) ? 'https://brazilmigration.com' : u; };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const parseJSON = s => { try { return JSON.parse(s || '{}'); } catch { return {}; } };
 export const hash = s => createHash('sha1').update(String(s)).digest('hex').slice(0, 12);

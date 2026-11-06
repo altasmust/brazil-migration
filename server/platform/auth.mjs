@@ -56,7 +56,7 @@ export function sessionCookie(req, token, maxAge) {
   return `${cookieName(req)}=${token ? encodeURIComponent(token) : ''}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${token ? maxAge : 0}${secure(req) ? '; Secure' : ''}`;
 }
 export function siteUrl(req) {
-  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/$/, '');
+  if (process.env.SITE_URL && !/chatgpt\.site/.test(process.env.SITE_URL)) return process.env.SITE_URL.replace(/\/$/, '');
   const u = new URL(req.url); const h = req.headers.get('x-forwarded-host') || req.headers.get('host') || u.host;
   return `${req.headers.get('x-forwarded-proto') || u.protocol.replace(':', '')}://${h}`;
 }
