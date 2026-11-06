@@ -5,7 +5,7 @@ import {
   createImpersonationSession, isImpersonated, readCookie,
 } from './auth.mjs';
 import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
-import {translateText, translateStats} from './translate.mjs';
+import {translateText, translateStats, parseGlossary, DEFAULT_GLOSSARY} from './translate.mjs';
 import {applyConfig} from './config.mjs';
 import {loadSplits, cleanSplits, splitFor, serviceKey, SPLIT_DEFAULTS} from './commission.mjs';
 import {wafState, unban, clearEvents, cleanIps, clientIp} from '../waf.mjs';
@@ -26,7 +26,7 @@ const DEFAULT_PERMS = {
 };
 // Çevirili görüşme modülü (/gorusme). Ayar: items 'config-meeting'.
 export const MEETING_DEFAULTS = {enabled: true, inBooking: true, teamLang: 'pt', from: 'Brazil Migration <bilgi@brazilmigration.com>'};
-export async function translateConfig(db) { const r = await db.prepare("SELECT data FROM items WHERE id='config-translate'").first(); let d = {}; try { d = JSON.parse(r?.data || '{}') || {}; } catch {} return {provider: '', key: '', region: '', ...d, email: 'bilgi@brazilmigration.com'}; }
+export async function translateConfig(db) { const r = await db.prepare("SELECT data FROM items WHERE id='config-translate'").first(); let d = {}; try { d = JSON.parse(r?.data || '{}') || {}; } catch {} const gr = await db.prepare("SELECT data, updated FROM items WHERE id='config-glossary'").first(); let gt = null; try { gt = gr ? JSON.parse(gr.data).text : null; } catch {} return {provider: '', key: '', region: '', ...d, email: 'bilgi@brazilmigration.com', glossary: parseGlossary(gt ?? DEFAULT_GLOSSARY), gv: gr?.updated || 0}; }
 export async function meetingConfig(db) { const r = await db.prepare("SELECT data FROM items WHERE id='config-meeting'").first(); let d = {}; try { d = JSON.parse(r?.data || '{}') || {}; } catch {} return {...MEETING_DEFAULTS, ...d}; }
 const roomCode = () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = crypto.getRandomValues(new Uint8Array(8)); return [...r].map(x => a[x % a.length]).join(''); };
 export const roomLink = (base, code, lang) => `${base}/gorusme/?oda=${encodeURIComponent(code)}&dil=${lang}&otomatik=1`;
@@ -113,8 +113,39 @@ function readLocation(b, req) {
 }
 
 // ---- /api/auth/* (public) -------------------------------------------------
+// ---------- Randevu hatırlatması: başlangıçtan ~15 dk önce "Görüşmeye katıl" e-postası ----------
+async function runReminders(db) {
+  const t = Date.now();
+  const due = await rows(db, "SELECT id, data FROM items WHERE kind='booking' AND CAST(json_extract(data,'$.start') AS INTEGER) BETWEEN ? AND ? AND json_extract(data,'$.reminded') IS NULL", t + 60e3, t + 16 * 60e3);
+  if (!due.length) return;
+  const mc = await meetingConfig(db), cfg = (await getItem(db, 'integration-meet'))?.data || {};
+  for (const r of due) {
+    let d; try { d = JSON.parse(r.data); } catch { continue; }
+    if (d.status === 'İptal' || !validEmail(d.email || '')) continue;
+    await db.prepare("UPDATE items SET data=json_set(data,'$.reminded',?), updated=? WHERE id=? AND json_extract(data,'$.reminded') IS NULL").bind(t, t, r.id).run(); // önce işaretle → çift gönderim olmaz
+    const link = d.roomLink || d.meet; if (!link) continue;
+    const tz = d.timezone || 'Europe/Istanbul', mins = Math.max(1, Math.round((d.start - t) / 60000));
+    const hhmm = new Date(d.start).toLocaleTimeString('tr-TR', {timeZone: tz, hour: '2-digit', minute: '2-digit'});
+    try {
+      await sendMail({to: d.email, subject: `Ön görüşmeniz ${mins} dakika sonra (${hhmm})`, title: 'Merhaba ' + String(d.name || '').split(' ')[0] + ',',
+        text: `Brazil Migration ile ön görüşmeniz ${mins} dakika sonra, saat ${hhmm}'de (${tz === 'America/Sao_Paulo' ? 'São Paulo' : 'Türkiye'} saati) başlıyor. Aşağıdaki butondan katılabilirsiniz${d.room ? '; oda kodunuz: ' + d.room : ''}. Katılmadan önce kamera ve mikrofon izni vermeniz, mümkünse kulaklık kullanmanız önerilir.`,
+        link, button: 'Görüşmeye katıl', from: d.roomLink ? mc.from : undefined});
+      if (cfg.notifyEmail && validEmail(cfg.notifyEmail)) await sendMail({to: cfg.notifyEmail, subject: `${mins} dk sonra ön görüşme: ${d.name}`, text: `${d.name} (${d.email}) · ${hhmm} · ${d.service || ''}`, link: d.teamRoomLink || d.meet || undefined, button: 'Görüşme odasını aç', from: d.teamRoomLink ? mc.from : undefined});
+    } catch (e) { console.error('[reminder]', e.message); }
+  }
+}
+export function ensureReminders(env) {
+  if (!env?.DB) return;
+  globalThis.__bmRemDb = env.DB;
+  if (globalThis.__bmRem) return;
+  const tick = () => globalThis.__bmRemDb && runReminders(globalThis.__bmRemDb).catch(e => console.error('[reminder]', e.message));
+  globalThis.__bmRem = setInterval(tick, 60e3); if (globalThis.__bmRem.unref) globalThis.__bmRem.unref();
+  setTimeout(tick, 3000);
+}
+export {runReminders};
+
 export async function handleAuth(req, env, route) {
-  const db = env.DB;
+  const db = env.DB; ensureReminders(env);
   route = route.replace(/^admin\//, '');
   if (req.method !== 'GET') sameOrigin(req);
   if (route === 'payment-methods' && req.method === 'GET') return json({methods: enabledMethods(await loadPayments(db)).map(m => m.id === 'havale' ? m : {id: m.id, name: m.name})});
@@ -533,7 +564,7 @@ function validPerms(ps) {
   return out;
 }
 export async function handlePlatformAdmin(req, env, route, ctx = {}) {
-  const db = env.DB;
+  const db = env.DB; ensureReminders(env);
   if (req.method !== 'GET') sameOrigin(req);
   const u = await currentUser(db, req);
   if (!u || u.email !== OWNER_EMAIL()) fail(401, 'Yönetici girişi gerekli.');
@@ -1097,6 +1128,12 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     return streamFile(env, p.docs[doc]);
   }
 
+  if (route === 'settings/glossary' && req.method === 'GET') { const r = await getItem(db, 'config-glossary'); const text = r?.data?.text ?? DEFAULT_GLOSSARY; return json({text, count: parseGlossary(text).length}); }
+  if (route === 'settings/glossary' && req.method === 'POST') {
+    const text = String(b.reset ? DEFAULT_GLOSSARY : b.text ?? '').slice(0, 60000);
+    await db.batch([putItem(db, 'config-glossary', 'config', 'owner', {text, updated: now()}), audit(db, actor, 'settings.glossary', String(parseGlossary(text).length))]);
+    return json({text, count: parseGlossary(text).length});
+  }
   if (route === 'settings/translate' && req.method === 'GET') { const c = await translateConfig(db); return json({translate: {provider: c.provider, region: c.region, key: c.key ? MASK : ''}, stats: translateStats()}); }
   if (route === 'settings/translate' && req.method === 'POST') {
     const old = await translateConfig(db), provider = ['azure', 'google', 'deepl'].includes(b.provider) ? b.provider : '';

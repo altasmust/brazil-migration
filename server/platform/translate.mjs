@@ -51,12 +51,45 @@ async function deepl(q, sl, tl, cfg) {
 }
 const PRO = {azure, google: googleCloud, deepl};
 
+// ---------- Terim sözlüğü: "tr | pt | en | fa" satırları ----------
+export const DEFAULT_GLOSSARY = `# Türkçe | Português | English | فارسی  — her satır bir terim; boş bırakılan dil atlanır
+Brazil Migration | Brazil Migration | Brazil Migration | Brazil Migration
+Federal Polis | Polícia Federal | Federal Police | پلیس فدرال
+Oturum izni | Autorização de Residência | Residence permit | اجازه اقامت
+Göçmen kimlik kartı | CRNM | CRNM | CRNM
+Apostil | Apostila | Apostille | آپوستیل
+Yeminli tercüme | Tradução juramentada | Sworn translation | ترجمه رسمی
+Adli sicil kaydı | Certidão de antecedentes criminais | Criminal record certificate | گواهی عدم سوء پیشینه
+Dijital göçebe vizesi | Visto de nômade digital | Digital nomad visa | ویزای عشایر دیجیتال
+Aile birleşimi | Reunião familiar | Family reunification | الحاق خانواده
+Vergi kimlik numarası | CPF | CPF | CPF
+Şirket vergi numarası | CNPJ | CNPJ | CNPJ`;
+const ORDER = ['tr', 'pt', 'en', 'fa'];
+export function parseGlossary(text) {
+  return String(text ?? DEFAULT_GLOSSARY).split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#')).slice(0, 500)
+    .map(l => { const c = l.split('|').map(x => x.trim().slice(0, 120)); const e = {}; ORDER.forEach((k, i) => { if (c[i]) e[k] = c[i]; }); return e; })
+    .filter(e => Object.keys(e).length >= 2);
+}
+const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function applyGlossary(q, sl, tl, entries) {
+  let out = q, hit = false;
+  for (const e of entries) {
+    const a = e[sl], b = e[tl]; if (!a || !b) continue;
+    // Türkçede ekler terime bitişir (oturum iznini) → sözcüğün kalanını da al
+    const re = new RegExp(`(?<![\\p{L}\\p{N}])${esc(a)}${sl === 'tr' ? '\\p{L}*' : ''}(?![\\p{L}\\p{N}])`, 'giu');
+    if (re.test(out)) { hit = true; out = out.replace(re, b); }
+  }
+  return {text: out, hit};
+}
+
 export async function translateText(q, sl, tl, cfg = {}) {
   q = String(q || '').replace(/\s+/g, ' ').trim().slice(0, 1200);
   if (!q || !TR_LANGS.includes(sl) || !TR_LANGS.includes(tl)) return {text: q, ok: false};
   if (sl === tl) return {text: q, ok: true, by: 'same'};
   C.stats.req++;
-  const key = sl + '|' + tl + '|' + q.toLowerCase();
+  const g = cfg.glossary && cfg.glossary.length ? applyGlossary(q, sl, tl, cfg.glossary) : {text: q, hit: false};
+  const key = sl + '|' + tl + '|' + (cfg.gv || 0) + '|' + q.toLowerCase();
+  q = g.text;
   if (C.cache.has(key)) { C.stats.hit++; const v = C.cache.get(key); C.cache.delete(key); C.cache.set(key, v); return {text: v, ok: true, by: 'cache'}; }
   const chain = [];
   if (cfg.provider && cfg.key && PRO[cfg.provider]) chain.push(['pro', () => PRO[cfg.provider](q, sl, tl, cfg)]);

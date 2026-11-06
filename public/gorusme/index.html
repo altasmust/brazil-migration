@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="/gorusme/app.css?v=5">
+<link rel="stylesheet" href="/gorusme/app.css?v=6">
 </head>
 <body>
 <div id="bm-intro" aria-live="polite"><div class="in-wrap"><img class="in-logo" src="/brazil-migration-logo.png" alt="Brazil Migration"><div class="in-line"></div><div class="in-tag">Tercümanlı görüntülü görüşme</div><div class="in-load"><div class="in-ring"></div><div class="in-bar"><i></i></div><div class="in-txt">Görüşme hazırlanıyor… <b id="bm-pct">0%</b></div></div></div></div>
@@ -196,9 +196,11 @@
       <div class="stat"><b id="stLines">0</b><span data-i="stLines">Çevrilen cümle</span></div>
       <div class="stat"><b id="stMsgs">0</b><span data-i="stMsgs">Mesaj</span></div>
     </div>
+    <div class="end-sum" id="endSum" hidden><b id="endSumT">Görüşme özeti</b><pre id="endSumX" dir="auto"></pre></div>
     <p class="fine" data-i="endNote">Döküm yalnızca bu cihazda tutuluyor. Sayfayı kapatmadan önce indirin.</p>
     <div class="actions">
       <button class="btn btn-primary" id="endDl"><svg class="i"><use href="#i-download"/></svg><span data-i="download">Dökümü indir</span></button>
+      <button class="btn btn-primary" id="endSave" hidden><svg class="i"><use href="#i-download"/></svg><span id="endSaveT">Müşteri dosyasına kaydet</span></button>
       <button class="btn btn-ghost" id="rejoin" data-i="newCall">Yeni görüşme</button>
     </div>
   </div>
@@ -207,6 +209,6 @@
 <div class="toasts" id="toasts" aria-live="assertive"></div>
 
 <script src="/gorusme/peerjs.min.js?v=1.5.4"></script>
-<script src="/gorusme/app.js?v=5"></script>
+<script src="/gorusme/app.js?v=6"></script>
 </body>
 </html>

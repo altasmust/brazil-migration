@@ -47,7 +47,19 @@
           <label class="bmi-f">Gönderen adres<input id="bmg-from" class="bmi-in" value="${esc(m.from)}"><small>SMTP hesabınız bu adresle göndermeye izinli olmalı (aynı posta kutusu veya takma ad). İzin yoksa e-posta varsayılan gönderenle gider.${d.mail ? '' : ' <b>E-posta henüz yapılandırılmadı</b> — Genel Ayarlar → E-posta (SMTP).'}</small></label>
           <button class="btn primary small" id="bmg-save">${ic('check')} Kaydet</button></section>
         <section class="bmw-card"><h3>${ic('link')} Kullanım</h3><p class="bmw-hint">Müşteri ve danışman panellerinde “Görüşmeye katıl” bağlantısı vardır; yaklaşan bir ön görüşmesi olan müşteri doğrudan kendi odasına yönlenir. Planlı linklerde ilk giren odayı açar, diğeri otomatik katılır. En iyi sonuç için Chrome veya Edge önerilir.</p><a class="btn small" href="${esc(d.url)}" target="_blank" rel="noopener">${ic('arrow-up-right')} Görüşme sayfasını aç</a></section>
-        <section class="bmw-card" id="bmt-card"><h3>${ic('globe')} Çeviri servisi</h3><div class="loading">Yükleniyor…</div></section>`;
+        <section class="bmw-card" id="bmt-card"><h3>${ic('globe')} Çeviri servisi</h3><div class="loading">Yükleniyor…</div></section>
+        <section class="bmw-card" id="bmgl-card"><h3>${ic('book')} Hukuki terim sözlüğü</h3><div class="loading">Yükleniyor…</div></section>`;
+      (async () => {
+        const card = $('#bmgl-card'); let g;
+        try { g = await A('settings/glossary'); } catch (e) { card.insertAdjacentHTML('beforeend', `<div class="bmc-err">${esc(e.message)}</div>`); return; }
+        card.innerHTML = `<h3>${ic('book')} Hukuki terim sözlüğü <small style="margin-left:auto;font-weight:500">${g.count} terim</small></h3>
+          <p class="bmw-hint">Görüşmelerde bu terimler her zaman burada yazdığınız karşılıkla çevrilir. Her satıra bir terim yazın: <code>Türkçe | Português | English | فارسی</code>. Bir dili boş bırakabilirsiniz. # ile başlayan satırlar not olarak sayılır.</p>
+          <textarea id="bmgl-t" class="bmi-in" rows="12" spellcheck="false" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.6;resize:vertical;min-height:200px">${esc(g.text)}</textarea>
+          <div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary small" id="bmgl-save">${ic('check')} Sözlüğü kaydet</button><button class="btn small" id="bmgl-reset">Varsayılan listeye dön</button></div>`;
+        const go = async body => { try { const r = await A('settings/glossary', 'POST', body); say('Sözlük kaydedildi: ' + r.count + ' terim.'); meetingPage.reload(); } catch (e) { say(e.message); } };
+        $('#bmgl-save').onclick = () => go({text: $('#bmgl-t').value});
+        $('#bmgl-reset').onclick = () => { if (confirm('Sözlük varsayılan listeye dönsün mü? Eklediğiniz terimler silinir.')) go({reset: true}); };
+      })();
       (async () => {
         const card = $('#bmt-card'); let t;
         try { t = await A('settings/translate'); } catch (e) { card.insertAdjacentHTML('beforeend', `<div class="bmc-err">${esc(e.message)}</div>`); return; }

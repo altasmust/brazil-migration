@@ -367,3 +367,6 @@ html,body{max-width:100%;overflow-x:hidden}
 [dir=rtl] .cap,[dir=rtl] .msg,[dir=rtl] .entry{text-align:right}
 .cap.fa .main,.cap.fa .orig,.msg [lang=fa]{direction:rtl}
 @media (max-width:900px){#call .panel{background:rgba(9,26,17,.9)!important}}
+.end-sum{width:100%;max-width:640px;text-align:left;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:14px 16px;max-height:46vh;overflow:auto}
+.end-sum b{display:block;margin-bottom:8px;color:#a5d6a7}
+.end-sum pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:400 14px/1.55 var(--body);color:var(--fg)}

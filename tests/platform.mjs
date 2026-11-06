@@ -167,6 +167,28 @@ try {
   assert.equal((await call('b', 'auth', 'booking', {name: 'Ali', email: 'ali.b@test.com', date: '2020-01-01', time: '14:00', consent: true})).status, 400);
   assert.equal((await call('admin', 'admin', 'bookings')).data.bookings[0].email, 'ali.b@test.com');
 
+  // Görüşme: randevu hatırlatması (15 dk önce, tek sefer)
+  {
+    const {runReminders} = await import('../server/platform/api.mjs');
+    const db = getEnv().DB, bk = await db.prepare("SELECT id FROM items WHERE kind='booking' LIMIT 1").first();
+    await db.prepare("UPDATE items SET data=json_set(data,'$.start',?) WHERE id=?").bind(Date.now() + 10 * 6e4, bk.id).run();
+    await runReminders(db); await runReminders(db);
+    const d = JSON.parse((await db.prepare('SELECT data FROM items WHERE id=?').bind(bk.id).first()).data);
+    assert.ok(d.reminded, 'hatırlatma işaretlenmeli');
+    // terim sözlüğü + çeviri ucu
+    let g = await call('admin', 'admin', 'settings/glossary'); assert.equal(g.status, 200); assert.ok(g.data.count >= 5);
+    g = await call('admin', 'admin', 'settings/glossary', {text: 'Oturum izni | Autorização de Residência'}); assert.equal(g.data.count, 1);
+    assert.equal((await call('b', 'auth', 'translate', {q: 'x', sl: 'tr', tl: 'xx'})).data.ok, false);
+    // görüşme dökümü müşteri dosyasına
+    const sv = await call('zey', 'workspace', 'meeting/save', {room: 'TESTRM01', start: Date.now() - 6e5, lines: [{time: '10:00:01', who: 'Zey', lang: 'tr', orig: 'Merhaba', tr: 'Olá'}], msgs: [{time: '10:01', who: 'Zey', text: 'Adresim', tr: 'Meu endereço'}]});
+    assert.equal(sv.status, 200, JSON.stringify(sv.data)); assert.ok(sv.data.id);
+    const again = await call('zey', 'workspace', 'meeting/save', {room: 'TESTRM01', lines: [{time: '10:00:01', who: 'Zey', lang: 'tr', orig: 'Merhaba tekrar', tr: 'Olá de novo'}]});
+    assert.equal(again.data.id, sv.data.id); // aynı oda → aynı belge güncellenir
+    const f = await call('zey', 'workspace', 'file/' + sv.data.id, undefined, 'GET');
+    assert.equal(f.status, 200);
+    assert.equal((await call('zey', 'workspace', 'meeting/save', {room: 'X', lines: []})).status, 400);
+  }
+
   // logout ends the session
   await call('zey', 'auth', 'logout', {});
   assert.equal((await call('zey', 'workspace', 'bootstrap')).status, 401);
