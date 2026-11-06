@@ -93,6 +93,33 @@
     const c = $('#bmg-erc'); if (c) c.onclick = async () => { try { await A('errlog/clear', 'POST', {}); render(); } catch (err) { say(err.message); } };
   }); return wrap('Yedekler & Hata Kaydı', 'Otomatik veritabanı yedekleri, sağlık kontrolü ve ziyaretçi tarafı hata kaydı.'); };
 
+
+  // ---------------- Diller (İngilizce taslak) ----------------
+  const langsPage = () => { run(async root => {
+    const d = (await A('i18n')).en;
+    const pub = d.published;
+    root.innerHTML = `<div class="bmg-2"><section class="panel bmg-p"><header class="panel-head"><h2><img src="/bm/flags/gb.svg" alt="" width="20" height="14" style="vertical-align:-2px"> English</h2><span class="bmc-login ${pub ? 'on' : 'wait'}">${pub ? 'Yayında' : 'Taslak'}</span></header>
+      <p class="bmg-hint">${pub ? 'İngilizce sayfalar ziyaretçilere ve Google’a açık. Türkçe sayfalarda dil düğmesi ve hreflang etiketleri görünüyor; İngilizce adresler sitemap’te.' : '<b>Taslak:</b> İngilizce sayfalar ziyaretçilere ve Google’a kapalı (404). Sitemap’e girmez, dil düğmesi görünmez, hiçbir sayfadan bağlantı almaz. Yalnız siz önizleme ile görürsünüz.'}</p>
+      <div class="form-actions" style="justify-content:flex-start;flex-wrap:wrap">
+        ${pub ? '' : `<button class="btn primary small" data-lg="prev">${ic('eye')} ${d.preview ? 'Önizlemeyi aç' : 'Önizlemeyi başlat'}</button>${d.preview ? '<button class="btn small" data-lg="prevoff">Önizlemeyi kapat</button>' : ''}`}
+        <button class="btn small" data-lg="scan">${ic('search')} Eksik çevirileri tara</button>
+        <button class="btn ${pub ? '' : 'primary'} small" data-lg="${pub ? 'unpub' : 'pub'}">${pub ? 'Taslağa al' : 'Yayınla'}</button></div>
+      <p class="bmg-hint" style="margin-top:12px">Önerilen yayın zamanı: Search Console’da Türkçe sayfaların çoğu “Dizine eklendi” göründüğünde. Sözlükte ${d.strings} çeviri var; blog yazıları ve Türkiye–Brezilya karşılaştırması bilerek Türkçe bırakıldı.</p>
+      <div id="bmg-scan"></div></section>
+    <section class="panel bmg-p"><header class="panel-head"><h2>Sayfalar (${d.pages.length})</h2></header><ul class="bmg-ul">${d.pages.map(p => `<li><span><b>${esc(p.en)}</b><small>${esc(p.tr)}</small></span>${pub || d.preview ? `<a class="btn small" href="${esc(p.en)}" target="_blank" rel="noopener">${ic('eye')} Aç</a>` : ''}</li>`).join('')}</ul></section></div>`;
+  }); return wrap('Diller', 'Sitenin İngilizce sürümü: taslak önizleme ve yayın.'); };
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('[data-lg]'); if (!b) return; const a = b.dataset.lg;
+    try {
+      if (a === 'prev') { await A('i18n/preview', 'POST', {on: true}); window.open('/en/', '_blank', 'noopener'); render(); }
+      else if (a === 'prevoff') { await A('i18n/preview', 'POST', {on: false}); render(); }
+      else if (a === 'pub') { if (!confirm('İngilizce sayfalar herkese ve Google’a açılacak; Türkçe sayfalara dil düğmesi ve hreflang eklenecek, İngilizce adresler sitemap’e girecek. Devam edilsin mi?')) return; await A('i18n/publish', 'POST', {published: true}); say('İngilizce yayında.'); render(); }
+      else if (a === 'unpub') { if (!confirm('İngilizce sayfalar ziyaretçilere kapatılsın mı? (Önizleme bağlantıları da sıfırlanır.)')) return; await A('i18n/publish', 'POST', {published: false}); say('İngilizce taslağa alındı.'); render(); }
+      else if (a === 'scan') { const box = $('#bmg-scan'); box.innerHTML = '<div class="loading">Taranıyor…</div>'; const r = await A('i18n/missing'); const TRW = /[çğışüöÇĞŞÜÖİ]/; const pages = r.pages.map(p => ({...p, miss: (p.missing || []).filter(m => TRW.test(m.k))})).filter(p => p.miss.length);
+        box.innerHTML = pages.length ? `<h3 class="bmg-h3">Çevrilmemiş metin bulunan sayfalar</h3><ul class="bmg-ul bmg-err">${pages.map(p => `<li><span><b>${esc(p.en)}</b><small>${p.miss.slice(0, 6).map(m => esc(m.k.replace(/<\/?\d+\/?>/g, ' ').slice(0, 90))).join(' · ')}${p.miss.length > 6 ? ' …' : ''}</small></span><span class="bmc-count">${p.miss.length}</span></li>`).join('')}</ul><p class="bmg-hint">Sayfa metinlerini yönetim panelinden değiştirdiyseniz yeni metnin İngilizcesi sözlüğe eklenmelidir; eklenene kadar o metin Türkçe görünür.</p>` : `<div class="bmc-empty sm">${ic('check')}<b>Eksik çeviri yok.</b><span>Tüm sayfalardaki metinlerin İngilizcesi mevcut.</span></div>`; }
+    } catch (err) { say(err.message); }
+  });
+
   // ---------------- olaylar ----------------
   document.addEventListener('click', async e => {
     const f = e.target.closest('[data-rvf]'); if (f) { rvF = f.dataset.rvf; reviewsDraw($('#bmg-root')); return; }
@@ -122,8 +149,8 @@
   });
 
   // ---------------- rotalar + menü ----------------
-  const routes = {yorumlar: reviewsPage, aboneler: subsPage, fiyatlar: pricesPage, yedekler: backupsPage};
-  Object.assign(names, {yorumlar: 'Müşteri Yorumları', aboneler: 'Aboneler & Bülten', fiyatlar: 'Paket Fiyatları', yedekler: 'Yedekler & Hata Kaydı'});
+  const routes = {yorumlar: reviewsPage, aboneler: subsPage, fiyatlar: pricesPage, yedekler: backupsPage, diller: langsPage};
+  Object.assign(names, {yorumlar: 'Müşteri Yorumları', aboneler: 'Aboneler & Bülten', fiyatlar: 'Paket Fiyatları', yedekler: 'Yedekler & Hata Kaydı', diller: 'Diller'});
   const _overview = overview;
   overview = function () { const r = route(); return routes[r] ? routes[r]() : _overview(); };
   const nav = $('#navigation');
@@ -132,6 +159,7 @@
     const el = document.createElement('details');
     el.innerHTML = '<summary>Pazarlama</summary><div class="dropdown"><a href="#yorumlar">Müşteri Yorumları</a><a href="#aboneler">Aboneler &amp; Bülten</a><a href="#fiyatlar">Paket Fiyatları</a></div>';
     if (site) site.after(el); else nav.appendChild(el);
+    site?.querySelector('.dropdown')?.insertAdjacentHTML('beforeend', '<a href="#diller">Diller (English)</a>');
     const ay = [...nav.querySelectorAll('details')].find(d => d.querySelector('summary')?.textContent.trim() === 'Ayarlar');
     ay?.querySelector('a[href="#durum"]')?.insertAdjacentHTML('afterend', '<a href="#yedekler">Yedekler &amp; Hata Kaydı</a>');
   }

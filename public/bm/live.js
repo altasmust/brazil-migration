@@ -11,6 +11,11 @@
     {who: 'me', lang: 'en', text: 'Great, can we talk again next week?', to: 'pt', tr: 'Ótimo, podemos conversar de novo na semana que vem?', step: 3},
   ];
   const STEPS = ['Kendi dilinizde konuşun', 'Anında çevrilir', 'TR · PT · EN · FA', 'Uygulama gerekmez'];
+  // İngilizce sayfada müşteri İngilizce konuşur (metinler doğrudan; yazma animasyonu sözlükle çevrilemez)
+  if (document.documentElement.lang === 'en') {
+    SC[0] = {who: 'me', lang: 'en', text: 'Hello, which documents do I need for family reunification?', to: 'pt', tr: SC[0].tr, step: 0};
+    SC[1] = {...SC[1], to: 'en', tr: 'You need an apostilled marriage certificate and a sworn translation.'};
+  }
   const DUR = 5200;
   const lawyer = `<svg viewBox="0 0 200 200" aria-hidden="true"><defs><linearGradient id="bmvB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#24455e"/><stop offset="1" stop-color="#18324a"/></linearGradient></defs>
     <path d="M38 200c4-40 30-62 62-62s58 22 62 62z" fill="url(#bmvB)"/><path d="M88 138h24l-12 26z" fill="#f3f3f3"/>

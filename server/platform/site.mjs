@@ -52,10 +52,11 @@ export async function staticPages() {
 let state = null, stateAt = 0;
 export function invalidateSite() { stateAt = 0; renderCache.clear(); }
 import {loadSplits} from './commission.mjs';
+import {dict as i18nDict, translateRoot} from './i18n.mjs';
 import {publishedReviews, reviewsHTML, subscribeHTML, PRICE_KEYS} from './growth.mjs';
 export async function siteState(db) {
   if (state && Date.now() - stateAt < 15000) return state;
-  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post') OR id IN ('config-company','config-payments','config-didit','config-analytics','config-seo','config-prices')").all()).results || [];
+  const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post') OR id IN ('config-company','config-payments','config-didit','config-analytics','config-seo','config-prices','config-i18n')").all()).results || [];
   const s = {menu: null, pages: {}, custom: {}, blog: {}, company: null, stamp: ''};
   try { s.reviews = await publishedReviews(db, 12); } catch { s.reviews = []; }
   try { s.splits = await loadSplits(db); } catch { s.splits = null; }
@@ -72,6 +73,7 @@ export async function siteState(db) {
     if (r.id === 'config-analytics') s.analytics = d;
     if (r.id === 'config-seo') s.seo = d;
     if (r.id === 'config-prices') s.prices = d;
+    if (r.id === 'config-i18n') s.i18n = d;
   }
   s.stamp = hash(stamp);
   if (state?.stamp !== s.stamp) renderCache.clear();
@@ -274,7 +276,7 @@ function applyLivePromo(root, path) {
     <div class="bmlp-cta"><button class="btn" type="button" onclick="book()">Ücretsiz ön görüşme planla <span>↗</span></button><a class="bmlp-more" href="${LIVE.path}">Nasıl çalışır?</a></div></div>
     <div class="bmlp-art"><div class="bmv" data-bmv></div></div>
   </div></section>`);
-  const head = root.querySelector('head'); if (head && !head.querySelector('link[href^="/bm/live.css"]')) head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/live.css?v=5"><script src="/bm/live.js?v=2" defer></script>');
+  const head = root.querySelector('head'); if (head && !head.querySelector('link[href^="/bm/live.css"]')) head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/live.css?v=5"><script src="/bm/live.js?v=3" defer></script>');
 }
 
 // ---------- Yorumlar, bülten formu, paket fiyatları, PWA (büyüme) ----------
@@ -284,7 +286,7 @@ function applyGrowth(root, path, S) {
   // Tarayıcı / Google otomatik çevirisini kapat: sayfa her ziyaretçiye ve arama motoruna aynı (Türkçe) içerikle sunulur.
   const html = root.querySelector('html'); if (html) html.setAttribute('translate', 'no');
   if (head && !head.querySelector('meta[name="google"]')) head.insertAdjacentHTML('afterbegin', '<meta name="google" content="notranslate">');
-  if (head && !head.querySelector('link[rel="manifest"]')) head.insertAdjacentHTML('beforeend', '<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1b5e20"><link rel="apple-touch-icon" href="/bm/pwa/icon-192.png"><link rel="stylesheet" href="/bm/grow.css?v=1"><script src="/bm/grow.js?v=1" defer></script>');
+  if (head && !head.querySelector('link[rel="manifest"]')) head.insertAdjacentHTML('beforeend', '<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#1b5e20"><link rel="apple-touch-icon" href="/bm/pwa/icon-192.png"><link rel="stylesheet" href="/bm/grow.css?v=2"><script src="/bm/grow.js?v=1" defer></script>');
   if (!f) return;
   // yorumlar: yalnız onaylı gerçek yorum varsa
   if (REVIEW_PAGES.has(path) && S.reviews?.length && !root.querySelector('.rv-sec')) {
@@ -467,6 +469,52 @@ export function arrowize(html) {
   return html;
 }
 
+// ---------- diller ----------
+export const enPublished = S => !!S?.i18n?.en?.published;
+const LANGSW_CSS = '<style>.bm-langsw{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:7px 11px;border:1px solid var(--line,#dfe5d8);border-radius:6px;font-size:13px;font-weight:600;color:var(--ink,#183b2c);text-decoration:none}.bm-langsw img{border-radius:2px}.bm-draft{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:9999;background:#8a6d1a;color:#fff;font:600 13px/1.3 Poppins,Arial,sans-serif;padding:9px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.25)}@media(max-width:760px){.bm-langsw{min-height:36px;padding:6px 9px}.bm-langsw span{display:none}}</style>';
+// hreflang + dil düğmesi. TR sayfada: yalnız İngilizce yayındaysa. EN sayfada (taslak önizleme dahil): her zaman.
+function applyLangLinks(root, trPath, enPath, S, {draft = false} = {}) {
+  const d = i18nDict('en'); enPath = enPath || d.toEn.get(trPath); if (!enPath) return;
+  const onEn = root.querySelector('html')?.getAttribute('lang') === 'en';
+  if (!onEn && !enPublished(S)) return;
+  const head = root.querySelector('head'), base = siteUrl();
+  if (head && enPublished(S) && !draft) head.insertAdjacentHTML('beforeend', `<link rel="alternate" hreflang="tr" href="${base}${trPath}"><link rel="alternate" hreflang="en" href="${base}${enPath}"><link rel="alternate" hreflang="x-default" href="${base}${trPath}">`);
+  if (head) head.insertAdjacentHTML('beforeend', LANGSW_CSS);
+  const to = onEn ? {href: trPath, code: 'tr', flag: 'tr', label: 'Türkçe'} : {href: enPath, code: 'en', flag: 'gb', label: 'English'};
+  const btn = `<a class="bm-langsw" href="${to.href}" hreflang="${to.code}" lang="${to.code}" translate="no"><img src="/bm/flags/${to.flag}.svg" alt="" width="18" height="13"><span>${to.label}</span></a>`;
+  const tt = root.querySelector('header .theme-toggle'); if (tt) tt.insertAdjacentHTML('beforebegin', btn);
+}
+// /en/... sayfası: Türkçe sayfa render edilir, sonra çevrilir.
+const enCache = new Map();
+export async function renderEn(db, enPath, {draft = false, missing = null} = {}) {
+  const d = i18nDict('en'), trPath = d.toTr.get(enPath);
+  if (!trPath) return null;
+  const st = await siteState(db);
+  const ck = enPath + '|' + st.stamp + '|' + draft;
+  if (!missing && enCache.has(ck)) return enCache.get(ck);
+  const tr = await renderPage(db, trPath);
+  if (tr.status !== 200) return null;
+  const root = parseHTML(tr.html);
+  root.querySelectorAll('link[hreflang],a.bm-langsw').forEach(n => n.remove());
+  // İngilizcesi olmayan (yalnız Türkçe) bölümler: blog vitrini ve menüdeki Türkçe-özel sayfa bağlantıları
+  root.querySelectorAll('section.home-blog').forEach(n => n.remove());
+  root.querySelectorAll('header a[href^="/blog"],footer a[href^="/blog"],header a[href^="/turkiye-brezilya/"],footer a[href^="/turkiye-brezilya/"],header a[href^="/portekizce/"],footer a[href^="/portekizce/"],.full-menu a[href^="/blog"],.full-menu a[href^="/turkiye-brezilya/"],.full-menu a[href^="/portekizce/"]').forEach(a => { const li = a.parentNode; (li && li.rawTagName?.toLowerCase() === 'li' ? li : a).remove(); });
+  root.querySelector('html')?.setAttribute('lang', 'en');
+  translateRoot(root, {lang: 'en', path: enPath, trPath, missing});
+  applyLangLinks(root, trPath, enPath, st, {draft});
+  const head = root.querySelector('head');
+  // tarayıcıda JS ile üretilen metinler için: aynı sözlük + çevirmen
+  head?.insertAdjacentHTML('afterbegin', '<script src="/api/site/i18n/en.js?v=' + st.stamp + '"></script>');
+  if (draft) {
+    root.querySelectorAll('meta[name="robots"],meta[name="googlebot"]').forEach(m => m.remove());
+    head?.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex,nofollow">');
+    root.querySelector('body')?.insertAdjacentHTML('beforeend', '<div class="bm-draft" translate="no">TASLAK · English önizleme — ziyaretçilere kapalı</div>');
+  }
+  const out = {status: 200, html: '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '')};
+  if (!missing) { if (enCache.size > 100) enCache.clear(); enCache.set(ck, out); }
+  return out;
+}
+
 // ---------- render ----------
 const renderCache = new Map();
 export async function renderPage(db, path, {editor = false, preview = null} = {}) {
@@ -488,7 +536,7 @@ export async function renderPage(db, path, {editor = false, preview = null} = {}
   else return {status: 404, html: await notFound(db)};
   if (!root) return {status: 404, html: await notFound(db)};
   if (st?.menu || preview) applyMenu(root, (st || await siteState(db)).menu);
-  try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); if (!editor) { applyGlobalSeo(root, path, S.seo || {}); applyAnalytics(root, S.analytics || {}, path); applyLivePromo(root, path); applyGrowth(root, path, S); applyPerf(root); } } catch (e) { console.error('[site]', e.message); }
+  try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); if (!editor) { applyGlobalSeo(root, path, S.seo || {}); applyAnalytics(root, S.analytics || {}, path); applyLivePromo(root, path); applyGrowth(root, path, S); applyPerf(root); applyLangLinks(root, path, null, S); } } catch (e) { console.error('[site]', e.message); }
   if (path === '/' && !editor && st) { const why = root.querySelector('section.why'); const hb = homeBlogHTML(Object.values(st.blog || {}).filter(p => p.published)); const ft = root.querySelector('footer.site-footer'); if (ft && hb) { ft.insertAdjacentHTML('beforebegin', hb); root.querySelector('head')?.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/blog.css?v=1">'); } }
   let html = '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
   if (siteUrl()) html = html.replace(OLD_HOSTS, siteUrl());
@@ -528,5 +576,7 @@ export async function sitemapXML(db) {
   const posts = Object.values(st.blog).filter(p => p.published && !p.seo?.noindex);
   if (posts.length) urls.push('/blog/');
   const lm = {}; for (const p of posts) { urls.push('/blog/' + p.slug + '/'); lm['/blog/' + p.slug + '/'] = p.modified || p.date; }
+  // İngilizce: yalnız yayına alındıysa (taslakta sitemap'e girmez)
+  if (enPublished(st)) { const d = i18nDict('en'); for (const u of [...urls]) { const en = d.toEn.get(u); if (en) urls.push(en); } }
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${esc(base + u)}</loc><lastmod>${lm[u] || today}</lastmod></url>`).join('')}</urlset>`;
 }

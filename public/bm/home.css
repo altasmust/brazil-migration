@@ -99,3 +99,28 @@ body[data-page="home"] span.bm-ico svg{display:block;margin:0}
 .home-blog .hb-all{font-weight:600;font-size:14px;color:var(--forest);white-space:nowrap;border:1px solid #cfe0c6;padding:10px 16px;border-radius:999px}
 .home-blog .hb-all:hover{background:#eef5e9}
 @media (max-width:640px){.home-blog{padding:56px 0 10px}.home-blog .hb-head{flex-direction:column;align-items:flex-start}}
+/* Şehir slider'ı (hero-slider.js) */
+.home-hero .hs-slide{position:absolute;inset:0;opacity:0;transition:opacity 1.4s ease}
+.home-hero .hs-slide.on{opacity:1}
+.home-hero .hs-slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 52%}
+.home-hero .hs-slide.on img.city-day{animation:hsZoom 9s ease-out both}
+@keyframes hsZoom{from{transform:scale(1.06)}to{transform:scale(1)}}
+.home-hero .hero-shade,.home-hero .hero-content{z-index:1}
+.hs-bar{position:absolute;right:26px;bottom:22px;z-index:2;display:flex;align-items:center;gap:16px;color:#fff}
+.hs-cap{text-align:right;line-height:1.25;text-shadow:0 1px 6px rgba(0,0,0,.55)}
+.hs-cap b{display:block;font-size:15px;letter-spacing:.02em}.hs-cap span{display:block;font-size:12px;opacity:.85}.hs-cap small{display:block;font-size:10px;opacity:.6;margin-top:2px}
+.hs-cap small:empty{display:none}
+.hs-dots{display:flex;gap:7px}
+.hs-dots button{width:34px;height:22px;padding:0;border:0;background:none;cursor:pointer;display:grid;place-items:center}
+.hs-dots i{display:block;width:100%;height:3px;border-radius:3px;background:rgba(255,255,255,.38);overflow:hidden;position:relative}
+.hs-dots [aria-selected=true] i{background:rgba(255,255,255,.5)}
+.hs-dots [aria-selected=true] i::after{content:"";position:absolute;inset:0;background:#fff;transform-origin:left;transform:scaleX(1)}
+.hs-bar.run .hs-dots [aria-selected=true] i::after{animation:hsBar var(--hs-t,7s) linear both}
+.home-hero.hs-paused .hs-dots [aria-selected=true] i::after{animation-play-state:paused}
+@keyframes hsBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.hs-dots button:focus-visible{outline:2px solid #fff;outline-offset:2px;border-radius:4px}
+@media(max-width:760px){.hs-bar{right:14px;top:14px;bottom:auto;gap:8px}.hs-cap{display:none}.hs-dots button{width:24px}}
+@media(prefers-reduced-motion:reduce){.home-hero .hs-slide{transition:none}.home-hero .hs-slide.on img.city-day{animation:none}}
+.home-hero[data-hs] .hero-bottom span+span{display:none}
+.home-hero h1 em,.home-hero .hero-bottom span{transition:opacity .35s ease}
+.home-hero .hs-fade{opacity:0}

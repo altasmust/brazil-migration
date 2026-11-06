@@ -108,3 +108,4 @@ html.rh-open .rh-body .rh-sec{display:block}html.rh-open .rh-gate{display:none}
 [data-theme=dark] .pr-price b.has-price{color:var(--d-accent,#8fcf8a)}
 .nl-form,.nl-row,.rh-card{min-width:0;max-width:100%}.nl-row input{width:100%}.nl-row .btn{flex:1 1 auto}
 @media (max-width:900px){.rh-card{padding:20px}.pi-grid{grid-template-columns:minmax(0,1fr)!important}.pi-card{min-width:0;padding:20px}}
+html[lang=en] .pr-exc::before{content:"Available as an add-on"}
