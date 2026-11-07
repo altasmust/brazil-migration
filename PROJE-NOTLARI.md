@@ -401,3 +401,11 @@
 - Çözüm: `server/platform/tts.mjs` + public `POST /api/auth/tts` {q, l} → MP3 (yalnız aynı origin; WAF 'tr' limitinde). Sıra: Sunucu Modülleri → yeni "Azure Speech (sesli çeviri)" kartı (azuretts: key+region, Speech kaynağı F0, kaydederken doğrulanır) → Google translate_tts (ücretsiz, 180 karakter parçalı). LRU 400.
 - İstemci (gorusme/app.js v=8): tek `<audio>` (ttsEl) ile sıralı çalma (en fazla 4 bekleyen), çalarken konuşma tanıma duraklar; düğmeye basınca `/gorusme/silence.mp3` ile ses kilidi açılır (speechSynthesis artık telefonda kullanılmaz; yalnız masaüstünde yedek). Video 'pause' olursa ve ses bitince otomatik play(); telefonda uzak video sesi değiştirilmez.
 - Yerelde dış ağ kapalı → Google ses denenemedi (502 yedek yolu doğrulandı); canlıda Hostinger sunucusu Google'a erişir. Güvenilirlik için Azure Speech anahtarı önerildi.
+
+## Ponte (ayrı uygulama — Brazil Migration sitesinde YAYINLANMAZ)
+- Depo: github.com/altasmust/ponte (gizli), yerel: /home/claude/proje/ponte (symlink /home/claude/ponte). Ayrıntılı kurulum: README.md.
+- Yapı: Vercel (public/ + api/[...path].js → lib/api.js), Turso, e-posta kodu girişi (Gmail SMTP veya Resend), Web Push (VAPID, DB'de otomatik), PeerJS görüşme (public/call = gorusme kopyası, ?hemen=1&geri=…).
+- Android: android/ (Bubblewrap TWA, paket app.ponte.twa, host yer tutucu PONTE_HOST_PLACEHOLDER.vercel.app → CI'da vars.PONTE_HOST). .github/workflows/android-apk.yml imzalı APK üretir; secret yoksa yeni anahtar üretip "imza-anahtari-SAKLA" çıktısı verir. assetlinks: env ANDROID_SHA256.
+- iPhone: PWA (Ana Ekrana Ekle). Ücretsiz iOS mağaza dışı dağıtım yok.
+- Yerel test: PONTE_PORT=3020 node scripts/dev.js; kod terminale yazılır. İki kullanıcılı e2e (kayıt, mesaj, arama çal/cevapla) geçti; PeerJS ve çeviri bu ortamda ağ yüzünden test edilemedi.
+- Kullanıcının yapacakları: Turso DB+token, Vercel import + env, PONTE_HOST değişkeni, Actions → Android APK.
