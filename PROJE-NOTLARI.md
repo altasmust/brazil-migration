@@ -412,4 +412,5 @@
 - Canlı: https://ponte-ochre.vercel.app (Vercel hesabı hostizm-2878, proje ponte). Upstash: upstash-kv-bistre-canvas (Free), env otomatik.
 - ÖNEMLİ: Vercel Hobby, commit yazarı tanınmazsa yayını "Blocked" yapar → ponte deposunda git user.email = 67632420+altasmust@users.noreply.github.com.
 - GitHub repo değişkeni PONTE_HOST=ponte-ochre.vercel.app eklendi. APK iş akışı #2 başarılı (Ponte-1.0.2.apk); setup-android adımı kaldırıldı (runner SDK'sı kullanılıyor). ANDROID_SHA256 Vercel'e eklendi, assetlinks çalışıyor.
-- Eksik (kullanıcı): SMTP_* (Gmail uygulama şifresi) Vercel env'e — yoksa üretimde giriş kodu gitmez; imza-anahtari-SAKLA çıktısındaki 2 değer GitHub Secrets'a (7 gün içinde).
+- SMTP (Gmail) Vercel'de ayarlı (SMTP_PASS'ı kullanıcı girdi), canlıda giriş kodu e-postası gidiyor. API yönlendirmesi: api/index.js + vercel.json rewrite (/api/:path* → /api/index?__p=…); catch-all [...path] Vercel'de çok parçalı yolda 404 veriyordu.
+- Eksik (kullanıcı): imza-anahtari-SAKLA çıktısındaki 2 değer GitHub Secrets'a (7 gün içinde).
