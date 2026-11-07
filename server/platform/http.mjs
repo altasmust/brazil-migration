@@ -1,3 +1,5 @@
+import zlib from 'node:zlib';
+import {createHash} from 'node:crypto';
 // Glue between Next.js route handlers and the existing (Cloudflare-style) server modules.
 import {getDatabase} from './db.mjs';
 import {refreshConfig} from './config.mjs';
@@ -59,6 +61,22 @@ export function platform(kind, after) {
 }
 export {isAdminRequest};
 const LANGSW_PREVIEW_CSS = '<style>.bm-langsw{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:7px 11px;border:1px dashed #8a6d1a;border-radius:6px;font-size:13px;font-weight:600;color:var(--ink,#183b2c);text-decoration:none}.bm-langsw img{border-radius:2px}@media(max-width:760px){.bm-langsw{min-height:36px;padding:6px 9px}.bm-langsw span{display:none}}</style>';
+// HTML yanıtlarını sıkıştır (Next, route handler yanıtlarını sıkıştırmıyor): brotli > gzip. Küçük önbellek: aynı sayfa tekrar sıkıştırılmaz.
+const zc = new Map();
+function htmlOut(req, html, init) {
+  const headers = {...(init.headers || {}), 'Vary': 'Accept-Encoding'};
+  if (req.method === 'HEAD' || html == null) return new Response(null, {...init, headers});
+  const ae = req.headers.get('accept-encoding') || '', enc = /\bbr\b/.test(ae) ? 'br' : /\bgzip\b/.test(ae) ? 'gzip' : '';
+  if (!enc || html.length < 1024) return new Response(html, {...init, headers});
+  const key = enc + ':' + createHash('sha1').update(html).digest('base64');
+  let buf = zc.get(key);
+  if (!buf) {
+    const b = Buffer.from(html);
+    buf = enc === 'br' ? zlib.brotliCompressSync(b, {params: {[zlib.constants.BROTLI_PARAM_QUALITY]: 5, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: b.length}}) : zlib.gzipSync(b, {level: 6});
+    if (zc.size > 300) zc.clear(); zc.set(key, buf);
+  }
+  return new Response(buf, {...init, headers: {...headers, 'Content-Encoding': enc}});
+}
 const readCookieRaw = (req, name) => { const m = (req.headers.get('cookie') || '').match(new RegExp('(?:^|;\\s*)' + name + '=([^;]+)')); return m ? decodeURIComponent(m[1]) : ''; };
 
 // Public site pages (rewritten here by proxy.ts), uploaded site media, sitemap and robots.
@@ -79,8 +97,8 @@ export function site() {
           const st = await siteState(db), key = st.i18n?.previewKey;
           const pub = enPublished(st), prev = !pub && key && readCookieRaw(req, 'bm_lang_prev') === key;
           const r = (pub || prev) ? await renderEn(db, path === '/en' ? '/en/' : path, {draft: prev}) : null;
-          if (!r) { const nf = await renderPage(db, '/__yok__/'); return new Response(req.method === 'HEAD' ? null : nf.html, {status: 404, headers: {...htmlHeaders, 'X-Robots-Tag': 'noindex'}}); }
-          return new Response(req.method === 'HEAD' ? null : r.html, {status: 200, headers: prev ? {...htmlHeaders, 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex, nofollow'} : htmlHeaders});
+          if (!r) { const nf = await renderPage(db, '/__yok__/'); return htmlOut(req, nf.html, {status: 404, headers: {...htmlHeaders, 'X-Robots-Tag': 'noindex'}}); }
+          return htmlOut(req, r.html, {status: 200, headers: prev ? {...htmlHeaders, 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex, nofollow'} : htmlHeaders});
         }
         const r = await renderPage(db, path);
         // Taslak önizleme açık yönetici: Türkçe sayfada da "English" düğmesi (yalnız bu yanıtta, önbelleğe girmez)
@@ -89,10 +107,10 @@ export function site() {
           const st = await siteState(db), key = st.i18n?.previewKey;
           if (!enPublished(st) && key && readCookieRaw(req, 'bm_lang_prev') === key) {
             const sw = langMenuHTML('tr', path, st, {preview: true});
-            if (sw) return new Response(req.method === 'HEAD' ? null : r.html.replace('<button type="button" class="theme-toggle"', sw + '<button type="button" class="theme-toggle"').replace('</head>', LANG_CSS + '</head>'), {status: 200, headers: {...htmlHeaders, 'Cache-Control': 'private, no-store'}});
+            if (sw) return htmlOut(req, r.html.replace('<button type="button" class="theme-toggle"', sw + '<button type="button" class="theme-toggle"').replace('</head>', LANG_CSS + '</head>'), {status: 200, headers: {...htmlHeaders, 'Cache-Control': 'private, no-store'}});
           }
         }
-        return new Response(req.method === 'HEAD' ? null : r.html, {status: r.status, headers: htmlHeaders});
+        return htmlOut(req, r.html, {status: r.status, headers: htmlHeaders});
       }
       if (route === 'i18n/en.js') {
         const {siteState, enPublished} = await import('./site.mjs'); const {dict} = await import('./i18n.mjs');
@@ -101,7 +119,7 @@ export function site() {
         const d = dict('en'), rt = new Set(d.raw.rt || []), t = {}; for (const k of rt) { const v = d.t.get(k); if (v != null) t[k] = v; }
         const {readFile} = await import('node:fs/promises'); const {join} = await import('node:path');
         const code = await readFile(join(process.cwd(), 'server', 'platform', 'i18n', 'runtime.js'), 'utf8');
-        return new Response('window.BM_I18N=' + JSON.stringify({lang: 'en', t, slugs: d.raw.slugs}).replace(/</g, '\\u003c') + ';\n' + code, {headers: {'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': enPublished(st) ? 'public, max-age=3600' : 'private, no-store', 'X-Content-Type-Options': 'nosniff'}});
+        return htmlOut(req, 'window.BM_I18N=' + JSON.stringify({lang: 'en', t, slugs: d.raw.slugs}).replace(/</g, '\\u003c') + ';\n' + code, {headers: {'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': enPublished(st) ? 'public, max-age=3600' : 'private, no-store', 'X-Content-Type-Options': 'nosniff'}});
       }
       if (route.startsWith('media/')) {
         const id = route.slice(6); if (!/^[a-f0-9-]{8,40}\.(png|jpe?g|webp|gif|svg)$/i.test(id)) return new Response('Not found', {status: 404});

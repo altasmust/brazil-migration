@@ -18,11 +18,11 @@
   const srcset = id => [960, 1440, 1920, 2560].map(w => `${U(id, w)} ${w}w`).join(', ');
   const build = s => {
     const el = document.createElement('div'); el.className = 'hs-slide'; el.setAttribute('aria-hidden', 'true');
-    el.innerHTML = `<img class="city-day" alt="${s.alt}" decoding="async" sizes="100vw" data-srcset="${srcset(s.day)}" data-src="${U(s.day, 1920)}"><img class="city-night" alt="" aria-hidden="true" decoding="async" sizes="100vw" data-srcset="${srcset(s.night)}" data-src="${U(s.night, 1920)}">`;
+    el.innerHTML = `<img class="city-day" alt="${s.alt}" decoding="async" sizes="(max-width: 760px) 60vw, 100vw" data-srcset="${srcset(s.day)}" data-src="${U(s.day, 1920)}"><img class="city-night" alt="" aria-hidden="true" decoding="async" data-night="${U(s.night, 1920)}">`;
     slides[slides.length - 1].after(el); slides.push(el); return el;
   };
   SLIDES.slice(1).forEach(build);
-  const load = el => el.querySelectorAll('img[data-src]').forEach(i => { i.srcset = i.dataset.srcset; i.src = i.dataset.src; i.removeAttribute('data-src'); i.removeAttribute('data-srcset'); });
+  const load = el => { if (document.documentElement.dataset.theme === 'dark' && window.bmNights) setTimeout(window.bmNights); el.querySelectorAll('img[data-src]').forEach(i => { i.srcset = i.dataset.srcset; i.src = i.dataset.src; i.removeAttribute('data-src'); i.removeAttribute('data-srcset'); }); };
   // 2. alt bar: şehir adı + noktalar
   const bar = document.createElement('div'); bar.className = 'hs-bar';
   bar.innerHTML = `<div class="hs-cap" aria-live="polite"><b></b><span></span><small></small></div><div class="hs-dots" role="tablist" aria-label="Şehirler">${SLIDES.map((s, i) => `<button type="button" role="tab" aria-label="${s.city}" aria-selected="${i === 0}" data-i="${i}"><i></i></button>`).join('')}</div>`;

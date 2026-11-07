@@ -97,3 +97,8 @@ body{font-family:'Poppins',Arial,sans-serif;font-size:16px;line-height:1.75}h1,h
 .stack-label:before,.stack-label:after{display:none!important}
 [data-theme=dark] .stack-label{background:#2e7d47!important;box-shadow:-12px 0 0 -5px rgba(110,160,100,.45),-24px 0 0 -10px rgba(80,120,80,.3)}
 .check{display:block;position:relative;padding-left:26px}.check input{position:absolute;left:0;top:0}[dir=rtl] .check{padding-left:0;padding-right:26px}[dir=rtl] .check input{left:auto;right:0}
+/* dünya haritası noktaları: 8.789 daire yerine 2 yol (yuvarlak uçlu kesik çizgi = nokta) */
+.land-dots path{fill:none;stroke:#719381;stroke-width:2.7;stroke-linecap:round}
+.land-dots path.ld-run{stroke-dasharray:0 4.6}
+[data-theme=dark] .land-dots path{stroke:#628573}
+.lens-map .land-dots path{stroke-width:1.4}

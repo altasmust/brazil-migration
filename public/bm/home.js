@@ -30,7 +30,7 @@
   $$('.service-card').forEach(c => {
     const m = CARDS[c.getAttribute('href')]; if (!m) return;
     c.classList.add('bm-live');
-    c.insertAdjacentHTML('afterbegin', `<span class="bm-thumb" aria-hidden="true"><img src="/images/marketing-v2/${m[1]}-768.webp" srcset="/images/marketing-v2/${m[1]}-768.webp 768w, /images/marketing-v2/${m[1]}.webp 1536w" sizes="(max-width: 760px) 92vw, 420px" width="768" height="512" alt="" loading="lazy" decoding="async"></span>${ico(m[0])}`);
+    c.insertAdjacentHTML('afterbegin', `<span class="bm-thumb" aria-hidden="true"><img src="/images/marketing-v2/${m[1]}-768.webp" srcset="/images/marketing-v2/${m[1]}-480.webp 480w, /images/marketing-v2/${m[1]}-768.webp 768w" sizes="(max-width: 760px) 46vw, 420px" width="768" height="512" alt="" loading="lazy" decoding="async"></span>${ico(m[0])}`);
   });
 
   const WHY = ['home', 'scale', 'leaf', 'chat'];
