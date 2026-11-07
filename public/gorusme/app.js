@@ -428,18 +428,46 @@ const nowStr = () => new Date().toLocaleTimeString(LOC[S.me], { hour:'2-digit', 
 let voicesCache = [];
 const loadVoices = () => { if ('speechSynthesis' in window) voicesCache = speechSynthesis.getVoices(); };
 if ('speechSynthesis' in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+/* Sesli çeviri: sunucudan MP3 (/api/auth/tts) → tek <audio> elemanı, sıralı çalma.
+   Telefonda speechSynthesis görüşme sırasında ses oturumunu ele geçirip videoyu durduruyordu. */
+const isTouch = matchMedia('(pointer:coarse)').matches || /Android|iPhone|iPad/i.test(navigator.userAgent);
+const ttsEl = new Audio(); ttsEl.setAttribute('playsinline', ''); ttsEl.preload = 'auto';
+const ttsQ = []; let ttsBusy = false, ttsUrl = '';
+const SILENT = '/gorusme/silence.mp3';
+function ttsPlayNext(){
+  if (ttsBusy || !ttsQ.length || !S.voiceOn) return;
+  const {text, lang} = ttsQ.shift(); ttsBusy = true;
+  const done = () => { ttsBusy = false; if (ttsUrl){ URL.revokeObjectURL(ttsUrl); ttsUrl = ''; } if (!ttsQ.length) pauseRecognition(false); resumeVideos(); ttsPlayNext(); };
+  fetch('/api/auth/tts', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ q:text, l:lang }) })
+    .then(r => { if (!r.ok) throw new Error('tts ' + r.status); return r.blob(); })
+    .then(bl => {
+      if (!S.voiceOn){ done(); return; }
+      ttsUrl = URL.createObjectURL(bl); ttsEl.src = ttsUrl;
+      ttsEl.onended = ttsEl.onerror = done;
+      pauseRecognition(true);
+      return ttsEl.play().then(resumeVideos);
+    })
+    .catch(() => { ttsBusy = false; if (!isTouch) speakLocal(text, lang); else done(); });
+}
 function speak(text){
-  if (!S.voiceOn || !('speechSynthesis' in window) || !text) return;
-  const lang = LANGS[S.me].tts;
-  const u = new SpeechSynthesisUtterance(text);
+  if (!S.voiceOn || !text) return;
+  ttsQ.push({ text, lang: S.me }); if (ttsQ.length > 4) ttsQ.splice(0, ttsQ.length - 4);
+  ttsPlayNext();
+}
+/* yedek: yalnız masaüstünde tarayıcının kendi sesi */
+function speakLocal(text, code){
+  if (!('speechSynthesis' in window)) return;
+  const lang = LANGS[code].tts, u = new SpeechSynthesisUtterance(text);
   u.lang = lang; u.rate = 1.04;
   const vs = voicesCache.filter(v => (v.lang || '').replace('_','-').toLowerCase().startsWith(lang.toLowerCase()));
-  const v = vs.find(v => /google|natural|online/i.test(v.name)) || vs[0];
-  if (v) u.voice = v;
+  const v = vs.find(v => /google|natural|online/i.test(v.name)) || vs[0]; if (v) u.voice = v;
   u.onstart = () => pauseRecognition(true);
-  u.onend = u.onerror = () => { if (!speechSynthesis.speaking) pauseRecognition(false); };
+  u.onend = u.onerror = () => { if (!speechSynthesis.speaking) pauseRecognition(false); ttsPlayNext(); };
   speechSynthesis.speak(u);
 }
+function ttsStop(){ ttsQ.length = 0; try { ttsEl.pause(); } catch(e){} ttsBusy = false; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+/* Video (karşı taraf veya kendi görüntün) herhangi bir sebeple durursa yeniden oynat */
+function resumeVideos(){ ['vRemote','vSelf'].forEach(id => { const v = $(id); if (v && v.srcObject && v.paused) v.play().catch(() => {}); }); }
 
 /* ===== Speech recognition (own voice) ===== */
 const SRClass = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -793,7 +821,7 @@ function endCall(){
   const dur = S.startedAt ? Date.now() - S.startedAt : 0;
   clearInterval(S.timerId);
   stopScreen(); teardownPeer();
-  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  ttsStop();
   cancelAnimationFrame(S.meterRaf);
   if (S.stream){ S.stream.getTracks().forEach(tr => tr.stop()); S.stream = null; }
   $('endRoom').textContent = t('roomShort') + ' ' + S.room;
@@ -830,9 +858,10 @@ $('camBtn').onclick = () => { S.camOn = !S.camOn; applyTrackStates(); };
 $('voiceBtn').onclick = () => {
   S.voiceOn = !S.voiceOn;
   $('voiceBtn').classList.toggle('active', S.voiceOn);
-  $('vRemote').volume = S.voiceOn ? 0.2 : 1;
-  if (!S.voiceOn && 'speechSynthesis' in window){ speechSynthesis.cancel(); pauseRecognition(false); }
-  if (S.voiceOn && 'speechSynthesis' in window){ const u = new SpeechSynthesisUtterance(''); speechSynthesis.speak(u); } // unlock audio on iOS/Chrome
+  if (!isTouch) $('vRemote').volume = S.voiceOn ? 0.2 : 1; // telefonda ses seviyesi değiştirilemez / değiştirmek oynatmayı bozabilir
+  if (!S.voiceOn){ ttsStop(); pauseRecognition(false); }
+  else { ttsEl.src = SILENT; ttsEl.play().catch(() => {}); } // dokunma anında ses kilidini aç (iOS/Android), konuşma sentezi KULLANMA
+  setTimeout(resumeVideos, 120); setTimeout(resumeVideos, 800);
   toast(S.voiceOn ? t('voiceOn') : t('voiceOff'));
   store.set('voice', S.voiceOn ? '1' : '0');
 };
@@ -1074,7 +1103,8 @@ window.addEventListener('beforeunload', () => send({ type:'bye' }));
 });
 try { if (navigator.mediaSession && navigator.mediaSession.setActionHandler) navigator.mediaSession.setActionHandler('enterpictureinpicture', null); } catch(e){}
 /* Ana ekranda görüntü durursa (sekme değişimi, PiP dönüşü) yeniden oynat */
-document.addEventListener('visibilitychange', () => { if (!document.hidden) ['vRemote','vSelf'].forEach(id => { const v = $(id); if (v && v.srcObject && v.paused) v.play().catch(() => {}); }); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) resumeVideos(); });
+['vRemote','vSelf'].forEach(id => { const v = $(id); if (v) v.addEventListener('pause', () => { if (v.srcObject && !document.hidden) setTimeout(() => { if (v.paused && v.srcObject) v.play().catch(() => {}); }, 80); }); });
 /* Masaüstünde fare hareketi menüleri geri getirir */
 document.addEventListener('mousemove', (() => { let last = 0; return () => { const n = Date.now(); if (n - last < 400) return; last = n; const c = $('call'); if (!c.hidden && c.classList.contains('ui-off')){ c.classList.remove('ui-off'); clearTimeout(window._bmHide); window._bmHide = setTimeout(() => { if ($('menu').hidden) c.classList.add('ui-off'); }, 5000); } }; })());
 /* Görüntü ekranla aynı yönde ise tam doldur (cover); dik telefon görüntüsü yatay ekranda ise kırpmadan sığdır */

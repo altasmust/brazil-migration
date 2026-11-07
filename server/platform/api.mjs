@@ -35,6 +35,7 @@ export const SERVER_MODULES = [
   {id: 'google', group: 'tr', name: 'Google Cloud Translation', category: 'Çeviri', region: 'Global', icon: 'globe', color: '#4285f4', desc: 'Google’ın resmî çeviri API’si; ayda 500 bin karakter ücretsiz.', fields: [{k: 'key', label: 'API anahtarı', secret: true, req: true}], help: 'Google Cloud Console → APIs & Services → Credentials → API key. Cloud Translation API etkin olmalı.'},
   {id: 'deepl', group: 'tr', name: 'DeepL API', category: 'Çeviri', region: 'Avrupa', icon: 'globe', color: '#0f2b46', desc: 'Doğal çeviri kalitesi; ücretsiz pakette ayda 500 bin karakter. Farsça desteklemez (Farsça ücretsiz yedekle çevrilir).', fields: [{k: 'key', label: 'Authentication Key', secret: true, req: true}], help: 'DeepL hesabı → API Keys. Ücretsiz anahtarlar ":fx" ile biter.'},
   {id: 'freetr', group: 'tr', name: 'Ücretsiz çeviri (yedek)', category: 'Çeviri', region: 'Global', icon: 'refresh', color: '#2e7d32', desc: 'Google ve MyMemory ücretsiz uçları; resmî servis yanıt vermezse otomatik devreye girer. Kota uyarıları gösterilmez.', fields: [], locked: true, help: 'Her zaman açık yedek katman; ayar gerektirmez.'},
+  {id: 'azuretts', group: 'tts', name: 'Azure Speech (sesli çeviri)', category: 'Ses', region: 'Global', icon: 'chat', color: '#0078d4', desc: 'Görüşmede sesli çeviri için doğal sesler (TR, PT, EN, FA); ayda 500 bin karakter ücretsiz. Kapalıysa ücretsiz Google sesi kullanılır.', fields: [{k: 'key', label: 'Speech anahtarı (KEY 1)', secret: true, req: true}, {k: 'region', label: 'Bölge (Location/Region)', req: true, ph: 'ör. germanywestcentral'}], help: 'Azure portalında “Speech service” kaynağı oluşturun (Free F0) → Keys and Endpoint sayfasındaki KEY 1 ve Location/Region. Translator anahtarı burada çalışmaz; ayrı bir Speech kaynağı gerekir.'},
   {id: 'metered', group: 'turn', name: 'Metered TURN', category: 'Bağlantı sunucusu', region: 'Global', icon: 'transfer', color: '#7c3aed', desc: 'Zayıf/filtreli ağlarda görüntü ve sesi 443 portundan şifreli aktarır. Ücretsiz paket ayda 500 MB.', fields: [{k: 'u', label: 'Kullanıcı adı (Username)', req: true}, {k: 'p', label: 'Şifre (Password)', secret: true, req: true}], help: 'Metered panelinde TURN Server → Credentials tablosundaki Username ve Password. Adresler otomatik eklenir.'},
   {id: 'cloudflare', group: 'turn', name: 'Cloudflare Realtime TURN', category: 'Bağlantı sunucusu', region: 'Global', icon: 'transfer', color: '#f38020', desc: 'Ayda 1.000 GB ücretsiz (Cloudflare ödeme yöntemi ister). Geçici giriş bilgileri sunucuda her gün yenilenir.', fields: [{k: 'keyId', label: 'Turn Token ID', req: true}, {k: 'token', label: 'API Token', secret: true, req: true}], help: 'Cloudflare paneli → Realtime → TURN Server → Create. Kaydederken Cloudflare’e bağlanılıp doğrulanır.'},
   {id: 'custom', group: 'turn', name: 'Özel TURN / STUN', category: 'Bağlantı sunucusu', region: 'Elle', icon: 'key', color: '#455a64', desc: 'Başka bir sağlayıcının veya kendi sunucunuzun adresleri.', fields: [{k: 'text', label: 'Sunucular — her satır: adres | kullanıcı | şifre', type: 'textarea', req: true, ph: 'turns:sunucu.ornek.com:443?transport=tcp | kullanici | sifre'}], help: 'Bir satıra birden çok adres boşlukla yazılabilir (turn:, turns:, stun:).'},
@@ -274,6 +275,15 @@ export async function handleAuth(req, env, route) {
     if (sv.metered?.enabled && sv.metered.u && sv.metered.p) ice.push(...meteredIce(sv.metered));
     if (sv.custom?.enabled) ice.push(...parseIce(sv.custom.text));
     return json({enabled: !!mc.enabled, ice});
+  }
+  if (route === 'tts' && req.method === 'POST') { // görüşmede sesli çeviri: MP3 (yalnız kendi sitemizden)
+    const origin = req.headers.get('origin') || req.headers.get('referer') || '';
+    let host = ''; try { host = new URL(origin).host; } catch {}
+    if (!host || host !== new URL(req.url).host && host !== (req.headers.get('x-forwarded-host') || req.headers.get('host'))) fail(403, 'Yetkisiz.');
+    const {ttsAudio} = await import('./tts.mjs');
+    let buf = null; try { buf = await ttsAudio(b.q, String(b.l || ''), await serversConfig(db)); } catch (e) { console.error('[tts]', e.message); }
+    if (!buf) return json({error: 'Ses üretilemedi.'}, 502);
+    return new Response(buf, {headers: {'Content-Type': 'audio/mpeg', 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff'}});
   }
   if (route === 'translate' && req.method === 'POST') { // görüşme çevirisi (yalnız kendi sitemizden)
     const origin = req.headers.get('origin') || req.headers.get('referer') || '';
@@ -1208,6 +1218,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
         const miss = def.fields.filter(f => f.req && !String(cur[f.k] || '').trim()); if (miss.length) fail(400, 'Etkinleştirmek için bilgileri girin: ' + miss.map(f => f.label).join(', ') + '.');
         if (def.group === 'tr') { const t = await translateText('Merhaba, nasılsınız?', 'tr', 'pt', {provider: def.id, key: cur.key, region: cur.region}); if (!t.ok || t.by !== 'pro') fail(400, 'Anahtar doğrulanamadı: servis çeviri döndürmedi. Anahtarı ve bölgeyi kontrol edin.'); for (const k of ['azure', 'google', 'deepl']) if (k !== def.id && sv[k]) sv[k] = {...sv[k], enabled: false}; }
         if (def.id === 'cloudflare') { cur.keyId = String(cur.keyId || '').replace(/[^a-zA-Z0-9_-]/g, ''); try { await cloudflareIce(cur, true); } catch (e) { fail(400, 'Cloudflare bilgileri doğrulanamadı (' + e.message + ').'); } }
+        if (def.id === 'azuretts') { cur.region = String(cur.region || '').toLowerCase().replace(/[^a-z0-9]/g, ''); const {azureTest} = await import('./tts.mjs'); let ok = false; try { const buf = await azureTest(cur); ok = !!buf && buf.length > 1000; } catch {} if (!ok) fail(400, 'Azure Speech doğrulanamadı: anahtarı (Speech kaynağı, Translator değil) ve bölgeyi kontrol edin.'); }
         if (def.id === 'metered' && /[|\s]/.test(cur.u + cur.p)) fail(400, 'Kullanıcı adı ve şifrede boşluk veya | olmamalı.');
         if (def.id === 'custom' && !parseIce(cur.text).length) fail(400, 'Geçerli sunucu bulunamadı. Satır biçimi: turns:adres:443?transport=tcp | kullanıcı | şifre');
       }

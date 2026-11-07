@@ -62,7 +62,7 @@ export function inspect({method, pathname, search, headers, adminHost}) {
   if (ATTACK.some(r => r.test(url))) { W.stats.blocked++; log(ip, 'attack', raw, ua); strike(ip, 2, 'attack', raw, ua); return {status: 403}; }
   const write = !['GET', 'HEAD', 'OPTIONS'].includes(method);
   const checks = [['all:' + ip, adminHost ? 1500 : 600]];
-  if (pathname === '/api/auth/translate') checks.push(['tr:' + ip, 400]); // görüşme çevirisi: canlı altyazı sık istek atar
+  if (pathname === '/api/auth/translate' || pathname === '/api/auth/tts') checks.push(['tr:' + ip, 400]); // görüşme çevirisi: canlı altyazı sık istek atar
   else if (write && pathname.startsWith('/api/')) checks.push(['w:' + ip, adminHost ? 300 : 90]);
   if (write && AUTH.test(pathname)) checks.push(['a:' + ip, 12]);
   for (const [k, lim] of checks) if (!count(k, lim)) {

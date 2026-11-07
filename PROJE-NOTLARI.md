@@ -395,3 +395,9 @@
 - Görseller: logo webp 2172 px → 480 px (231 → 30 KB); hero webp yeniden kodlandı + 960 px sürümleri (`sao-paulo-day-hq-960.webp`, `sao-paulo-night-960.webp`), `sizes="(max-width:760px) 60vw, 100vw"`; marketing-v2 webp'ler RGB q72 (7.2 → 4.4 MB) + kart küçükleri `-480.webp` (home.js v=7).
 - Gece görseli yalnız koyu temada ya da sayfa yüklendikten ~3.5 sn sonra boşta iner (`data-night`, theme.js v=4 `bmNights`; hero-slider v=3).
 - Not: renderPage önbelleği statik HTML değişince sunucu yeniden başlayana kadar eskiyi verir (Hostinger'da paket yüklenince yeniden başlar).
+
+## Görüşme: sesli çeviri hatası (2026-11-08)
+- Sorun: "Sesli çeviri" telefonda görüntüyü durduruyor, ses gelmiyordu. Sebep: speechSynthesis görüşme sırasında ses oturumunu ele geçirip <video>'yu durduruyor; telefonda dil sesi yoksa hiç konuşmuyor.
+- Çözüm: `server/platform/tts.mjs` + public `POST /api/auth/tts` {q, l} → MP3 (yalnız aynı origin; WAF 'tr' limitinde). Sıra: Sunucu Modülleri → yeni "Azure Speech (sesli çeviri)" kartı (azuretts: key+region, Speech kaynağı F0, kaydederken doğrulanır) → Google translate_tts (ücretsiz, 180 karakter parçalı). LRU 400.
+- İstemci (gorusme/app.js v=8): tek `<audio>` (ttsEl) ile sıralı çalma (en fazla 4 bekleyen), çalarken konuşma tanıma duraklar; düğmeye basınca `/gorusme/silence.mp3` ile ses kilidi açılır (speechSynthesis artık telefonda kullanılmaz; yalnız masaüstünde yedek). Video 'pause' olursa ve ses bitince otomatik play(); telefonda uzak video sesi değiştirilmez.
+- Yerelde dış ağ kapalı → Google ses denenemedi (502 yedek yolu doğrulandı); canlıda Hostinger sunucusu Google'a erişir. Güvenilirlik için Azure Speech anahtarı önerildi.
