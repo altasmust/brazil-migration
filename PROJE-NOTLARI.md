@@ -404,8 +404,12 @@
 
 ## Ponte (ayrı uygulama — Brazil Migration sitesinde YAYINLANMAZ)
 - Depo: github.com/altasmust/ponte (gizli), yerel: /home/claude/proje/ponte (symlink /home/claude/ponte). Ayrıntılı kurulum: README.md.
-- Yapı: Vercel (public/ + api/[...path].js → lib/api.js), Turso, e-posta kodu girişi (Gmail SMTP veya Resend), Web Push (VAPID, DB'de otomatik), PeerJS görüşme (public/call = gorusme kopyası, ?hemen=1&geri=…).
+- Yapı: Vercel (public/ + api/[...path].js → lib/api.js), Upstash Redis (lib/kv.js; Turso KULLANILMIYOR — kullanıcı istemedi; Blob kotası yetmez), e-posta kodu girişi (Gmail SMTP veya Resend), Web Push (VAPID, DB'de otomatik), PeerJS görüşme (public/call = gorusme kopyası, ?hemen=1&geri=…).
 - Android: android/ (Bubblewrap TWA, paket app.ponte.twa, host yer tutucu PONTE_HOST_PLACEHOLDER.vercel.app → CI'da vars.PONTE_HOST). .github/workflows/android-apk.yml imzalı APK üretir; secret yoksa yeni anahtar üretip "imza-anahtari-SAKLA" çıktısı verir. assetlinks: env ANDROID_SHA256.
 - iPhone: PWA (Ana Ekrana Ekle). Ücretsiz iOS mağaza dışı dağıtım yok.
 - Yerel test: PONTE_PORT=3020 node scripts/dev.js; kod terminale yazılır. İki kullanıcılı e2e (kayıt, mesaj, arama çal/cevapla) geçti; PeerJS ve çeviri bu ortamda ağ yüzünden test edilemedi.
 - Kullanıcının yapacakları: Turso DB+token, Vercel import + env, PONTE_HOST değişkeni, Actions → Android APK.
+- Canlı: https://ponte-ochre.vercel.app (Vercel hesabı hostizm-2878, proje ponte). Upstash: upstash-kv-bistre-canvas (Free), env otomatik.
+- ÖNEMLİ: Vercel Hobby, commit yazarı tanınmazsa yayını "Blocked" yapar → ponte deposunda git user.email = 67632420+altasmust@users.noreply.github.com.
+- GitHub repo değişkeni PONTE_HOST=ponte-ochre.vercel.app eklendi; Android APK workflow #1 çalıştırıldı.
+- Eksik (kullanıcı): SMTP_* (Gmail uygulama şifresi) Vercel env'e; APK sonrası imza secret'ları + ANDROID_SHA256.
