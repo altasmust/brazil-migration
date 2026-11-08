@@ -386,3 +386,7 @@ html,body{max-width:100%;overflow-x:hidden}
   #call .panel[hidden]{display:none!important}
 }
 @media (min-width:901px){#call:has(.panel:not([hidden])) .self{right:408px}}
+/* Bekleme kartı dar ekranda sağa taşmasın (ızgara sütunu içeriğe göre büyümesin) */
+.waiting{grid-template-columns:minmax(0,1fr);overflow:hidden}
+.wait-card{width:100%;max-width:460px;min-width:0;box-sizing:border-box;justify-self:center}
+.wait-card .linkbox{width:100%;min-width:0}
