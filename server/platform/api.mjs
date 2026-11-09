@@ -15,6 +15,7 @@ import {wafState, unban, clearEvents, cleanIps, clientIp} from '../waf.mjs';
 import {cleanPost, readMinutes} from './blog.mjs';
 import {loadPayments, publicView as paymentsView, savePayment, enabledMethods} from './payments.mjs';
 import {startCheckout, finishCheckout} from './iyzico.mjs';
+import {startAsaas, asaasReturn, asaasWebhook} from './asaas.mjs';
 import {staticPages, siteState, invalidateSite, editorHTML, readStatic, buildOverrides, extractMenu, renderPage, hash as shash, PANEL, cleanAnalytics, cleanSeo} from './site.mjs';
 import {creditState, creditRecord, saveCredit, monthKey, monthStart as creditMonthStart, DEFAULT_MONTHLY} from './credits.mjs';
 import {CITIES, locate, fromRequest, distanceKm} from './geo.mjs';
@@ -529,6 +530,11 @@ export async function handlePlatform(req, env, route, ctx = {}) {
     const ip = clientIp(req.headers) === 'unknown' ? '' : clientIp(req.headers);
     return json(await startCheckout({db, req, person, invoiceId: clean(b.invoice, 80), putItem, getItem, ip}));
   }
+  if (route === 'pay/asaas/start' && req.method === 'POST') {
+    const b = await body(req);
+    try { return json(await startAsaas({db, req, person, invoiceId: clean(b.invoice, 80), cpf: clean(b.cpf, 30), putItem, getItem, rows})); }
+    catch (e) { if (e.needCpf) return json({error: e.message, needCpf: true}, 409); throw e; }
+  }
   if (route.startsWith('partner/kyc-credit')) {
     const pid = person?.role === 'advisor' ? person.id : person?.role === 'employee' && person.manager && person.manager !== 'owner' ? person.manager : null;
     if (!pid) fail(403, 'Partner hesabı gerekli.');
@@ -1029,6 +1035,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const status = ['Ödenmedi', 'Ödendi', 'İptal'].includes(b.status) ? b.status : fail(400, 'Geçersiz durum.'); const d = inv.data;
     if (d.status === status) return json({ok: true});
     if (d.status === 'Ödendi' && d.method === 'iyzico') fail(400, 'Kartla ödenmiş fatura buradan değiştirilemez; iade için iyzico panelini kullanın.');
+    if (d.status === 'Ödendi' && d.method === 'asaas') fail(400, 'Asaas ile ödenmiş fatura buradan değiştirilemez; iade için Asaas panelini kullanın.');
     const next = {...d, status, ...(status === 'Ödendi' ? {reference: clean(b.reference, 200) || 'Yönetim onayı', paidAt: now(), confirmedBy: actor, method: d.method || 'manual'} : {})};
     const ops = [putItem(db, inv.id, 'invoice', inv.owner, next), audit(db, actor, 'invoice.status', inv.id + ':' + status)];
     if (status === 'Ödendi') { ops.push(notice(db, inv.owner, 'Ödemeniz onaylandı. Teşekkür ederiz.', 'finance')); if (d.advisor) ops.push(q(db, 'INSERT OR IGNORE INTO ledger VALUES(?,?,?,?,?,?,?)', uuid(), inv.id, inv.owner, d.advisor, d.amount, Math.round(d.amount * (d.rate || 0) / 100), now())); }
@@ -1303,3 +1310,6 @@ export async function partnerGate(db, req, user, area, route) {
 export async function iyzicoCallback(env, token) {
   return finishCheckout({db: env.DB, token, q, putItem, getItem, notice, audit, rows});
 }
+// Asaas: ödeme sayfasından dönüş ve webhook (oturum gerekmez; durum Asaas API'den doğrulanır).
+export async function asaasReturnCb(env, ref) { return asaasReturn({db: env.DB, ref, q, putItem, getItem, notice, audit, rows}); }
+export async function asaasWebhookCb(env, token, event) { return asaasWebhook({db: env.DB, token, event, q, putItem, getItem, notice, audit, rows}); }

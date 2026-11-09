@@ -6,7 +6,7 @@ import {refreshConfig} from './config.mjs';
 import {renderPage, readStatic, sitemapXML} from './site.mjs';
 import {getBucket} from './storage.mjs';
 import {withIdentity, isAdminRequest, onAdminHost, adminHosts} from './auth.mjs';
-import {handleAuth, handlePlatform, handlePlatformAdmin, partnerGate, maybeVerifyCustomerUpload, iyzicoCallback} from './api.mjs';
+import {handleAuth, handlePlatform, handlePlatformAdmin, partnerGate, maybeVerifyCustomerUpload, iyzicoCallback, asaasReturnCb, asaasWebhookCb} from './api.mjs';
 
 export function getEnv() {
   return {...process.env, DB: getDatabase(), BUCKET: getBucket()};
@@ -146,6 +146,23 @@ export function pay() {
     const params = ctx?.params ? await ctx.params : {};
     const route = (params.path || []).join('/');
     const back = (ok, msg) => new Response(null, {status: 303, headers: {Location: '/panel/?odeme=' + (ok ? 'basarili' : 'hata') + (msg ? '&mesaj=' + encodeURIComponent(String(msg).slice(0, 160)) : '') + '#finance', 'Cache-Control': 'no-store'}});
+    if (route === 'asaas/webhook') {
+      if (req.method !== 'POST') return new Response('Method not allowed', {status: 405});
+      try {
+        await getDatabase().ready(); await refreshConfig(getDatabase().client, 30000);
+        const ev = await req.json().catch(() => null);
+        const r = await asaasWebhookCb(getEnv(), req.headers.get('asaas-access-token') || '', ev);
+        return new Response(JSON.stringify(r.body), {status: r.status, headers: {'Content-Type': 'application/json', 'Cache-Control': 'no-store'}});
+      } catch (e) { console.error('[asaas webhook]', e); return new Response(JSON.stringify({error: 'temporary'}), {status: 500, headers: {'Content-Type': 'application/json'}}); }
+    }
+    if (route === 'asaas/return') {
+      try {
+        await getDatabase().ready(); await refreshConfig(getDatabase().client, 30000);
+        const r = await asaasReturnCb(getEnv(), String(new URL(req.url).searchParams.get('ref') || ''));
+        if (r.ok && !r.paid && r.pending) return new Response(null, {status: 303, headers: {Location: '/panel/?odeme=bekliyor#finance', 'Cache-Control': 'no-store'}});
+        return back(r.ok && r.paid, r.ok ? '' : r.reason);
+      } catch (e) { console.error('[asaas]', e); return back(false, 'Ödeme doğrulanamadı.'); }
+    }
     if (route !== 'iyzico/callback') return new Response('Not found', {status: 404});
     try {
       await getDatabase().ready(); await refreshConfig(getDatabase().client, 30000);

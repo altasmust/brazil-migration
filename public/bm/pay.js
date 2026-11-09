@@ -38,15 +38,38 @@
       location.href = d.url;
     } catch (e) { b.disabled = false; b.textContent = t; alert(e.message); }
   }
+  // Asaas (Brezilya): Pix / boleto / kart — yalnız BRL faturalar. CPF yoksa önce sorulur.
+  function cpfAsk(onOk) {
+    const ov = document.createElement('div'); ov.className = 'bm-pay-ov';
+    ov.innerHTML = `<form class="bm-pay" role="dialog" aria-modal="true" aria-label="CPF"><h2>CPF / CNPJ</h2><p class="sub">Pix, boleto veya kartla ödeme için Asaas, CPF (veya şirket için CNPJ) numaranızı ister. Bir kez girmeniz yeterli.</p>
+      <label style="display:grid;gap:6px;font-size:13px;margin-bottom:12px">CPF / CNPJ<input name="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" required style="border:1px solid #dfe5d8;border-radius:9px;padding:10px 12px;font:inherit;font-size:15px"></label>
+      <p class="sub err" hidden style="color:#b3261e"></p><div class="acts"><button type="button" data-x>Vazgeç</button><button type="submit" class="go" style="background:#1b5e20;color:#fff;border-color:#1b5e20">Devam et</button></div></form>`;
+    const f = ov.querySelector('form'), inp = f.cpf, e = f.querySelector('.err');
+    inp.oninput = () => { const d = inp.value.replace(/\D/g, '').slice(0, 14); inp.value = d.length <= 11 ? d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2') : d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2}).*/, '$1.$2.$3/$4-$5'); };
+    f.onsubmit = ev => { ev.preventDefault(); const d = inp.value.replace(/\D/g, ''); if (d.length !== 11 && d.length !== 14) { e.hidden = false; e.textContent = 'CPF 11, CNPJ 14 haneli olmalı.'; return; } ov.remove(); onOk(d); };
+    ov.addEventListener('click', ev => { if (ev.target === ov || ev.target.closest('[data-x]')) ov.remove(); });
+    document.body.appendChild(ov); inp.focus();
+  }
+  async function asaas(b, cpf) {
+    b.disabled = true; const t = b.dataset.t || (b.dataset.t = b.textContent); b.textContent = 'Asaas açılıyor…';
+    try {
+      const r = await fetch('/api/platform/pay/asaas/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({invoice: b.dataset.inv, cpf})});
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 409 && d.needCpf) { b.disabled = false; b.textContent = t; return cpfAsk(c => asaas(b, c)); }
+      if (!r.ok || !d.url) throw new Error(d.error || 'Ödeme sayfası açılamadı.');
+      location.href = d.url;
+    } catch (e) { b.disabled = false; b.textContent = t; alert(e.message); }
+  }
   async function enhance() {
     const els = [...document.querySelectorAll('[data-bm-pay]:not([data-done]):not([data-no-pay])')]; if (!els.length) return;
     els.forEach(e => e.dataset.done = '1');
-    const ms = await load(), havale = ms.find(m => m.id === 'havale'), iyzico = ms.find(m => m.id === 'iyzico');
-    if (!havale && !iyzico) return;
+    const ms = await load(), havale = ms.find(m => m.id === 'havale'), iyzico = ms.find(m => m.id === 'iyzico'), asaasM = ms.find(m => m.id === 'asaas');
+    if (!havale && !iyzico && !asaasM) return;
     if (!document.getElementById('bm-pay-css')) { const s = document.createElement('style'); s.id = 'bm-pay-css'; s.textContent = css; document.head.appendChild(s); }
     for (const el of els) {
       const wrap = document.createElement('span'); wrap.className = 'bm-pay-acts';
-      if (iyzico) { const b = document.createElement('button'); b.type = 'button'; b.className = 'bm-pay-btn main'; b.textContent = 'Kartla öde'; b.dataset.inv = el.dataset.bmPay; b.onclick = () => card(b); wrap.appendChild(b); }
+      if (asaasM && el.dataset.cur === 'BRL') { const b = document.createElement('button'); b.type = 'button'; b.className = 'bm-pay-btn main'; b.textContent = 'Pix · Boleto · Kart'; b.dataset.inv = el.dataset.bmPay; b.onclick = () => asaas(b); wrap.appendChild(b); }
+      if (iyzico && el.dataset.cur !== 'BRL') { const b = document.createElement('button'); b.type = 'button'; b.className = 'bm-pay-btn main'; b.textContent = 'Kartla öde'; b.dataset.inv = el.dataset.bmPay; b.onclick = () => card(b); wrap.appendChild(b); }
       if (havale) { const b = document.createElement('button'); b.type = 'button'; b.className = 'bm-pay-btn'; b.textContent = 'Havale / EFT'; b.onclick = () => open(el, havale); wrap.appendChild(b); }
       el.replaceWith(wrap);
     }
@@ -54,8 +77,8 @@
   // iyzico dönüşü: sonucu göster
   const qs = new URLSearchParams(location.search);
   if (qs.get('odeme')) {
-    const ok = qs.get('odeme') === 'basarili', msg = qs.get('mesaj') || '';
-    const show = () => { const n = document.createElement('div'); n.className = 'bm-pay-note ' + (ok ? 'ok' : 'err'); n.setAttribute('role', 'status'); n.innerHTML = ok ? '<b>Ödemeniz alındı.</b> Faturanız “Ödendi” olarak güncellendi. Teşekkür ederiz.' : '<b>Ödeme tamamlanmadı.</b> ' + esc(msg || 'Kartınızdan çekim yapılmadı. Tekrar deneyebilir veya havale ile ödeyebilirsiniz.'); n.onclick = () => n.remove(); document.body.appendChild(n); setTimeout(() => n.remove(), 9000); history.replaceState(null, '', location.pathname + location.hash); };
+    const ok = qs.get('odeme') === 'basarili' || qs.get('odeme') === 'bekliyor', wait = qs.get('odeme') === 'bekliyor', msg = qs.get('mesaj') || '';
+    const show = () => { const n = document.createElement('div'); n.className = 'bm-pay-note ' + (ok ? 'ok' : 'err'); n.setAttribute('role', 'status'); n.innerHTML = wait ? '<b>Ödemeniz bekleniyor.</b> Pix veya boleto ödemeniz Asaas’a ulaşınca faturanız otomatik “Ödendi” olur (boleto 1–2 iş günü sürebilir).' : ok ? '<b>Ödemeniz alındı.</b> Faturanız “Ödendi” olarak güncellendi. Teşekkür ederiz.' : '<b>Ödeme tamamlanmadı.</b> ' + esc(msg || 'Kartınızdan çekim yapılmadı. Tekrar deneyebilir veya havale ile ödeyebilirsiniz.'); n.onclick = () => n.remove(); document.body.appendChild(n); setTimeout(() => n.remove(), 9000); history.replaceState(null, '', location.pathname + location.hash); };
     if (!document.getElementById('bm-pay-css')) { const s = document.createElement('style'); s.id = 'bm-pay-css'; s.textContent = css; document.head.appendChild(s); }
     if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
   }

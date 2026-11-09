@@ -18,6 +18,10 @@ export const PROVIDERS = [
     desc: 'Birden çok bankayla çalışan sanal POS; 3D Secure ve taksit.',
     fields: [{k: 'merchant', label: 'Üye İşyeri Kodu (Merchant)', req: true}, {k: 'merchantUser', label: 'API Kullanıcı Adı', req: true}, {k: 'merchantPassword', label: 'API Şifresi', secret: true, req: true}],
     modes: true, help: 'Paratika Üye İşyeri Paneli → Ayarlar → API kullanıcıları bölümünden bilgilerinizi alın. Test ortamı için Paratika’dan test hesabı isteyin.'},
+  {id: 'asaas', name: 'Asaas', category: 'Pix · Boleto · Kart', region: 'Brezilya', icon: 'credit-card', color: '#0030b9',
+    desc: 'Brezilya’da Pix, boleto ve kredi kartıyla tahsilat. Müşteri yöntemini Asaas ödeme sayfasında seçer.',
+    fields: [{k: 'apiKey', label: 'API Anahtarı (access_token)', secret: true, req: true}, {k: 'webhookToken', label: 'Webhook doğrulama anahtarı (authToken)', secret: true}, {k: 'dueDays', label: 'Son ödeme süresi (gün)', ph: '3'}],
+    modes: true, help: 'Asaas → Integrações → Chaves de API bölümünden API anahtarı oluşturun (Test modu için sandbox.asaas.com hesabının anahtarı, Canlı için asaas.com). Asaas → Integrações → Webhooks → Novo webhook: URL {site}/api/pay/asaas/webhook, olaylar “Cobranças”, Token de autenticação olarak 32+ karakterli bir anahtar yazın ve aynısını buradaki “Webhook doğrulama anahtarı” alanına girin (boleto gibi sonradan ödenen faturaların otomatik kapanması için gerekli). Asaas yalnız BRL faturalarda görünür; müşteriden ilk ödemede CPF/CNPJ istenir. Ödeme onaylanınca fatura otomatik “Ödendi” olur.'},
   {id: 'havale', name: 'Banka Havalesi / EFT', category: 'Banka havalesi', region: 'Türkiye · Brezilya', icon: 'bank', color: '#1b5e20',
     desc: 'Müşteri IBAN’a ödeme yapar, dekontu yükler; ödemeyi siz onaylarsınız.',
     fields: [{k: 'accounts', label: 'Banka hesapları', type: 'accounts'}, {k: 'note', label: 'Müşteriye gösterilecek açıklama', type: 'textarea', ph: 'Ör. Açıklama kısmına fatura numaranızı yazın. Ödeme 1 iş günü içinde onaylanır.'}],
@@ -34,7 +38,7 @@ export function publicView(all) {
   return PROVIDERS.map(p => {
     const c = all[p.id] || {}, values = {};
     for (const f of p.fields) values[f.k] = f.secret ? (c.values?.[f.k] ? MASK : '') : (c.values?.[f.k] ?? (f.type === 'accounts' ? [] : ''));
-    return {...p, enabled: !!c.enabled, mode: c.mode || 'test', label: c.label || '', values, ready: ready(p, c), updated: c.updated || null};
+    return {...p, help: String(p.help || '').replace('{site}', (process.env.SITE_URL || 'https://brazilmigration.com').replace(/\/$/, '')), enabled: !!c.enabled, mode: c.mode || 'test', label: c.label || '', values, ready: ready(p, c), updated: c.updated || null};
   });
 }
 function ready(p, c) {
@@ -52,6 +56,8 @@ export function savePayment(all, id, b) {
       for (const a of values[f.k]) if (a.iban && !/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(a.iban)) throw Object.assign(new Error(`IBAN geçersiz görünüyor: ${a.iban}`), {status: 400});
     } else if (f.secret) { if (v !== MASK) values[f.k] = clean(v, 300); }
     else values[f.k] = clean(v, f.type === 'textarea' ? 1000 : 300);
+    if (id === 'asaas' && f.k === 'webhookToken' && values[f.k] && v !== MASK && (values[f.k].length < 32 || /\s/.test(values[f.k]))) throw Object.assign(new Error('Asaas webhook anahtarı en az 32 karakter olmalı ve boşluk içermemeli.'), {status: 400});
+    if (id === 'asaas' && f.k === 'dueDays' && values[f.k] && !/^\d{1,2}$/.test(values[f.k])) throw Object.assign(new Error('Son ödeme süresi 1–30 gün arası bir sayı olmalı.'), {status: 400});
   }
   const next = {enabled: 'enabled' in b ? !!b.enabled : !!old.enabled, mode: b.mode === 'live' ? 'live' : b.mode === 'test' ? 'test' : (old.mode || 'test'), label: 'label' in b ? clean(b.label, 60) : (old.label || ''), values, updated: Date.now()};
   if (next.enabled && !ready(p, next)) throw Object.assign(new Error(p.id === 'havale' ? 'Etkinleştirmek için en az bir IBAN ekleyin.' : 'Etkinleştirmek için zorunlu bilgileri doldurun.'), {status: 400});
