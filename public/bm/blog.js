@@ -32,13 +32,13 @@
   $$('.bl-mtoc a').forEach(a => a.addEventListener('click', () => { const d = a.closest('details'); if (d) d.open = false; }));
 
   // listen: speechSynthesis, read in sentence chunks so long articles work on mobile too
-  const box = $('[data-listen]'), S = window.speechSynthesis;
+  const box = $('[data-listen]'), S = window.speechSynthesis; const LG = (box && box.getAttribute('data-lang')) || 'tr-TR';
   if (box && S && 'SpeechSynthesisUtterance' in window) {
     box.hidden = false;
     const btn = $('.bl-play', box), bar = $('[data-lbar]', box), rate = $('[data-lrate]', box);
     const PLAY = btn.innerHTML, PAUSE = '<svg class="bl-i" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
     let chunks = null, i = 0, state = 'idle', voice = null, gen = 0;
-    const pickVoice = () => { const v = S.getVoices(); voice = v.find(x => /^tr(-|_|$)/i.test(x.lang)) || null; };
+    const pickVoice = () => { const v = S.getVoices(); voice = v.find(x => x.lang.toLowerCase().replace('_', '-').startsWith(LG.slice(0, 2))) || null; };
     pickVoice(); S.onvoiceschanged = pickVoice;
     const build = () => {
       const parts = [$('.bl-article h1')?.textContent || ''];
@@ -50,7 +50,7 @@
     const ui = () => { btn.innerHTML = state === 'play' ? PAUSE : PLAY; btn.setAttribute('aria-label', state === 'play' ? 'Duraklat' : 'Makaleyi dinle'); bar.style.width = chunks ? Math.round(i / chunks.length * 100) + '%' : '0'; };
     const speak = () => {
       if (!chunks || i >= chunks.length) { state = 'idle'; i = 0; ui(); return; }
-      const g = ++gen, u = new SpeechSynthesisUtterance(chunks[i]); u.lang = 'tr-TR'; if (voice) u.voice = voice; u.rate = Number(rate.value) || 1;
+      const g = ++gen, u = new SpeechSynthesisUtterance(chunks[i]); u.lang = LG; if (voice) u.voice = voice; u.rate = Number(rate.value) || 1;
       u.onend = () => { if (state !== 'play' || g !== gen) return; i++; ui(); speak(); };
       u.onerror = ev => { if (g !== gen || ev.error === 'interrupted' || ev.error === 'canceled') return; state = 'idle'; ui(); };
       S.speak(u);

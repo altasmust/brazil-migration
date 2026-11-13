@@ -21,7 +21,7 @@ export function dict(lang = 'en') {
   let raw = {slugs: {}, t: {}};
   try { raw = JSON.parse(readFileSync(join(DIR(), lang + '.json'), 'utf8')); } catch (e) { console.error('[i18n]', e.message); }
   const t = new Map(); for (const [k, v] of Object.entries(raw.t || {})) if (v) t.set(norm(k), v);
-  const toEn = new Map(Object.entries(raw.slugs || {})), toTr = new Map([...toEn].map(([a, b]) => [b, a]));
+  const toEn = new Map(Object.entries({...(raw.slugs || {}), '/blog/': '/en/blog/'})), toTr = new Map([...toEn].map(([a, b]) => [b, a]));
   D = {lang, t, toEn, toTr, raw};
   return D;
 }

@@ -439,14 +439,16 @@ async function renderCustom(page, path) {
 }
 
 // ---------- blog ----------
-async function renderBlog(path, st, preview) {
+async function renderBlog(path, st, preview, lang = 'tr') {
   const sh = await shell(); if (!sh) return null;
+  if (preview?.lang === 'en') lang = 'en';
   const posts = Object.values(st?.blog || {}).filter(p => p.published);
   const m = BLOG_POST.exec(path);
   const post = preview || (m ? st?.blog[m[1]] : null);
-  if (m && !preview && !post?.published) return null;
+  if (m && !preview && (!post?.published || (post.lang === 'en' ? 'en' : 'tr') !== lang)) return null;
+  const bp = lang === 'en' ? '/en/blog/' : '/blog/';
   const root = parseHTML(sh);
-  root.querySelector('main#main').set_content(post ? blogPostHTML(post, posts) : blogIndexHTML(posts));
+  root.querySelector('main#main').set_content(post ? blogPostHTML(post, posts) : blogIndexHTML(posts, lang));
   root.querySelector('body')?.setAttribute('data-page', 'blog');
   const head = root.querySelector('head');
   head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/blog.css?v=1">' + (post ? blogJsonLd(post) : ''));
@@ -454,10 +456,10 @@ async function renderBlog(path, st, preview) {
   root.querySelectorAll('body script').filter(s => /\/bm\/(?!session)/.test(s.getAttribute('src') || '')).forEach(s => s.remove());
   root.querySelector('body').insertAdjacentHTML('beforeend', '<script src="/bm/blog.js?v=1" defer></script>');
   if (post) {
-    applySeo(root, '/blog/' + post.slug + '/', {title: post.seo?.title || post.title + ' | Brazil Migration Blog', description: post.seo?.description || post.excerpt || '', image: post.cover, noindex: post.seo?.noindex || !!preview});
+    applySeo(root, bp + post.slug + '/', {title: post.seo?.title || post.title + ' | Brazil Migration Blog', description: post.seo?.description || post.excerpt || '', image: post.cover, noindex: post.seo?.noindex || !!preview});
     const h = root.querySelector('head'); setMeta(h, 'property', 'og:type', 'article'); setMeta(h, 'property', 'article:published_time', post.date); if (post.modified) setMeta(h, 'property', 'article:modified_time', post.modified);
-  } else { head.insertAdjacentHTML('beforeend', `<script type="application/ld+json">${JSON.stringify({'@context': 'https://schema.org', '@type': 'Blog', name: 'Brazil Migration Blog', url: (siteUrl() || '') + '/blog/', inLanguage: 'tr', publisher: {'@type': 'Organization', name: 'Brazil Migration', logo: {'@type': 'ImageObject', url: (siteUrl() || '') + '/brazil-migration-logo.png'}}}).replace(/</g, '\\u003c')}</script>`); }
-  if (!post) applySeo(root, '/blog/', {title: 'Blog: Brezilya Oturum, Vatandaşlık ve Yaşam Rehberi', description: 'Brezilya oturum izni, vatandaşlık, şirket kurulumu ve São Paulo’da yaşam üzerine kaynaklı, güncel Türkçe rehber yazılar.'});
+  } else { head.insertAdjacentHTML('beforeend', `<script type="application/ld+json">${JSON.stringify({'@context': 'https://schema.org', '@type': 'Blog', name: 'Brazil Migration Blog', url: (siteUrl() || '') + bp, inLanguage: lang === 'en' ? 'en' : 'tr', publisher: {'@type': 'Organization', name: 'Brazil Migration', logo: {'@type': 'ImageObject', url: (siteUrl() || '') + '/brazil-migration-logo.png'}}}).replace(/</g, '\\u003c')}</script>`); }
+  if (!post) applySeo(root, bp, lang === 'en' ? {title: 'Blog: Brazil Residence, Citizenship and Relocation Guides', description: 'Sourced, up-to-date guides on Brazilian residence permits, citizenship, company setup and daily life in São Paulo.'} : {title: 'Blog: Brezilya Oturum, Vatandaşlık ve Yaşam Rehberi', description: 'Brezilya oturum izni, vatandaşlık, şirket kurulumu ve São Paulo’da yaşam üzerine kaynaklı, güncel Türkçe rehber yazılar.'});
   return root;
 }
 
@@ -481,33 +483,38 @@ export function langMenuHTML(cur, trPath, S, {preview = false} = {}) {
   const text = ([k, code, name]) => { const n = lab[k] || name; return fmt === 'label' ? n : fmt === 'code' ? code : `${code} · ${n}`; };
   return `<label class="bm-lang${preview ? ' is-preview' : ''}" translate="no"><span class="sr-only">Language / Dil</span><select aria-label="Language / Dil" onchange="location.href=this.value"${preview ? ' title="Taslak önizleme — ziyaretçiler görmez"' : ''}>${LANGS.map(l => `<option value="${href[l[0]]}" lang="${l[0]}"${l[0] === cur ? ' selected' : ''}>${text(l)}</option>`).join('')}</select></label>`;
 }
-function applyLangLinks(root, trPath, enPath, S, {draft = false} = {}) {
+function applyLangLinks(root, trPath, enPath, S, {draft = false, noAlt = false} = {}) {
   const d = i18nDict('en'); enPath = enPath || d.toEn.get(trPath); if (!enPath) return;
   const onEn = root.querySelector('html')?.getAttribute('lang') === 'en';
   if (!onEn && !enPublished(S)) return;
   const head = root.querySelector('head'), base = siteUrl();
-  if (head && enPublished(S) && !draft) head.insertAdjacentHTML('beforeend', `<link rel="alternate" hreflang="tr" href="${base}${trPath}"><link rel="alternate" hreflang="en" href="${base}${enPath}"><link rel="alternate" hreflang="x-default" href="${base}${trPath}">`);
+  if (head && enPublished(S) && !draft && !noAlt) head.insertAdjacentHTML('beforeend', `<link rel="alternate" hreflang="tr" href="${base}${trPath}"><link rel="alternate" hreflang="en" href="${base}${enPath}"><link rel="alternate" hreflang="x-default" href="${base}${trPath}">`);
   if (head) head.insertAdjacentHTML('beforeend', LANG_CSS);
   const tt = root.querySelector('header .theme-toggle'); if (tt) tt.insertAdjacentHTML('beforebegin', langMenuHTML(onEn ? 'en' : 'tr', trPath, S, {preview: draft}));
 }
 // /en/... sayfası: Türkçe sayfa render edilir, sonra çevrilir.
 const enCache = new Map();
 export async function renderEn(db, enPath, {draft = false, missing = null} = {}) {
-  const d = i18nDict('en'), trPath = d.toTr.get(enPath);
+  const d = i18nDict('en'), bm = /^\/en\/blog\/(?:([a-z0-9-]{2,90})\/)?$/.exec(enPath);
+  const trPath = bm ? '/blog/' + (bm[1] ? bm[1] + '/' : '') : d.toTr.get(enPath);
   if (!trPath) return null;
   const st = await siteState(db);
+  const enPosts = Object.values(st.blog || {}).filter(p => p.published && p.lang === 'en');
+  if (bm && !enPosts.length) return null;
   const ck = enPath + '|' + st.stamp + '|' + draft;
   if (!missing && enCache.has(ck)) return enCache.get(ck);
-  const tr = await renderPage(db, trPath);
+  const tr = await renderPage(db, trPath, bm ? {blogLang: 'en'} : {});
   if (tr.status !== 200) return null;
   const root = parseHTML(tr.html);
   root.querySelectorAll('link[hreflang],a.bm-langsw,label.bm-lang').forEach(n => n.remove());
   // İngilizcesi olmayan (yalnız Türkçe) bölümler: blog vitrini ve menüdeki Türkçe-özel sayfa bağlantıları
-  root.querySelectorAll('section.home-blog').forEach(n => n.remove());
-  root.querySelectorAll('header a[href^="/blog"],footer a[href^="/blog"],header a[href^="/turkiye-brezilya/"],footer a[href^="/turkiye-brezilya/"],header a[href^="/portekizce/"],footer a[href^="/portekizce/"],.full-menu a[href^="/blog"],.full-menu a[href^="/turkiye-brezilya/"],.full-menu a[href^="/portekizce/"]').forEach(a => { const li = a.parentNode; (li && li.rawTagName?.toLowerCase() === 'li' ? li : a).remove(); });
+  const enHome = !bm && enPosts.length ? homeBlogHTML(enPosts, 'en') : '';
+  root.querySelectorAll('section.home-blog').forEach(n => { if (enHome) n.replaceWith(parseHTML(enHome)); else n.remove(); });
+  root.querySelectorAll((enPosts.length ? '' : 'header a[href^="/blog"],footer a[href^="/blog"],.full-menu a[href^="/blog"],') + 'header a[href^="/turkiye-brezilya/"],footer a[href^="/turkiye-brezilya/"],header a[href^="/portekizce/"],footer a[href^="/portekizce/"],.full-menu a[href^="/turkiye-brezilya/"],.full-menu a[href^="/portekizce/"]').forEach(a => { const li = a.parentNode; (li && li.rawTagName?.toLowerCase() === 'li' ? li : a).remove(); });
   root.querySelector('html')?.setAttribute('lang', 'en');
+  if (bm) root.querySelector('main#main')?.setAttribute('translate', 'no');
   translateRoot(root, {lang: 'en', path: enPath, trPath, missing});
-  applyLangLinks(root, trPath, enPath, st, {draft});
+  applyLangLinks(root, bm ? '/blog/' : trPath, enPath, st, {draft, noAlt: !!bm?.[1]});
   const head = root.querySelector('head');
   // tarayıcıda JS ile üretilen metinler için: aynı sözlük + çevirmen
   head?.insertAdjacentHTML('afterbegin', '<script src="/api/site/i18n/en.js?v=' + st.stamp + '"></script>');
@@ -523,9 +530,9 @@ export async function renderEn(db, enPath, {draft = false, missing = null} = {})
 
 // ---------- render ----------
 const renderCache = new Map();
-export async function renderPage(db, path, {editor = false, preview = null} = {}) {
+export async function renderPage(db, path, {editor = false, preview = null, blogLang = 'tr'} = {}) {
   const st = preview ? null : await siteState(db);
-  const ckey = path + '|' + (st?.stamp || '');
+  const ckey = path + '|' + (st?.stamp || '') + '|' + blogLang;
   if (!editor && !preview && renderCache.has(ckey)) return renderCache.get(ckey);
   const staticHtml = await readStatic(path);
   const page = st?.pages[path] || {};
@@ -537,7 +544,7 @@ export async function renderPage(db, path, {editor = false, preview = null} = {}
     root = parseHTML(staticHtml);
     applyOverrides(root, page.overrides, editor);
     if (!editor) applySeo(root, path, page.seo);
-  } else if (path === '/blog/' || BLOG_POST.test(path)) root = await renderBlog(path, st);
+  } else if (path === '/blog/' || BLOG_POST.test(path)) root = await renderBlog(path, st, null, blogLang);
   else if (st?.custom[path] && (st.custom[path].published || editor)) root = await renderCustom(st.custom[path], path);
   else return {status: 404, html: await notFound(db)};
   if (!root) return {status: 404, html: await notFound(db)};
@@ -579,10 +586,15 @@ export async function sitemapXML(db) {
   const today = new Date().toISOString().slice(0, 10);
   const urls = (await staticPages()).filter(p => !st.pages[p.path]?.hidden && !st.pages[p.path]?.seo?.noindex && !['/giris/', '/icerik-plani/'].includes(p.path)).map(p => p.path);
   for (const c of Object.values(st.custom)) if (c.published && !c.seo?.noindex) urls.push(c.path);
-  const posts = Object.values(st.blog).filter(p => p.published && !p.seo?.noindex);
+  const allPosts = Object.values(st.blog).filter(p => p.published && !p.seo?.noindex);
+  const posts = allPosts.filter(p => p.lang !== 'en'), enPosts = allPosts.filter(p => p.lang === 'en');
   if (posts.length) urls.push('/blog/');
   const lm = {}; for (const p of posts) { urls.push('/blog/' + p.slug + '/'); lm['/blog/' + p.slug + '/'] = p.modified || p.date; }
   // İngilizce: yalnız yayına alındıysa (taslakta sitemap'e girmez)
-  if (enPublished(st)) { const d = i18nDict('en'); for (const u of [...urls]) { const en = d.toEn.get(u); if (en) urls.push(en); } }
+  if (enPublished(st)) {
+    const d = i18nDict('en'); for (const u of [...urls]) { const en = d.toEn.get(u); if (en && (u !== '/blog/' || enPosts.length)) urls.push(en); }
+    if (enPosts.length && !urls.includes('/en/blog/')) urls.push('/en/blog/');
+    for (const p of enPosts) { urls.push('/en/blog/' + p.slug + '/'); lm['/en/blog/' + p.slug + '/'] = p.modified || p.date; }
+  }
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(u => `<url><loc>${esc(base + u)}</loc><lastmod>${lm[u] || today}</lastmod></url>`).join('')}</urlset>`;
 }

@@ -35,7 +35,7 @@
       const root = $('#bmb-root');
       try {
         LIST = await A('blog');
-        const row = p => `<tr><td><div class="bmb-t">${p.cover ? `<img src="${esc(p.cover)}" alt="">` : `<span class="bmb-noimg">${I('img')}</span>`}<div><b>${esc(p.title)}</b><small class="bmc-ct">${esc(p.category)} · ${p.readMin} dk okuma${p.featured ? ' · <span class="bmc-login wait">Öne çıkan</span>' : ''}</small></div></div></td>
+        const row = p => `<tr><td><div class="bmb-t">${p.cover ? `<img src="${esc(p.cover)}" alt="">` : `<span class="bmb-noimg">${I('img')}</span>`}<div><b>${esc(p.title)}</b><small class="bmc-ct">${esc(p.category)}${p.lang === 'en' ? ' · EN' : ''} · ${p.readMin} dk okuma${p.featured ? ' · <span class="bmc-login wait">Öne çıkan</span>' : ''}</small></div></div></td>
           <td><code>/blog/${esc(p.slug)}/</code></td><td>${trDate(p.date)}${p.modified && p.modified !== p.date ? `<small class="bmc-ct">Güncelleme ${trDate(p.modified)}</small>` : ''}</td>
           <td>${p.published ? '<span class="bmc-login on">Yayında</span>' : '<span class="bmc-login off">Taslak</span>'}</td>
           <td><div class="bmb-acts"><button class="btn primary" data-ed="${esc(p.id)}">${I('edit')} Düzenle</button>${p.published ? `<a class="btn" href="/blog/${esc(p.slug)}/" target="_blank" rel="noopener">${I('eye')} Görüntüle</a>` : ''}<button class="btn" data-pub="${esc(p.id)}">${p.published ? I('off') + ' Taslağa al' : I('eye') + ' Yayınla'}</button><button class="btn danger" data-del="${esc(p.id)}" title="Sil">${I('trash')}</button></div></td></tr>`;
@@ -84,6 +84,7 @@
           ${inp('title', 'Başlık (H1)', 'Ör. Brezilya’da oturum izni nasıl alınır?')}
           <label>Yazı adresi<span class="bms-slug"><span>/blog/</span><input class="bmc-in" id="bmb-slug" value="${esc(D.slug)}" placeholder="yazi-adresi"><span>/</span></span></label>
           <div class="bms-row2"><label>Kategori<input class="bmc-in" data-k="category" list="bmb-cats" value="${esc(D.category)}"></label>${inp('date', 'Yayın tarihi', '', 'date')}</div>
+          <label>Yazı dili<select class="bmc-in" data-k="lang"><option value="tr"${D.lang === 'en' ? '' : ' selected'}>Türkçe (/blog/)</option><option value="en"${D.lang === 'en' ? ' selected' : ''}>English (/en/blog/ — İngilizce site)</option></select></label>
           <div class="bms-row2">${inp('author.name', 'Yazar')}${inp('modified', 'Son güncelleme', '', 'date')}</div>
           ${inp('author.role', 'Yazar ünvanı (isteğe bağlı)', 'Ör. Göç danışmanı · São Paulo')}
           ${area('excerpt', 'Kısa açıklama (liste kartlarında görünür)', 2)}

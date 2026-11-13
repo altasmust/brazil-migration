@@ -64,11 +64,14 @@ export function cleanPost(b, old = {}) {
     sources: (Array.isArray(b.sources) ? b.sources : []).slice(0, 20).map(s => ({label: T(s.label, 200), url: okUrl(T(s.url, 500))})).filter(s => s.label),
     seo: {title: T(b.seo?.title, 120), description: T(b.seo?.description, 320), noindex: !!b.seo?.noindex},
     published: !!b.published, featured: !!b.featured,
+    lang: (b.lang ?? old.lang) === 'en' ? 'en' : 'tr',
   };
 }
 
 // ---------- rendering ----------
 const TRM = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+const ENM = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+export const enDate = d => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ''); return m ? `${ENM[+m[2] - 1]} ${+m[3]}, ${m[1]}` : ''; };
 export const trDate = d => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ''); return m ? `${+m[3]} ${TRM[+m[2] - 1]} ${m[1]}` : ''; };
 const SV = (p, cls = 'bl-i') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const IC = {
@@ -85,81 +88,109 @@ const BRAND = {
 const AI = [['ChatGPT', 'https://chatgpt.com/?q='], ['Gemini', 'https://www.google.com/search?udm=50&q='], ['Grok', 'https://grok.com/?q='], ['Perplexity', 'https://www.perplexity.ai/search?q='], ['Claude', 'https://claude.ai/new?q=']];
 const aiDot = {ChatGPT: '#10a37f', Gemini: '#4f7cff', Grok: '#111', Perplexity: '#1f8a9c', Claude: '#d97757'};
 
-function shareLinks(url, title) {
+function shareLinks(url, title, lang = 'tr') {
+  const a = L[lang].sh;
   const u = encodeURIComponent(url), t = encodeURIComponent(title);
-  return `<a class="bl-sh" href="https://www.linkedin.com/sharing/share-offsite/?url=${u}" target="_blank" rel="noopener" aria-label="LinkedIn’de paylaş">${BRAND.linkedin}</a><a class="bl-sh" href="https://www.facebook.com/sharer/sharer.php?u=${u}" target="_blank" rel="noopener" aria-label="Facebook’ta paylaş">${BRAND.facebook}</a><a class="bl-sh" href="https://x.com/intent/post?url=${u}&amp;text=${t}" target="_blank" rel="noopener" aria-label="X’te paylaş">${BRAND.x}</a><a class="bl-sh" href="https://wa.me/?text=${t}%20${u}" target="_blank" rel="noopener" aria-label="WhatsApp’ta paylaş">${BRAND.whatsapp}</a><button class="bl-sh" type="button" data-copy="${esc(url)}" aria-label="Bağlantıyı kopyala">${SV(IC.link)}</button>`;
+  return `<a class="bl-sh" href="https://www.linkedin.com/sharing/share-offsite/?url=${u}" target="_blank" rel="noopener" aria-label="${a[0]}">${BRAND.linkedin}</a><a class="bl-sh" href="https://www.facebook.com/sharer/sharer.php?u=${u}" target="_blank" rel="noopener" aria-label="${a[1]}">${BRAND.facebook}</a><a class="bl-sh" href="https://x.com/intent/post?url=${u}&amp;text=${t}" target="_blank" rel="noopener" aria-label="${a[2]}">${BRAND.x}</a><a class="bl-sh" href="https://wa.me/?text=${t}%20${u}" target="_blank" rel="noopener" aria-label="${a[3]}">${BRAND.whatsapp}</a><button class="bl-sh" type="button" data-copy="${esc(url)}" aria-label="${a[4]}">${SV(IC.link)}</button>`;
 }
 const coverImg = (p, cls, eager) => p.cover ? `<img class="${cls}" src="${esc(p.cover)}" alt="${esc(p.coverAlt || p.title)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">` : `<span class="${cls} bl-noimg">${SV(IC.star)}</span>`;
-function card(p, big) {
-  return `<a class="bl-card${big ? ' big' : ''}" href="/blog/${esc(p.slug)}/" data-cat="${esc(p.category)}"><span class="bl-card-img">${coverImg(p, 'bl-ci', big)}</span><span class="bl-card-body"><span class="bl-cat">${esc(p.category)}</span><strong>${esc(p.title)}</strong><span class="bl-ex">${esc(p.excerpt || plain(p.lead).slice(0, 180))}</span><span class="bl-cmeta">${SV(IC.cal)} ${esc(trDate(p.date))} <i></i> ${SV(IC.clock)} ${readMinutes(p)} dk okuma</span></span></a>`;
+function card(p, big, lang = 'tr') {
+  const t = L[lang];
+  return `<a class="bl-card${big ? ' big' : ''}" href="${base(lang)}${esc(p.slug)}/" data-cat="${esc(p.category)}"><span class="bl-card-img">${coverImg(p, 'bl-ci', big)}</span><span class="bl-card-body"><span class="bl-cat">${esc(p.category)}</span><strong>${esc(p.title)}</strong><span class="bl-ex">${esc(p.excerpt || plain(p.lead).slice(0, 180))}</span><span class="bl-cmeta">${SV(IC.cal)} ${esc(fmtDate(p.date, lang))} <i></i> ${SV(IC.clock)} ${readMinutes(p)} ${t.min}</span></span></a>`;
 }
+const isEn = p => p?.lang === 'en';
+const fmtDate = (d, lang) => lang === 'en' ? enDate(d) : trDate(d);
+const base = lang => lang === 'en' ? '/en/blog/' : '/blog/';
+const L = {
+  tr: {kick: 'BLOG · BRASIL REHBERİ', home: 'Ana sayfa', homeHref: '/', blog: 'Blog', crumb: 'Sayfa yolu', min: 'dk okuma', mins: 'Dakika Okuma Süresi', upd: 'Son güncelleme', toc: 'İçindekiler', sections: 'bölüm', share: 'Paylaş', shareAll: 'Bu yazıyı paylaşın',
+    aiT: 'Bu İçeriği Yapay Zekâ (AI) ile Özetleyin', listen: 'Makaleyi dinle', listenSub: 'Türkçe sesli okuma', rate: 'Okuma hızı', photo: 'Fotoğraf', gT: 'İçeriklerimizi Google’da Takip Edin', gS: 'Brazil Migration’ı Google’da tercih edilen kaynak olarak ekleyin.', gB: 'Tercih edilen kaynak olarak ekle',
+    faq: 'Sıkça Sorulan Sorular', src: 'Kaynaklar', disc: 'Bu yazı genel bilgilendirme amaçlıdır ve hukuki danışmanlık yerine geçmez. Mevzuat, ücretler ve belge listeleri değişebilir; başvurudan önce güncel resmi kaynakları kontrol edin veya bir uzmana danışın.',
+    ctaK: 'KİŞİSEL YOL HARİTASI', ctaH: 'Başvurunuzu birlikte planlayalım.', ctaP: 'Hangi oturum türünün size uygun olduğunu 15 dakikalık ücretsiz ön görüşmede netleştirin.', ctaB: 'Ücretsiz ön görüşme ↗', more: 'Diğer yazılar', home2: 'Blogdan son yazılar', all: 'Tüm yazılar ↗',
+    h1: 'Brezilya’ya taşınmadan önce<br>bilmeniz gerekenler.', sub: 'Oturum izni, vatandaşlık, şirket kurulumu ve São Paulo’da günlük yaşam üzerine sade, kaynaklı ve güncel yazılar.', allCats: 'Tümü', empty: 'Yakında burada yazılar olacak.',
+    c2K: 'KİŞİSEL DEĞERLENDİRME', c2H: 'Sizin için hangi yol uygun?', c2P: '15 dakikalık ücretsiz ön görüşmede durumunuzu birlikte değerlendirelim.',
+    prompt: (u, t) => `${u} adresindeki “${t}” başlıklı makaleyi Türkçe olarak özetle; ana adımları, gerekli belgeleri ve önemli uyarıları madde madde çıkar.`,
+    sh: ['LinkedIn’de paylaş', 'Facebook’ta paylaş', 'X’te paylaş', 'WhatsApp’ta paylaş', 'Bağlantıyı kopyala'], dot: 'Bu içerik ile ilgili yazılar'},
+  en: {kick: 'BLOG · BRAZIL GUIDE', home: 'Home', homeHref: '/en/', blog: 'Blog', crumb: 'Breadcrumb', min: 'min read', mins: 'min read', upd: 'Last updated', toc: 'Contents', sections: 'sections', share: 'Share', shareAll: 'Share this article',
+    aiT: 'Summarize this article with AI', listen: 'Listen to the article', listenSub: 'Read aloud', rate: 'Playback speed', photo: 'Photo', gT: 'Follow us on Google', gS: 'Add Brazil Migration as a preferred source on Google.', gB: 'Add as a preferred source',
+    faq: 'Frequently asked questions', src: 'Sources', disc: 'This article is general information and is not legal advice. Rules, fees and document lists change; check current official sources or consult a professional before you apply.',
+    ctaK: 'YOUR PERSONAL ROADMAP', ctaH: 'Let’s plan your application together.', ctaP: 'Find out which route fits you in a free 15-minute preliminary call.', ctaB: 'Free preliminary call ↗', more: 'More articles', home2: 'Latest from the blog', all: 'All articles ↗',
+    h1: 'What to know before<br>you move to Brazil.', sub: 'Plain-language, sourced guides on residence, citizenship, company setup and everyday life in São Paulo.', allCats: 'All', empty: 'Articles are coming soon.',
+    c2K: 'PERSONAL ASSESSMENT', c2H: 'Which route is right for you?', c2P: 'Let’s look at your situation together in a free 15-minute preliminary call.',
+    prompt: (u, t) => `Summarize the article “${t}” at ${u} in English; list the main steps, required documents and important warnings as bullet points.`,
+    sh: ['Share on LinkedIn', 'Share on Facebook', 'Share on X', 'Share on WhatsApp', 'Copy link'], dot: 'Related'},
+};
 const sortPosts = posts => [...posts].sort((a, b) => (b.featured - a.featured) || String(b.date).localeCompare(String(a.date)));
 
-// Ana sayfa: en yeni 3 yazı (yeni eklenen başa düşer).
-export function homeBlogHTML(posts) {
-  const list = [...posts].sort((a, b) => String(b.date).localeCompare(String(a.date)) || (b.created || 0) - (a.created || 0)).slice(0, 3);
+// Ana sayfa: en yeni 3 yazı (yeni eklenen başa düşer). Yalnız o dildeki yazılar.
+export function homeBlogHTML(posts, lang = 'tr') {
+  const t = L[lang];
+  const list = posts.filter(p => (isEn(p) ? 'en' : 'tr') === lang).sort((a, b) => String(b.date).localeCompare(String(a.date)) || (b.created || 0) - (a.created || 0)).slice(0, 3);
   if (!list.length) return '';
-  return `<section class="home-blog" id="blogdan"><div class="wrap"><div class="hb-head"><div><div class="kicker">BLOG · BRASIL REHBERİ</div><h2>Blogdan son yazılar</h2></div><a class="hb-all" href="/blog/">Tüm yazılar ↗</a></div><div class="bl-grid3">${list.map(p => card(p)).join('')}</div></div></section>`;
+  return `<section class="home-blog" id="blogdan"><div class="wrap"><div class="hb-head"><div><div class="kicker">${t.kick}</div><h2>${t.home2}</h2></div><a class="hb-all" href="${base(lang)}">${t.all}</a></div><div class="bl-grid3">${list.map(p => card(p, false, lang)).join('')}</div></div></section>`;
 }
 
-export function blogIndexHTML(posts) {
-  const list = sortPosts(posts);
+export function blogIndexHTML(allPosts, lang = 'tr') {
+  const t = L[lang];
+  const list = sortPosts(allPosts.filter(p => (isEn(p) ? 'en' : 'tr') === lang));
   const cats = [...new Set(list.map(p => p.category))];
   const [first, ...rest] = list;
   return `<div class="bl">
-  <section class="bl-hero wrap"><div class="kicker">BLOG · BRASIL REHBERİ</div><h1>Brezilya’ya taşınmadan önce<br>bilmeniz gerekenler.</h1><p>Oturum izni, vatandaşlık, şirket kurulumu ve São Paulo’da günlük yaşam üzerine sade, kaynaklı ve güncel yazılar.</p></section>
-  <section class="wrap bl-list">${list.length ? `${cats.length > 1 ? `<div class="bl-chips" role="tablist"><button class="on" data-cat="">Tümü</button>${cats.map(c => `<button data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
-    ${card(first, true)}${rest.length ? `<div class="bl-grid3">${rest.map(p => card(p)).join('')}</div>` : ''}` : '<div class="bl-empty">Yakında burada yazılar olacak.</div>'}</section>
-  <section class="wrap"><div class="bl-cta"><div><span class="kicker">KİŞİSEL DEĞERLENDİRME</span><h2>Sizin için hangi yol uygun?</h2><p>15 dakikalık ücretsiz ön görüşmede durumunuzu birlikte değerlendirelim.</p></div><button class="btn lime" type="button" onclick="book()">Ücretsiz ön görüşme ↗</button></div></section>
+  <section class="bl-hero wrap"><div class="kicker">${t.kick}</div><h1>${t.h1}</h1><p>${t.sub}</p></section>
+  <section class="wrap bl-list">${list.length ? `${cats.length > 1 ? `<div class="bl-chips" role="tablist"><button class="on" data-cat="">${t.allCats}</button>${cats.map(c => `<button data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
+    ${card(first, true, lang)}${rest.length ? `<div class="bl-grid3">${rest.map(p => card(p, false, lang)).join('')}</div>` : ''}` : `<div class="bl-empty">${t.empty}</div>`}</section>
+  <section class="wrap"><div class="bl-cta"><div><span class="kicker">${t.c2K}</span><h2>${t.c2H}</h2><p>${t.c2P}</p></div><button class="btn lime" type="button" onclick="book()">${t.ctaB}</button></div></section>
 </div>`;
 }
 
 export function blogPostHTML(p, posts = []) {
-  const url = `${siteUrl()}/blog/${p.slug}/`;
+  const lang = isEn(p) ? 'en' : 'tr', t = L[lang];
+  const url = `${siteUrl()}${base(lang)}${p.slug}/`;
   const {html: body, toc} = withToc(sanitizeRich(p.content));
-  const faqToc = p.faq?.length ? [{id: 'sss', text: 'Sıkça Sorulan Sorular'}] : [];
+  const faqToc = p.faq?.length ? [{id: 'sss', text: t.faq}] : [];
   const T = [...toc, ...faqToc];
   // intro paragraph → bold lead summary → rest of the article
   const firstP = body.indexOf('</p>');
   const lead = p.lead ? `<p class="bl-lead">${esc(p.lead)}</p>` : '';
   const bodyHtml = firstP > -1 && body.trimStart().startsWith('<p') ? body.slice(0, firstP + 4) + lead + body.slice(firstP + 4) : lead + body;
-  const prompt = `${url} adresindeki “${p.title}” başlıklı makaleyi Türkçe olarak özetle; ana adımları, gerekli belgeleri ve önemli uyarıları madde madde çıkar.`;
+  const prompt = t.prompt(url, p.title);
   const mins = readMinutes(p);
   const host = siteUrl().replace(/^https?:\/\//, '');
-  const tocList = `<ol>${T.map((t, i) => `<li><a href="#${t.id}"><span>${String(i + 1).padStart(2, '0')}</span>${esc(t.text)}</a></li>`).join('')}</ol>`;
-  const related = sortPosts(posts.filter(x => x.slug !== p.slug)).slice(0, 3);
+  const tocList = `<ol>${T.map((x, i) => `<li><a href="#${x.id}"><span>${String(i + 1).padStart(2, '0')}</span>${esc(x.text)}</a></li>`).join('')}</ol>`;
+  const related = sortPosts(posts.filter(x => x.slug !== p.slug && (isEn(x) ? 'en' : 'tr') === lang)).slice(0, 3);
   return `<div class="bl bl-post">
-  <div class="wrap"><nav class="bl-crumb" aria-label="Sayfa yolu"><a href="/">Ana sayfa</a><span>/</span><a href="/blog/">Blog</a><span>/</span><b>${esc(p.category)}</b></nav></div>
+  <div class="wrap"><nav class="bl-crumb" aria-label="${t.crumb}"><a href="${t.homeHref}">${t.home}</a><span>/</span><a href="${base(lang)}">${t.blog}</a><span>/</span><b>${esc(p.category)}</b></nav></div>
   <div class="wrap bl-layout">
     <aside class="bl-aside"><div class="bl-sticky">
-      ${T.length ? `<div class="bl-box bl-toc" role="navigation" aria-label="İçindekiler"><h2>${SV(IC.list)} İçindekiler</h2>${tocList}</div>` : ''}
-      <div class="bl-box bl-share"><h2>Paylaş</h2><div class="bl-shares">${shareLinks(url, p.title)}</div></div>
+      ${T.length ? `<div class="bl-box bl-toc" role="navigation" aria-label="${t.toc}"><h2>${SV(IC.list)} ${t.toc}</h2>${tocList}</div>` : ''}
+      <div class="bl-box bl-share"><h2>${t.share}</h2><div class="bl-shares">${shareLinks(url, p.title, lang)}</div></div>
     </div></aside>
     <article class="bl-article" itemscope itemtype="https://schema.org/BlogPosting">
       <div class="bl-meta"><span class="bl-author"><span class="bl-av" aria-hidden="true">BM</span><span><b>${esc(p.author?.name || 'Brazil Migration')}</b>${p.author?.role ? `<small>${esc(p.author.role)}</small>` : ''}</span></span>
-        <span class="bl-mi">${SV(IC.clock)} ${mins} Dakika Okuma Süresi</span><span class="bl-mi">${SV(IC.cal)} ${esc(trDate(p.date))}</span>${p.modified && p.modified !== p.date ? `<span class="bl-mi">${SV(IC.upd)} Son güncelleme: ${esc(trDate(p.modified))}</span>` : ''}</div>
+        <span class="bl-mi">${SV(IC.clock)} ${mins} ${t.mins}</span><span class="bl-mi">${SV(IC.cal)} ${esc(fmtDate(p.date, lang))}</span>${p.modified && p.modified !== p.date ? `<span class="bl-mi">${SV(IC.upd)} ${t.upd}: ${esc(fmtDate(p.modified, lang))}</span>` : ''}</div>
       <h1 itemprop="headline">${esc(p.title)}</h1>
-      <div class="bl-ai"><span class="bl-ai-t">${SV(IC.spark)} Bu İçeriği Yapay Zekâ (AI) ile Özetleyin</span><div class="bl-ai-b">${AI.map(([n, u]) => `<a href="${u}${encodeURIComponent(prompt)}" target="_blank" rel="noopener nofollow"><i style="background:${aiDot[n]}"></i>${n}</a>`).join('')}</div></div>
-      <div class="bl-listen" data-listen hidden><button type="button" class="bl-play" aria-label="Makaleyi dinle">${SV(IC.play)}</button><div class="bl-lt"><b>Makaleyi dinle</b><small><span data-ltime>~${mins} dk</span> · Türkçe sesli okuma</small></div><div class="bl-bar"><i data-lbar></i></div><select data-lrate aria-label="Okuma hızı"><option value="0.9">0.9x</option><option value="1" selected>1x</option><option value="1.15">1.15x</option><option value="1.3">1.3x</option></select></div>
-      ${p.cover ? `<figure class="bl-cover">${coverImg(p, 'bl-cimg', true)}${p.coverCredit?.name ? `<figcaption>Fotoğraf: ${p.coverCredit.url ? `<a href="${esc(p.coverCredit.url)}" target="_blank" rel="noopener nofollow">${esc(p.coverCredit.name)}</a>` : esc(p.coverCredit.name)} / Unsplash</figcaption>` : ''}</figure>` : ''}
-      <a class="bl-google" href="https://www.google.com/preferences/source?q=${encodeURIComponent(host)}" target="_blank" rel="noopener"><span class="bl-g" aria-hidden="true"><b style="color:#4285F4">G</b></span><span class="bl-gt"><b>İçeriklerimizi Google’da Takip Edin</b><small>Brazil Migration’ı Google’da tercih edilen kaynak olarak ekleyin.</small></span><span class="bl-gb">${SV(IC.star)} Tercih edilen kaynak olarak ekle</span></a>
-      ${T.length ? `<details class="bl-mtoc"><summary>${SV(IC.list)} İçindekiler <small>${T.length} bölüm</small></summary>${tocList}</details>` : ''}
+      <div class="bl-ai"><span class="bl-ai-t">${SV(IC.spark)} ${t.aiT}</span><div class="bl-ai-b">${AI.map(([n, u]) => `<a href="${u}${encodeURIComponent(prompt)}" target="_blank" rel="noopener nofollow"><i style="background:${aiDot[n]}"></i>${n}</a>`).join('')}</div></div>
+      <div class="bl-listen" data-listen hidden data-lang="${lang === 'en' ? 'en-US' : 'tr-TR'}"><button type="button" class="bl-play" aria-label="${t.listen}">${SV(IC.play)}</button><div class="bl-lt"><b>${t.listen}</b><small><span data-ltime>~${mins} ${lang === 'en' ? 'min' : 'dk'}</span> · ${t.listenSub}</small></div><div class="bl-bar"><i data-lbar></i></div><select data-lrate aria-label="${t.rate}"><option value="0.9">0.9x</option><option value="1" selected>1x</option><option value="1.15">1.15x</option><option value="1.3">1.3x</option></select></div>
+      ${p.cover ? `<figure class="bl-cover">${coverImg(p, 'bl-cimg', true)}${p.coverCredit?.name ? `<figcaption>${t.photo}: ${p.coverCredit.url ? `<a href="${esc(p.coverCredit.url)}" target="_blank" rel="noopener nofollow">${esc(p.coverCredit.name)}</a>` : esc(p.coverCredit.name)} / Unsplash</figcaption>` : ''}</figure>` : ''}
+      <a class="bl-google" href="https://www.google.com/preferences/source?q=${encodeURIComponent(host)}" target="_blank" rel="noopener"><span class="bl-g" aria-hidden="true"><b style="color:#4285F4">G</b></span><span class="bl-gt"><b>${t.gT}</b><small>${t.gS}</small></span><span class="bl-gb">${SV(IC.star)} ${t.gB}</span></a>
+      ${T.length ? `<details class="bl-mtoc"><summary>${SV(IC.list)} ${t.toc} <small>${T.length} ${t.sections}</small></summary>${tocList}</details>` : ''}
       <div class="bl-body" data-read itemprop="articleBody">${bodyHtml}</div>
-      ${p.faq?.length ? `<section class="bl-faq" id="sss" data-read><h2>Sıkça Sorulan Sorular</h2>${p.faq.map((f, i) => `<details${i === 0 ? ' open' : ''}><summary>${esc(f.q)}</summary><p>${esc(f.a).replace(/\n/g, '<br>')}</p></details>`).join('')}</section>` : ''}
-      ${p.sources?.length ? `<section class="bl-src"><h2>Kaynaklar</h2><ul>${p.sources.map(s => `<li>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener nofollow">${esc(s.label)}</a>` : esc(s.label)}</li>`).join('')}</ul></section>` : ''}
-      <p class="bl-disc">Bu yazı genel bilgilendirme amaçlıdır ve hukuki danışmanlık yerine geçmez. Mevzuat, ücretler ve belge listeleri değişebilir; başvurudan önce güncel resmi kaynakları kontrol edin veya bir uzmana danışın.</p>
-      <div class="bl-endshare"><b>Bu yazıyı paylaşın</b><div class="bl-shares">${shareLinks(url, p.title)}</div></div>
-      <div class="bl-cta"><div><span class="kicker">KİŞİSEL YOL HARİTASI</span><h2>Başvurunuzu birlikte planlayalım.</h2><p>Hangi oturum türünün size uygun olduğunu 15 dakikalık ücretsiz ön görüşmede netleştirin.</p></div><button class="btn lime" type="button" onclick="book()">Ücretsiz ön görüşme ↗</button></div>
+      ${p.faq?.length ? `<section class="bl-faq" id="sss" data-read><h2>${t.faq}</h2>${p.faq.map((f, i) => `<details${i === 0 ? ' open' : ''}><summary>${esc(f.q)}</summary><p>${esc(f.a).replace(/\n/g, '<br>')}</p></details>`).join('')}</section>` : ''}
+      ${p.sources?.length ? `<section class="bl-src"><h2>${t.src}</h2><ul>${p.sources.map(s => `<li>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener nofollow">${esc(s.label)}</a>` : esc(s.label)}</li>`).join('')}</ul></section>` : ''}
+      <p class="bl-disc">${t.disc}</p>
+      <div class="bl-endshare"><b>${t.shareAll}</b><div class="bl-shares">${shareLinks(url, p.title, lang)}</div></div>
+      <div class="bl-cta"><div><span class="kicker">${t.ctaK}</span><h2>${t.ctaH}</h2><p>${t.ctaP}</p></div><button class="btn lime" type="button" onclick="book()">${t.ctaB}</button></div>
     </article>
   </div>
-  ${related.length ? `<section class="wrap bl-related"><h2>Diğer yazılar</h2><div class="bl-grid3">${related.map(x => card(x)).join('')}</div></section>` : ''}
+  ${related.length ? `<section class="wrap bl-related"><h2>${t.more}</h2><div class="bl-grid3">${related.map(x => card(x, false, lang)).join('')}</div></section>` : ''}
 </div>`;
 }
 
 export function blogJsonLd(p) {
-  const url = `${siteUrl()}/blog/${p.slug}/`;
-  const g = [{'@type': 'BlogPosting', headline: p.title, description: p.seo?.description || p.excerpt, image: p.cover ? [p.cover] : undefined, datePublished: p.date, dateModified: p.modified || p.date, author: {'@type': 'Organization', name: p.author?.name || 'Brazil Migration', url: siteUrl()}, publisher: {'@type': 'Organization', name: 'Brazil Migration', logo: {'@type': 'ImageObject', url: siteUrl() + '/brazil-migration-logo.png'}}, mainEntityOfPage: url, inLanguage: 'tr-TR'},
-    {'@type': 'BreadcrumbList', itemListElement: [{'@type': 'ListItem', position: 1, name: 'Ana sayfa', item: siteUrl() + '/'}, {'@type': 'ListItem', position: 2, name: 'Blog', item: siteUrl() + '/blog/'}, {'@type': 'ListItem', position: 3, name: p.title, item: url}]}];
+  const lang = isEn(p) ? 'en' : 'tr', t = L[lang];
+  const url = `${siteUrl()}${base(lang)}${p.slug}/`;
+  const root = lang === 'en' ? '/en/' : '/';
+  const g = [{'@type': 'BlogPosting', headline: p.title, description: p.seo?.description || p.excerpt, image: p.cover ? [p.cover] : undefined, datePublished: p.date, dateModified: p.modified || p.date, author: {'@type': 'Organization', name: p.author?.name || 'Brazil Migration', url: siteUrl()}, publisher: {'@type': 'Organization', name: 'Brazil Migration', logo: {'@type': 'ImageObject', url: siteUrl() + '/brazil-migration-logo.png'}}, mainEntityOfPage: url, inLanguage: lang === 'en' ? 'en' : 'tr-TR'},
+    {'@type': 'BreadcrumbList', itemListElement: [{'@type': 'ListItem', position: 1, name: t.home, item: siteUrl() + root}, {'@type': 'ListItem', position: 2, name: t.blog, item: siteUrl() + base(lang)}, {'@type': 'ListItem', position: 3, name: p.title, item: url}]}];
   if (p.faq?.length) g.push({'@type': 'FAQPage', mainEntity: p.faq.map(f => ({'@type': 'Question', name: f.q, acceptedAnswer: {'@type': 'Answer', text: f.a}}))});
   return `<script type="application/ld+json">${JSON.stringify({'@context': 'https://schema.org', '@graph': g}).replace(/</g, '\\u003c')}</script>`;
 }

@@ -441,3 +441,11 @@
 - Görsel: üst çubuk hizası/dil seçici/profil rozeti/Çıkış taşması, hizmet kartı butonları, yorum formu, vize sayfası tam menü (`panel/fixes.css`). Logo → `/panel/#overview` (session.js: müşteri /panel, partner /partner, avukat /avukat).
 - Profil: müşteride IBAN ve Banka kaldırıldı (partnerde duruyor); telefon alanı ülke kodu + ülkeye göre hane sınırı (`bm/phone.js`, `data-phone`; kayıt, partner-ol, profil). Müşteri numarası profilde gösterilir.
 - Testler: `tests/panel-update.mjs` (yeni); authorization/platform testleri "müşteri başvuru açamaz" kuralına göre güncellendi. Panel metinleri için panel.tsv çevirisi eklenmedi (yeni metinler TR görünür).
+
+## CPF rehberi + İngilizce blog (2026-11-13)
+- Yeni TR yazı: `brezilya-cpf-numarasi-nasil-alinir` (kullanıcının uzun CPF metni; 5 tablo, adım kutusu, SSS 10, 5 resmî kaynak). Eski kısa yazı `cpf-nedir-nasil-alinir` DURUYOR (ikisi aynı konuda; istenirse admin → Blog'dan biri taslağa alınır/yönlendirilir).
+- Yeni EN yazı (TR'nin çevirisi DEĞİL, ayrı içerik/açı): `brazil-cpf-for-foreigners-guide` (karar odaklı: ne açar/ne açmaz, 3 soruyla rota seçimi, "online form tuzağı", 7 hata, kontrol listesi). Dosya: `server/platform/blog-seed-3.mjs`, tek seferlik migration `migration-blog-v3` (db.mjs ready zincirinde seedBlog2'den sonra).
+- İngilizce blog altyapısı: yazılara `lang: 'tr'|'en'` (cleanPost eskiyi korur). EN yazılar yalnız `/en/blog/` ve `/en/blog/<slug>/` altında; TR `/blog/` onları göstermez (404). `blog.mjs`: L (tr/en arayüz metinleri), fmtDate, blogIndexHTML/homeBlogHTML(posts, lang), JSON-LD inLanguage; `blog.js` sesli okuma `data-lang`. `site.mjs renderEn`: `/en/blog/` rotası renderPage(..., {blogLang:'en'}) ile; main `translate="no"`; EN yazı yoksa EN blog menü bağlantıları gizli kalır, varsa görünür ve ana sayfada EN "Latest from the blog" vitrini; sitemap'e (yalnız EN yayındaysa) EN yazılar eklenir; `i18n.mjs` toEn'e '/blog/'→'/en/blog/' eşlemesi (dil menüsü). EN site hâlâ TASLAK (yayınlayınca blog da görünür).
+- Admin Blog editörü: "Yazı dili" seçimi (bm-blog.js v=3), listede EN rozeti.
+- Görseller: kapaklar daha önce kullanılan Unsplash kimlikleri (doğrulanmış); sandbox ağı kapalı olduğundan canlıda gözle kontrol edilmeli.
+- NOT: paketleme `git archive HEAD` kullanır → önce COMMIT, sonra `scripts/package.mjs` (önceki zip bu yüzden eksik çıkmıştı).
