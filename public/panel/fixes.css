@@ -69,3 +69,4 @@
 .topbar .account{gap:10px}
 #content:focus,#content:focus-visible{outline:none}
 @media(max-width:1280px){.topbar nav{gap:14px}.topbar nav a{font-size:12px}.profile>span:nth-child(2){display:none}}
+.route-note{margin:0 0 14px;padding:10px 14px;border-radius:12px;background:#eef3ea;color:#25402a;font-size:14px;line-height:1.5}

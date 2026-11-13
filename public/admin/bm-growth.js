@@ -156,9 +156,53 @@
     catch (err) { say(err.message); btn.disabled = false; }
   });
 
+
+  // ---------------- Güncellemeler ----------------
+  const updatesPage = () => { run(async root => {
+    const draw = async (force) => {
+      const d = await A('updates' + (force ? '?force=1' : ''));
+      const cur = d.current, lt = d.latest, gate = d.gate;
+      const avail = !!lt?.available;
+      const short = x => x ? String(x).slice(0, 7) : '—';
+      root.innerHTML = `<div class="bmg-2"><section class="panel bmg-p"><header class="panel-head"><h2>Sürüm durumu</h2><button class="btn small" id="up-chk">${ic('refresh')} Şimdi kontrol et</button></header>
+        <div class="bmg-kpis" style="grid-template-columns:1fr 1fr"><div><small>Kurulu sürüm</small><b>${esc(short(cur.rev))}</b><small>${cur.builtAt ? day(cur.builtAt) : 'Sürüm bilgisi yok'}</small></div><div><small>Son sürüm (GitHub)</small><b>${esc(short(lt?.latestSha))}</b><small>${lt?.latest?.at ? day(lt.latest.at) : '—'}</small></div></div>
+        ${d.error ? `<div class="bmc-err">${esc(d.error)}</div>` : avail ? `<div class="bmg-note" style="background:#eef6ea;border-color:#cfe3c8;color:#1c4a22"><b>Yeni güncelleme var.</b> ${lt.commits.length} değişiklik yayına hazır.</div>` : `<div class="bmg-note" style="background:#f3f6f0">${ic('check')} <span>${cur.rev ? 'Siteniz güncel.' : 'Kurulu sürüm bilgisi bu pakette yok; bir sonraki güncelleme paketinden itibaren karşılaştırma yapılır.'}</span></div>`}
+        <h3 class="bmg-h3">${avail ? 'Güncellemeyle gelenler' : 'Son değişiklikler'}</h3>
+        ${lt?.commits?.length ? `<ul class="bmg-ul">${lt.commits.map(c => `<li><span><b>${esc(c.title)}</b><small>${c.at ? day(c.at) : ''} · ${esc(c.sha)}</small></span></li>`).join('')}</ul>` : '<div class="bmc-empty sm">Listelenecek değişiklik yok.</div>'}
+        ${d.last ? `<p class="bmg-hint" style="margin-top:14px">Son güncelleme isteği: ${day(d.last.at)} · ${esc(d.last.result === 'ok' ? 'tetiklendi' : d.last.result)}</p>` : ''}</section>
+      <section class="panel bmg-p"><header class="panel-head"><h2>Güncelle</h2></header>
+        <ol class="bmg-steps"><li class="${gate.ok ? 'done' : ''}"><b>1. Yedeği indirin (zorunlu)</b><p class="bmg-hint">Tüm veriler yeni bir yedeğe alınır ve bilgisayarınıza iner. Yedek indirilmeden güncelleme düğmesi kapalı kalır. İndirme 60 dakika boyunca geçerlidir.</p>
+          <button class="btn ${gate.ok ? '' : 'primary'}" id="up-bk">${ic('doc')} ${gate.ok ? 'Yedek indirildi ✓ — yeniden indir' : 'Yedeği oluştur ve indir'}</button></li>
+        <li><b>2. Güncellemeyi başlatın</b><p class="bmg-hint">Site yeni sürümle yeniden kurulur; birkaç dakika kısa süreli kesinti olabilir. Veriler korunur.</p>
+          <button class="btn primary" id="up-go" ${gate.ok && d.hook.set && avail ? '' : 'disabled'}>${ic('refresh')} Güncelle</button>
+          <small class="muted" id="up-why">${!avail ? 'Şu an uygulanacak güncelleme yok.' : !gate.ok ? 'Önce yedeği indirin.' : !d.hook.set ? 'Önce aşağıda dağıtım adresini kaydedin.' : ''}</small></li></ol>
+        <h3 class="bmg-h3">Dağıtım bağlantısı</h3>
+        <p class="bmg-hint">Güncelle düğmesi, Hostinger’ın verdiği <b>dağıtım (webhook) adresini</b> çağırarak yeni sürümü kurdurur. Hostinger → Web uygulaması → <i>Git</i> bölümünde GitHub deposu (${esc(d.repo)}) bağlıyken “Otomatik dağıtım / Webhook” adresi görünür; onu buraya yapıştırın. Adres gizli tutulur, kayıttan sonra yalnız sunucu adı gösterilir.</p>
+        <form class="bmg-form" id="up-hk"><label>Webhook adresi<input name="url" type="password" autocomplete="off" placeholder="${d.hook.set ? '•••••• ' + esc(d.hook.host) + ' (kayıtlı)' : 'https://…'}"></label><div class="form-actions"><button class="btn small" type="submit">Kaydet</button>${d.hook.set ? '<button class="btn small" type="button" id="up-hk-del">Kaldır</button>' : ''}</div></form>
+      </section></div>`;
+      $('#up-chk').onclick = async e => { e.target.disabled = true; try { await draw(true); } catch (err) { say(err.message); } };
+      $('#up-bk').onclick = async e => {
+        e.target.disabled = true;
+        try {
+          const r = await A('backups/run', 'POST', {});
+          const a = document.createElement('a'); a.href = '/api/platform/admin/backups/download?key=' + encodeURIComponent(r.backup.key); a.download = ''; document.body.appendChild(a); a.click(); a.remove();
+          say('Yedek indiriliyor…'); setTimeout(() => draw().catch(() => {}), 2500);
+        } catch (err) { say(err.message); e.target.disabled = false; }
+      };
+      $('#up-go').onclick = async e => {
+        if (!confirm('Site yeni sürüme güncellensin mi? Birkaç dakika kısa kesinti olabilir.')) return;
+        e.target.disabled = true;
+        try { await A('updates/apply', 'POST', {}); say('Güncelleme başlatıldı. Birkaç dakika sonra sayfayı yenileyin.'); draw(true).catch(() => {}); } catch (err) { say(err.message); e.target.disabled = false; }
+      };
+      $('#up-hk').onsubmit = async e => { e.preventDefault(); const url = new FormData(e.target).get('url'); if (!url) return say('Adres yazın.'); try { await A('updates/hook', 'POST', {url}); say('Dağıtım adresi kaydedildi.'); draw(); } catch (err) { say(err.message); } };
+      const del = $('#up-hk-del'); if (del) del.onclick = async () => { try { await A('updates/hook', 'POST', {url: ''}); draw(); } catch (err) { say(err.message); } };
+    };
+    await draw();
+  }); return wrap('Güncellemeler', 'Yeni sürüm bildirimi, değişiklik listesi ve yedek alarak güvenli güncelleme.'); };
+
   // ---------------- rotalar + menü ----------------
-  const routes = {yorumlar: reviewsPage, aboneler: subsPage, fiyatlar: pricesPage, yedekler: backupsPage, diller: langsPage};
-  Object.assign(names, {yorumlar: 'Müşteri Yorumları', aboneler: 'Aboneler & Bülten', fiyatlar: 'Paket Fiyatları', yedekler: 'Yedekler & Hata Kaydı', diller: 'Diller'});
+  const routes = {yorumlar: reviewsPage, aboneler: subsPage, fiyatlar: pricesPage, yedekler: backupsPage, diller: langsPage, guncellemeler: updatesPage};
+  Object.assign(names, {yorumlar: 'Müşteri Yorumları', aboneler: 'Aboneler & Bülten', fiyatlar: 'Paket Fiyatları', yedekler: 'Yedekler & Hata Kaydı', diller: 'Diller', guncellemeler: 'Güncellemeler'});
   const _overview = overview;
   overview = function () { const r = route(); return routes[r] ? routes[r]() : _overview(); };
   const nav = $('#navigation');
@@ -169,8 +213,10 @@
     if (site) site.after(el); else nav.appendChild(el);
     site?.querySelector('.dropdown')?.insertAdjacentHTML('beforeend', '<a href="#diller">Diller (English)</a>');
     const ay = [...nav.querySelectorAll('details')].find(d => d.querySelector('summary')?.textContent.trim() === 'Ayarlar');
-    ay?.querySelector('a[href="#durum"]')?.insertAdjacentHTML('afterend', '<a href="#yedekler">Yedekler &amp; Hata Kaydı</a>');
+    ay?.querySelector('a[href="#durum"]')?.insertAdjacentHTML('afterend', '<a href="#yedekler">Yedekler &amp; Hata Kaydı</a><a href="#guncellemeler">Güncellemeler</a>');
   }
+  // yeni güncelleme rozeti + bir kez hatırlatma
+  setTimeout(() => A('updates').then(d => { if (!d.latest?.available) return; const a = $('#navigation a[href="#guncellemeler"]'); if (a) a.insertAdjacentHTML('beforeend', ' <span class="bmc-count">Yeni</span>'); const k = 'bm-upd-' + d.latest.latestSha; try { if (!sessionStorage.getItem(k)) { sessionStorage.setItem(k, '1'); say('Yeni site güncellemesi var: Ayarlar → Güncellemeler.'); } } catch {} }).catch(() => {}), 1500);
   // bekleyen yorum rozeti
   setTimeout(() => A('reviews').then(d => { const n = d.reviews.filter(r => r.status === 'pending').length; const a = $('#navigation a[href="#yorumlar"]'); if (n && a) a.insertAdjacentHTML('beforeend', ` <span class="bmc-count">${n}</span>`); }).catch(() => {}), 1100);
   if (routes[route()]) setTimeout(() => { if (!$('#bmg-root')) render(); }, 300);
@@ -182,7 +228,7 @@
   .bmg-form{display:grid;gap:12px}.bmg-form label{display:grid;gap:5px;font-size:13px;font-weight:600}.bmg-form input:not([type=checkbox]),.bmg-form textarea,.bmg-form select{font:inherit;font-weight:400;border:1px solid #d7dfd2;border-radius:10px;padding:9px 11px;background:#fff}.bmg-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.bmg-cb{display:flex!important;gap:8px;align-items:flex-start;font-weight:400!important}
   .bmg-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.bmg-kpis div{background:#fff;border:1px solid #e3e8de;border-radius:14px;padding:14px 16px}.bmg-kpis small{display:block;color:#7b887e;font-size:12px}.bmg-kpis b{font-size:24px}
   .bmg-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}.bmg-p{padding:0 18px 18px}.bmg-p .panel-head{margin:0 -18px 14px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px}.bmg-hint{font-size:12.5px;color:#68776b;margin:0 0 12px;line-height:1.6}.bmg-h3{font-size:14px;margin:20px 0 8px}
-  .bmg-ul{list-style:none;padding:0;margin:0;display:grid;gap:8px}.bmg-ul li{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #eef1eb;border-radius:10px;padding:9px 12px}.bmg-ul small{display:block;color:#7b887e;font-size:12px}.bmg-err b{font-family:ui-monospace,monospace;font-size:12.5px;font-weight:600;word-break:break-word}
+  .bmg-steps{list-style:none;padding:0;margin:0 0 14px;display:grid;gap:14px}.bmg-steps li{border:1px solid #e3e8de;border-radius:12px;padding:14px 16px}.bmg-steps li.done{border-color:#bcd6b4;background:#f4f9f1}.bmg-steps .btn[disabled]{opacity:.5;cursor:not-allowed}.bmg-ul{list-style:none;padding:0;margin:0;display:grid;gap:8px}.bmg-ul li{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #eef1eb;border-radius:10px;padding:9px 12px}.bmg-ul small{display:block;color:#7b887e;font-size:12px}.bmg-err b{font-family:ui-monospace,monospace;font-size:12.5px;font-weight:600;word-break:break-word}
   .bmg-lmprev{display:flex;align-items:center;gap:12px;background:#f6f9f3;border:1px dashed #cfdcc8;border-radius:12px;padding:12px 14px}.bmg-lmprev small{color:#7b887e}.bmg-pill select{appearance:none;-webkit-appearance:none;border:1px solid #d6e2d3;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%231b5e20' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 11px center;border-radius:999px;padding:8px 30px 8px 13px;font:600 13px/1 inherit;color:#1b5e20}
   .bmg-prs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
   @media(max-width:900px){.bmg-2{grid-template-columns:1fr}.bmg-kpis{grid-template-columns:1fr 1fr}}`;

@@ -13,6 +13,7 @@ execSync(`git -C "${root}" archive --format=tar HEAD | tar -x -C "${tmp}"`);
 
 // Yayına gerekmeyen dosyalar
 const DROP = ['AGENTS.md', 'IMPLEMENTATION.md', 'PROJE-NOTLARI.md', 'README.md', 'HOSTINGER-KURULUM.md', 'PAKET-BILGISI.txt', 'build.py', 'content.py', 'enhancements.py', 'quizzes.py', 'docs', 'checks', 'tests', 'drizzle', 'tmp', 'assets', 'scripts', '.env.example'];
+try { writeFileSync(join(tmp, 'build.json'), JSON.stringify({rev: execSync(`git -C "${root}" rev-parse HEAD`).toString().trim(), builtAt: new Date().toISOString()})); } catch {}
 for (const f of DROP) rmSync(join(tmp, f), {recursive: true, force: true});
 const pkg = JSON.parse(readFileSync(join(tmp, 'package.json'), 'utf8'));
 delete pkg.scripts.test; pkg.description = 'Brazil Migration'; writeFileSync(join(tmp, 'package.json'), JSON.stringify(pkg, null, 2));

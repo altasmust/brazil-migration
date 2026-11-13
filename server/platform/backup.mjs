@@ -1,5 +1,6 @@
 // Güvence: günlük veritabanı yedeği (BUCKET → backups/, son 14 kopya), sağlık kontrolü.
 import {gzipSync} from 'node:zlib';
+import {markBackupDownloaded} from './updates.mjs';
 
 const parse = s => { try { return JSON.parse(s || '{}') || {}; } catch { return {}; } };
 const KEEP = 14, DAY = 864e5, LOG = 'config-backups';
@@ -68,6 +69,7 @@ export async function backupAdmin(req, env, route) {
     const log = await readLog(db);
     if (!(log.list || []).some(b => b.key === key)) return json({error: 'Yedek bulunamadı.'}, 404);
     const o = await bucket.get(key); if (!o) return json({error: 'Yedek dosyası bulunamadı.'}, 404);
+    try { await markBackupDownloaded(db, key, (log.list || []).find(b => b.key === key)?.at); } catch {}
     return new Response(o.body, {headers: {'Content-Type': 'application/gzip', 'Content-Disposition': `attachment; filename="${key.split('/').pop()}"`, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff'}});
   }
   return null;

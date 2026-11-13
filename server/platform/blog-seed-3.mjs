@@ -13,7 +13,7 @@ export const POSTS = [
   excerpt: 'Türkiye’den Brezilya’ya gitmeden CPF alınabilir mi? Online form yeterli mi, konsolosluğa şahsen gitmek zorunlu mu, apostilli vekâletnameyle başvuru nasıl yapılır? Belgeler, sık hatalar ve maliyetler.',
   lead: 'Kısaca: Brezilya dışında yaşayan yabancıların ilk CPF kaydı için resmî yol, yetkili Brezilya konsolosluğunda (İstanbul veya Ankara) e-Consular üzerinden başvurup şahsen gitmektir; bu işlem ücretsizdir. Brezilya’da vekâletnameyle temsilci kullanmak alternatiftir ancak vekâletnamenin kabulü ve şahsen başvuru koşulları ayrıca kontrol edilmelidir. Online FCPF formunu doldurmak CPF aldığınız anlamına gelmez.',
   cover: U('photo-1603796846097-bee99e4a601f'), coverAlt: 'Başvuru belgelerine not alan bir kişi', coverCredit: {name: 'Romain Dancre', url: 'https://unsplash.com/@romaindancre'},
-  seo: {title: 'Brezilya CPF Numarası Nasıl Alınır? Türkiye’den Başvuru (2026) | Brazil Migration', description: 'Türkiye’den Brezilya’ya gitmeden CPF alınabilir mi? Konsolosluk, apostilli vekâletname ve online FCPF formu: belgeler, adımlar, sık hatalar ve maliyetler.'},
+  seo: {title: 'Brezilya CPF Numarası Nasıl Alınır? (2026) | Brazil Migration', description: 'Türkiye’den Brezilya’ya gitmeden CPF alınabilir mi? Konsolosluk, apostilli vekâletname ve online FCPF formu: belgeler, adımlar, sık hatalar ve maliyetler.'},
   content: `<p>Brezilya’da gayrimenkul satın almak, şirket kurmak, banka hesabı açmak veya yatırım yapmak isteyen yabancıların karşılaştığı ilk resmî işlemlerden biri CPF numarası edinmektir. İlk bakışta basit görünür: bir internet formu doldurulur, pasaport bilgileri girilir ve numara alınır. Oysa özellikle Brezilya dışında yaşayan yabancılar için süreç bundan karmaşıktır; çünkü formun doldurulması başvurunun tamamlandığı anlamına gelmez.</p>
 <p>Bu rehberde hangi başvuru yollarının bulunduğunu, hangi belgelerin gerektiğini, vekâletnamenin hangi aşamada devreye girdiğini, başvuruların neden gecikebildiğini ve CPF alındıktan sonra nelere dikkat edilmesi gerektiğini anlatıyoruz.</p>
 <h2>CPF nedir ve neden önemlidir?</h2>
@@ -174,7 +174,7 @@ export const POSTS = [
   excerpt: 'A practical, decision-first guide to the Brazilian CPF for non-residents: what you can and cannot do with it, how to pick between consulate, attorney and in-person routes, and a pre-flight checklist.',
   lead: 'In short: a CPF is the 11-digit taxpayer number that Brazilian banks, notaries, brokers and landlords key everything to. It is free from the state, it does not require a visa or residency, and it does not make you a tax resident. The hard part is not eligibility, it is choosing a route that your documents, your timeline and your distance from Brazil can actually support.',
   cover: U('photo-1645536642772-93d4df8b8172'), coverAlt: 'Busy Avenida Paulista in São Paulo', coverCredit: {name: 'Antonino Visalli', url: 'https://unsplash.com/@antoninovisalli'},
-  seo: {title: 'Brazil CPF for Foreigners: Routes, Documents and Pitfalls (2026) | Brazil Migration', description: 'How non-residents get a Brazilian CPF: consulate, power of attorney or in person. What it unlocks, what it does not, a document checklist and the mistakes that delay applications.'},
+  seo: {title: 'Brazil CPF for Foreigners: Routes and Pitfalls | Brazil Migration', description: 'How non-residents get a Brazilian CPF: consulate, power of attorney or in person. What it unlocks, document checklist and the mistakes that delay applications.'},
   content: `<p>Most foreigners meet the CPF at an awkward moment: a notary asks for it before signing a property deed, a bank onboarding form will not submit without it, or a company registration stalls because one partner lives abroad. At that point the CPF stops being paperwork and becomes the critical path. This guide is written for that moment, so it starts with decisions rather than definitions.</p>
 <h2>What a CPF actually is, in one minute</h2>
 <p>The <strong>CPF (Cadastro de Pessoas Físicas)</strong> is the individual registry number run by Brazil’s federal tax authority, the <em>Receita Federal</em>. Each person gets one lifelong number. It identifies you to banks, notaries, real estate registries, brokerages, e-commerce checkouts and public portals. It is not an ID card, not a residence permit and not a work authorization.</p>
@@ -245,4 +245,28 @@ export async function seedBlog3(client, cleanPost) {
     await client.execute({sql: 'INSERT INTO items(id,kind,owner,data,created,updated) VALUES(?,?,?,?,?,?)', args: ['blog-' + p.slug.slice(0, 40), 'blog_post', 'owner', JSON.stringify(d), now, now]});
   }
   await client.execute({sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('migration-blog-v3','migration','owner','{}',?,?)", args: [now, now]});
+}
+
+// One-time (item 'migration-seo-v1'): shorter Google titles / descriptions for the first articles. Only fields that still
+// hold the original generated text are replaced, so anything edited in the admin is kept.
+const SEO_FIX = {
+  'brezilyada-oturum-izni-nasil-alinir': [['Brezilya’da Oturum İzni Nasıl Alınır? (2026 Rehberi) | Brazil Migration', 'Brezilya’da Oturum İzni Nasıl Alınır? (2026) | Brazil Migration'], ['Brezilya oturum izni türleri, şartları, gerekli belgeler, ücretler ve CRNM kaydına kadar adım adım başvuru süreci. Aile birleşimi, emeklilik, dijital göçebe ve yatırım yolları.', 'Brezilya oturum izni türleri, şartlar, belgeler, ücretler ve CRNM kaydına kadar adım adım süreç. Aile birleşimi, emeklilik, dijital göçebe ve yatırım yolları.']],
+  'brezilya-vatandasligi-nasil-alinir': [['Brezilya Vatandaşlığı Nasıl Alınır? Şartlar ve Süreler (2026) | Brazil Migration', 'Brezilya Vatandaşlığı Nasıl Alınır? (2026) | Brazil Migration']],
+  'yabanci-olarak-brezilyada-sirket-kurmak': [['Yabancı Olarak Brezilya’da Şirket Kurmak (2026 Rehberi) | Brazil Migration', 'Brezilya’da Şirket Kurmak: Yabancı Rehberi | Brazil Migration']],
+  'brezilya-dijital-gocebe-vizesi': [['Brezilya Dijital Göçebe Vizesi (VITEM XIV) 2026 | Brazil Migration', 'Brezilya Dijital Göçebe Vizesi (VITEM XIV) | Brazil Migration']],
+};
+export async function migrateBlogSeo(client) {
+  const done = await client.execute({sql: "SELECT id FROM items WHERE id='migration-seo-v1'", args: []});
+  if (done.rows.length) return;
+  const now = Date.now();
+  for (const [slug, pairs] of Object.entries(SEO_FIX)) {
+    const r = await client.execute({sql: "SELECT id, data FROM items WHERE kind='blog_post' AND json_extract(data,'$.slug')=?", args: [slug]});
+    for (const row of r.rows) {
+      let d; try { d = JSON.parse(row.data); } catch { continue; }
+      d.seo = d.seo || {}; let changed = false;
+      for (const [from, to] of pairs) for (const k of ['title', 'description']) if (d.seo[k] === from) { d.seo[k] = to; changed = true; }
+      if (changed) await client.execute({sql: 'UPDATE items SET data=?, updated=? WHERE id=?', args: [JSON.stringify(d), now, row.id]});
+    }
+  }
+  await client.execute({sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('migration-seo-v1','migration','owner','{}',?,?)", args: [now, now]});
 }

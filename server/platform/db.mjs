@@ -9,7 +9,7 @@ import {seedDemo, migrateOwner} from './seed.mjs';
 import {seedBlog, migrateMenuV2, migrateMenuV3, migrateMenuV4, migrateMenuV5} from './blog-seed.mjs';
 import {cleanPost} from './blog.mjs';
 import {seedBlog2} from './blog-seed-2.mjs';
-import {seedBlog3} from './blog-seed-3.mjs';
+import {seedBlog3, migrateBlogSeo} from './blog-seed-3.mjs';
 import {loadConfig} from './config.mjs';
 
 const toObject = (rs, row) => {
@@ -45,7 +45,7 @@ class Database {
     return rs.map(r => ({success: true, meta: {changes: r.rowsAffected}, results: r.rows.map(row => toObject(r, row))}));
   }
   async exec(sql) { await this.ready(); return this.client.executeMultiple(sql); }
-  ready() { return this._ready ??= this.connect().then(() => migrate(this.client)).then(() => migrateOwner(this.client)).then(() => seedBlog(this.client, cleanPost)).then(() => seedBlog2(this.client, cleanPost)).then(() => seedBlog3(this.client, cleanPost)).then(() => migrateMenuV2(this.client)).then(() => migrateMenuV3(this.client)).then(() => migrateMenuV4(this.client)).then(() => migrateMenuV5(this.client)).then(() => loadConfig(this.client)).then(() => seedDemo(this.client)).catch(e => { this._ready = null; throw e; }); }
+  ready() { return this._ready ??= this.connect().then(() => migrate(this.client)).then(() => migrateOwner(this.client)).then(() => seedBlog(this.client, cleanPost)).then(() => seedBlog2(this.client, cleanPost)).then(() => seedBlog3(this.client, cleanPost)).then(() => migrateBlogSeo(this.client)).then(() => migrateMenuV2(this.client)).then(() => migrateMenuV3(this.client)).then(() => migrateMenuV4(this.client)).then(() => migrateMenuV5(this.client)).then(() => loadConfig(this.client)).then(() => seedDemo(this.client)).catch(e => { this._ready = null; throw e; }); }
 }
 
 async function migrate(client) {

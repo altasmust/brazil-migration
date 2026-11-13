@@ -7,6 +7,7 @@ import {
 import {sendMail, mailConfigured, mailProvider} from './mail.mjs';
 import {growthPublic, growthAdmin} from './growth.mjs';
 import {ensureBackups, backupAdmin, health} from './backup.mjs';
+import {updatesAdmin} from './updates.mjs';
 import {i18nAdmin} from './i18n-admin.mjs';
 import {translateText, translateStats, parseGlossary, DEFAULT_GLOSSARY} from './translate.mjs';
 import {applyConfig} from './config.mjs';
@@ -656,6 +657,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   const actor = 'Yönetici';
   { const g = await growthAdmin(req, db, route); if (g) return g; }
   { const g = await backupAdmin(req, env, route); if (g) return g; }
+  { const g = await updatesAdmin(req, db, route, {audit, actor}); if (g) return g; }
   { const g = await i18nAdmin(req, db, route); if (g) return g; }
 
   if (route === 'meta' && req.method === 'GET') return json({types: ACCOUNT_TYPES, perms: PERMS, permLabels: PERM_LABELS, defaults: DEFAULT_PERMS, panels: PANELS, countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES, mail: mailConfigured(), verifier: verifierConfigured()});

@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['@libsql/client'],
   async redirects() {
     return [
+      {source: '/index.html', destination: '/', permanent: true},
+      {source: '/:path*/index.html', destination: '/:path*/', permanent: true},
+      {source: '/favicon.ico', destination: '/bm/pwa/icon-192.png', permanent: true},
+      {source: '/icerik-plani/:path*', destination: '/blog/', permanent: true},
       {source: '/lgbt-brezilya-oturum-izni/:path*', destination: '/brezilya-oturum-izni/', permanent: true},
       {source: '/brezilya-evlilik-oturum-izni/:path*', destination: '/brezilya-oturum-izni/', permanent: true},
     ];

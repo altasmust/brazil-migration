@@ -449,3 +449,13 @@
 - Admin Blog editörü: "Yazı dili" seçimi (bm-blog.js v=3), listede EN rozeti.
 - Görseller: kapaklar daha önce kullanılan Unsplash kimlikleri (doğrulanmış); sandbox ağı kapalı olduğundan canlıda gözle kontrol edilmeli.
 - NOT: paketleme `git archive HEAD` kullanır → önce COMMIT, sonra `scripts/package.mjs` (önceki zip bu yüzden eksik çıkmıştı).
+
+## Tur: Güncelleme merkezi, EN çeviri, SEO, destek yönlendirme
+- **Destek bileti yönlendirme** (`server/workspace.mjs routeOf`): müşteriye atanmış danışman/avukat/vb. varsa bilet ona (`assignee:rt`), yoksa yöneticiye düşer; yanıtta atanan yeniden hesaplanır; panelde "İlgilenen" sütunu + form altında yönlendirme notu.
+- **EN çeviri**: ~14 yeni anahtar (Didit KYC, kayıt formu). `renderEn` içinde genel öznitelik (alt/title/placeholder) çeviri geçişi eklendi. Prod'a özgü metinler için admin "Eksik çevirileri tara". Not: son panel turunda eklenen panel metinleri EN/FA panel sözlüğünde henüz yok.
+- **Güncelleme merkezi** (`server/platform/updates.mjs`, admin → Ayarlar → Güncellemeler): GitHub'dan yeni commit kontrolü (10 dk önbellek), `build.json` (package.mjs yazar), webhook (`updates/hook`), **yedek indirme zorunlu** (yedek indirilince 60 dk geçerli kapı), ardından Güncelle. Gerçek otomatik güncelleme için Hostinger uygulamasının Git'e bağlı olması ve webhook adresinin yapıştırılması gerekir.
+- **Güvenlik**: esbuild ^0.28.2 (npm audit 0).
+- **Kırık link/yönlendirme**: `next.config.ts` → `/index.html`, `/:path*/index.html`, `/favicon.ico`, `/icerik-plani/*`. Dahili tarama: kırık link yok. Search Console temizliği kullanıcı tarafından yapılır (Doğrulamayı başlat / Kaldırma).
+- **Görsel alt metinleri** (`site.mjs applyImgAlt`): bayrak ve pazarlama görselleri için dile göre otomatik alt; TR ve EN'de uygulanır.
+- **SEO**: noindex sayfalar (/gorusme/ vb.) sitemap'ten çıkarıldı; blog başlık/açıklamaları kısaltıldı; `migration-seo-v1` yalnızca varsayılan metni değiştirir (admin düzenlemesi korunur).
+- Hatırlatma: önce commit, sonra `scripts/package.mjs`.

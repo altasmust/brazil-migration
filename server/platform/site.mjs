@@ -39,7 +39,7 @@ export async function staticPages() {
     if (entries.some(e => e.isFile() && e.name === 'index.html') && !PANEL.test(rel)) {
       const html = await readStatic(rel);
       const t = (html?.match(/<title>([^<]*)<\/title>/) || [])[1] || rel;
-      out.push({path: rel, title: t.replace(/\s*\|\s*Brazil Migration\s*$/, '').replace(/&amp;/g, '&').trim()});
+      out.push({path: rel, noindex: /<meta[^>]+name="robots"[^>]+noindex/i.test(html || ''), title: t.replace(/\s*\|\s*Brazil Migration\s*$/, '').replace(/&amp;/g, '&').trim()});
     }
     for (const e of entries) if (e.isDirectory() && !['bm', 'images', 'illustrations'].includes(e.name)) await walk(join(dir, e.name), rel + e.name + '/');
   };
@@ -52,7 +52,7 @@ export async function staticPages() {
 let state = null, stateAt = 0;
 export function invalidateSite() { stateAt = 0; renderCache.clear(); }
 import {loadSplits} from './commission.mjs';
-import {dict as i18nDict, translateRoot} from './i18n.mjs';
+import {dict as i18nDict, translateRoot, lookup as lookupI18n} from './i18n.mjs';
 import {publishedReviews, reviewsHTML, subscribeHTML, PRICE_KEYS} from './growth.mjs';
 export async function siteState(db) {
   if (state && Date.now() - stateAt < 15000) return state;
@@ -438,6 +438,26 @@ async function renderCustom(page, path) {
   return root;
 }
 
+// Görsel açıklamaları (alt): bayraklar ve alt metni boş pazarlama görselleri için dile göre üretilir (SEO + erişilebilirlik).
+const IMG_ALT = {
+  'oturum': {tr: 'Brezilya oturum izni ve CRNM kimlik kartı başvurusu', en: 'Brazil residence permit and CRNM identity card application'},
+  'vatandaslik': {tr: 'Brezilya vatandaşlığı başvurusu', en: 'Brazilian citizenship application'},
+  'sirket': {tr: 'Brezilya’da şirket kurulumu', en: 'Company formation in Brazil'},
+};
+const regionNames = {};
+const regionName = (code, lang) => { try { return (regionNames[lang] ||= new Intl.DisplayNames([lang], {type: 'region'})).of(code.toUpperCase()); } catch { return code.toUpperCase(); } };
+function applyImgAlt(root, lang = 'tr', force = false) {
+  root.querySelectorAll('img').forEach(im => {
+    if (im.getAttribute('aria-hidden') === 'true' || im.getAttribute('role') === 'presentation') return;
+    const cur = (im.getAttribute('alt') || '').trim(), src = im.getAttribute('src') || '';
+    if (cur && !force) return;
+    const f = /\/bm\/flags\/([a-z]{2})\.svg/.exec(src);
+    if (f) { im.setAttribute('alt', lang === 'en' ? 'Flag of ' + regionName(f[1], 'en') : regionName(f[1], 'tr') + ' bayrağı'); return; }
+    const m = /\/images\/marketing-v2\/([a-z]+)(?:-\d+)?\.webp/.exec(src);
+    if (m && IMG_ALT[m[1]]) im.setAttribute('alt', IMG_ALT[m[1]][lang]);
+  });
+}
+
 // ---------- blog ----------
 async function renderBlog(path, st, preview, lang = 'tr') {
   const sh = await shell(); if (!sh) return null;
@@ -508,12 +528,16 @@ export async function renderEn(db, enPath, {draft = false, missing = null} = {})
   const root = parseHTML(tr.html);
   root.querySelectorAll('link[hreflang],a.bm-langsw,label.bm-lang').forEach(n => n.remove());
   // İngilizcesi olmayan (yalnız Türkçe) bölümler: blog vitrini ve menüdeki Türkçe-özel sayfa bağlantıları
-  const enHome = !bm && enPosts.length ? homeBlogHTML(enPosts, 'en') : '';
+  const enHome = !bm && enPosts.length ? homeBlogHTML(enPosts, 'en').replace('<section class="home-blog"', '<section translate="no" class="home-blog"') : '';
   root.querySelectorAll('section.home-blog').forEach(n => { if (enHome) n.replaceWith(parseHTML(enHome)); else n.remove(); });
   root.querySelectorAll((enPosts.length ? '' : 'header a[href^="/blog"],footer a[href^="/blog"],.full-menu a[href^="/blog"],') + 'header a[href^="/turkiye-brezilya/"],footer a[href^="/turkiye-brezilya/"],header a[href^="/portekizce/"],footer a[href^="/portekizce/"],.full-menu a[href^="/turkiye-brezilya/"],.full-menu a[href^="/portekizce/"]').forEach(a => { const li = a.parentNode; (li && li.rawTagName?.toLowerCase() === 'li' ? li : a).remove(); });
   root.querySelector('html')?.setAttribute('lang', 'en');
   if (bm) root.querySelector('main#main')?.setAttribute('translate', 'no');
   translateRoot(root, {lang: 'en', path: enPath, trPath, missing});
+  // Görsel açıklamaları (alt), title, aria-label vb. öznitelikler: metin birimi sezgisi atladıysa da çevrilsin
+  { const dd = i18nDict('en'); const skip = el => { for (let n = el; n && n.rawTagName; n = n.parentNode) { if (n.rawTagName.toLowerCase() === 'html') return false; if (n.getAttribute('translate') === 'no') return true; } return false; };
+    root.querySelectorAll('[alt],[title],[aria-label],[placeholder],[data-tip]').forEach(el => { if (skip(el)) return; for (const a of ['alt', 'title', 'aria-label', 'placeholder', 'data-tip']) { const v = el.getAttribute(a); if (!v || !/[A-Za-zÇĞİÖŞÜçğıöşü]/.test(v)) continue; const k = String(v).replace(/[\s\u00a0]+/g, ' ').trim(); const tv = lookupI18n(k, dd); if (tv != null) el.setAttribute(a, tv); else if (missing && /[ÇĞİÖŞÜçğıöşü]/.test(k)) missing.set(k, 'attr'); } }); }
+  if (!bm) applyImgAlt(root, 'en', true);
   applyLangLinks(root, bm ? '/blog/' : trPath, enPath, st, {draft, noAlt: !!bm?.[1]});
   const head = root.querySelector('head');
   // tarayıcıda JS ile üretilen metinler için: aynı sözlük + çevirmen
@@ -549,7 +573,7 @@ export async function renderPage(db, path, {editor = false, preview = null, blog
   else return {status: 404, html: await notFound(db)};
   if (!root) return {status: 404, html: await notFound(db)};
   if (st?.menu || preview) applyMenu(root, (st || await siteState(db)).menu);
-  try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); if (!editor) { applyGlobalSeo(root, path, S.seo || {}); applyAnalytics(root, S.analytics || {}, path); applyLivePromo(root, path); applyGrowth(root, path, S); applyPerf(root); applyLangLinks(root, path, null, S); } } catch (e) { console.error('[site]', e.message); }
+  try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); if (!editor) { applyImgAlt(root, 'tr'); applyGlobalSeo(root, path, S.seo || {}); applyAnalytics(root, S.analytics || {}, path); applyLivePromo(root, path); applyGrowth(root, path, S); applyPerf(root); applyLangLinks(root, path, null, S); } } catch (e) { console.error('[site]', e.message); }
   if (path === '/' && !editor && st) { const why = root.querySelector('section.why'); const hb = homeBlogHTML(Object.values(st.blog || {}).filter(p => p.published)); const ft = root.querySelector('footer.site-footer'); if (ft && hb) { ft.insertAdjacentHTML('beforebegin', hb); root.querySelector('head')?.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/blog.css?v=1">'); } }
   let html = '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
   if (siteUrl()) html = html.replace(OLD_HOSTS, siteUrl());
@@ -584,7 +608,7 @@ export async function editorHTML(db, path) {
 export async function sitemapXML(db) {
   const st = await siteState(db), base = siteUrl() || '';
   const today = new Date().toISOString().slice(0, 10);
-  const urls = (await staticPages()).filter(p => !st.pages[p.path]?.hidden && !st.pages[p.path]?.seo?.noindex && !['/giris/', '/icerik-plani/'].includes(p.path)).map(p => p.path);
+  const urls = (await staticPages()).filter(p => !p.noindex && !st.pages[p.path]?.hidden && !st.pages[p.path]?.seo?.noindex && !['/giris/', '/icerik-plani/'].includes(p.path)).map(p => p.path);
   for (const c of Object.values(st.custom)) if (c.published && !c.seo?.noindex) urls.push(c.path);
   const allPosts = Object.values(st.blog).filter(p => p.published && !p.seo?.noindex);
   const posts = allPosts.filter(p => p.lang !== 'en'), enPosts = allPosts.filter(p => p.lang === 'en');
