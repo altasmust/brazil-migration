@@ -99,6 +99,7 @@
     let data; try { data = await get('/api/platform/modules?panel=' + panel); } catch { return; }
     const nav = navOf(); if (!nav) return;
     const hidden = new Set((data.hidden || []).map(s => s.toLocaleLowerCase('tr')));
+    if (hidden.has('servisler')) hidden.add('hizmetlerim');
     nav.querySelectorAll('a').forEach(a => { if (hidden.has(a.textContent.trim().toLocaleLowerCase('tr'))) a.style.display = 'none'; });
     if (!data.modules?.length) return;
     const main = document.querySelector('main');
@@ -206,6 +207,7 @@
     const here = accounts.find(a => area === 'customer' ? a.panel === 'customer' : area === 'partner' ? ['partner', 'staff'].includes(a.panel) : area === 'lawyer' ? a.panel === 'lawyer' : true);
     if (!here && area !== 'kyc') { location.href = accounts[0]?.home || '/giris/'; return; }
     addLogout(me.user.email);
+    { const br = document.querySelector('header a.brand'); if (br && area !== 'kyc') br.href = area === 'customer' ? '/panel/#overview' : area === 'partner' ? '/partner/' : '/avukat/'; }
     if (area === 'customer' || area === 'partner') currency(me.user.country);
     if (area === 'customer') kycCard();
     if (me.user.impersonated && !document.getElementById('bm-imp')) {

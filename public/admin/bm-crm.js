@@ -283,7 +283,7 @@
           <div class="bmc-kvs">${row('E-posta', esc(a.email), 'mail')}${row('Telefon', esc(a.phone || ''), 'phone')}${row('Konum', place(a.country, a.city), 'pin')}${row('Hesap türü', k.label, k.icon)}${row('Kayıt tarihi', day(a.created), 'calendar')}${row('Giriş', esc(a.login), 'key')}${kindOf(a) === 'customer' ? row('Danışman', esc(a.advisorName || 'Merkez ofis'), 'briefcase') : ''}${row('Grup', g ? esc(g.name) + (g.discount ? ` · %${g.discount} indirim` : '') : '', 'users')}</div></section>
         <section class="panel"><header class="panel-head">${I('file')}<h2>Muhasebe</h2></header><div class="bmc-acc"><small>ÖDENMEMİŞ FATURALAR</small><b class="${unpaid.length ? 'red' : ''}">${money(sum(unpaid))}</b><i class="${L.invoices.length ? '' : 'none'}" style="--p:${L.invoices.length ? Math.round(paid.length / L.invoices.length * 100) : 0}%"></i>
           <div class="bmc-acc3"><div><small>ÖDENEN</small><b>${money(sum(paid))}</b><span>×${paid.length}</span></div><div><small>BEKLEYEN</small><b>${money(sum(unpaid))}</b><span>×${unpaid.length}</span></div><div><small>SİPARİŞ</small><b>${L.orders.length}</b><span>toplam</span></div></div></div>
-          <div class="bmc-actions"><a class="btn" href="#invoiceNew">${I('plus')} Yeni Fatura</a><button class="btn primary" data-act="manage">${I('key')} Hesabı yönet</button></div></section>
+          <div class="bmc-actions"><a class="btn" href="#invoiceNew">${I('plus')} Yeni Fatura</a><button class="btn primary" data-act="manage">${I('key')} Hesabı yönet</button>${kindOf(a) === 'customer' && a.status === 'active' ? `<button class="btn" data-act="meet">${I('send')} Görüşmeye çağır</button>` : ''}</div></section>
         <section class="panel bmc-score"><header class="panel-head">${I('shield')}<h2>Hesap Puanı</h2></header><div class="bmc-gauge" style="--v:${s.total}"><b>${s.total}</b><small>/ 100</small></div><p class="bmc-glabel">${s.total >= 70 ? 'İyi' : s.total >= 40 ? 'Orta' : 'Eksik'}</p>
           ${s.parts.map(([l, v, m]) => `<div class="bmc-bar"><span>${l}</span><em>${v}/${m}</em><i style="--p:${Math.round(v / m * 100)}%"></i></div>`).join('')}</section>
       </div>
@@ -317,6 +317,7 @@
       const act = e.target.closest('button[data-act]'); if (!act) return;
       try {
         if (act.dataset.act === 'manage') return manage(a.id);
+        if (act.dataset.act === 'meet') { const d = await A('meet/invite', 'POST', {id: a.id}); modal('Davet gönderildi', `<p class="bmc-p"><b>${esc(d.name)}</b> müşteri panelinde “Davete Katıl” şeridini görecek ve bildirim alacak (2 saat geçerli). Siz de odaya girin:</p><p><a class="btn primary" href="${esc(d.url)}" target="_blank" rel="noopener">Görüşmeyi aç</a></p>`); return; }
         if (act.dataset.act === 'edit') await window.BMAcc.edit(a.id);
         if (act.dataset.act === 'invite') linkInfo(await A('accounts/invite', 'POST', {id: a.id}));
         if (act.dataset.act === 'toggle') { await A('accounts', 'PATCH', {id: a.id, status: a.status === 'active' ? 'disabled' : 'active'}); await reload(); say('Durum güncellendi.'); }
@@ -374,7 +375,7 @@
 
   // ---------- rotalar ----------
   const EMBED = {yeni: 'Yeni Müşteri Ekle', partnerler: 'Partner Başvuruları', degerlendirmeler: 'Ön Değerlendirmeler', gorusmeler: 'Ön Görüşme Talepleri', moduller: 'Panel Modülleri', meet: 'Google Meet Entegrasyonu'};
-  Object.assign(names, EMBED, {customers: 'Müşteri Listesi', account: 'Müşteri Detayı'});
+  Object.assign(names, EMBED, {customers: 'Müşteri Listesi', account: 'Müşteri Detayı', konular: 'Destek Konuları'});
   const routes = {
     account: () => mount(`<div id="bmc-root" class="bmc"><div class="loading">Yükleniyor…</div></div>`, async () => {
       await load(); const id = decodeURIComponent(location.hash.split('/').slice(1).join('/'));
@@ -386,6 +387,22 @@
   };
   for (const [k, t] of Object.entries(EMBED)) routes[k] = () => mount(`<div class="bm-embed">${heading(t)}<div id="note" class="bm-note"></div><section id="view"><div class="loading">Yükleniyor…</div></section></div>`, () => window.BMAcc.route(k));
   window.BMRoutes = routes;
+
+
+  // ---------- DESTEK KONULARI ----------
+  routes.konular = () => mount(`<div class="bmc" id="bmc-root">${heading('Destek Konuları')}<div class="loading">Yükleniyor…</div></div>`, async () => {
+    const d = await A('settings/support-topics'), root = $('#bmc-root'); let list = d.topics.slice();
+    const draw = () => {
+      root.innerHTML = heading('Destek Konuları') + `<section class="panel" style="max-width:720px"><header class="panel-head">${I('send')}<h2>Müşterinin seçeceği konular</h2></header><p class="bmc-p">Müşteri panelinde “Destek Talebi Oluştur” penceresindeki Konu listesi burada belirlenir. Ekleyip çıkarabilir, sırasını değiştirebilirsiniz.</p><div id="kn-list" style="display:grid;gap:8px;margin:14px 0">${list.map((t, i) => `<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px"><input class="bmc-in" data-i="${i}" value="${esc(t)}" maxlength="60"><button class="btn" data-up="${i}" ${i ? '' : 'disabled'} aria-label="Yukarı">↑</button><button class="btn" data-dn="${i}" ${i < list.length - 1 ? '' : 'disabled'} aria-label="Aşağı">↓</button><button class="btn" data-del="${i}" aria-label="Sil">Sil</button></div>`).join('')}</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="kn-add">+ Konu ekle</button><button class="btn primary" id="kn-save">Kaydet</button></div><p class="bmc-p" id="kn-msg" role="status"></p></section>`;
+      root.querySelectorAll('input[data-i]').forEach(inp => inp.oninput = () => { list[+inp.dataset.i] = inp.value; });
+      root.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const i = +b.dataset.up; [list[i - 1], list[i]] = [list[i], list[i - 1]]; draw(); });
+      root.querySelectorAll('[data-dn]').forEach(b => b.onclick = () => { const i = +b.dataset.dn; [list[i + 1], list[i]] = [list[i], list[i + 1]]; draw(); });
+      root.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { list.splice(+b.dataset.del, 1); draw(); });
+      $('#kn-add').onclick = () => { list.push(''); draw(); root.querySelector('input[data-i="' + (list.length - 1) + '"]').focus(); };
+      $('#kn-save').onclick = async () => { const m = $('#kn-msg'); try { const r = await A('settings/support-topics', 'POST', {topics: list.map(x => x.trim()).filter(Boolean)}); list = r.topics; m.textContent = 'Kaydedildi.'; setTimeout(draw, 700); } catch (e) { m.textContent = e.message; } };
+    };
+    draw();
+  });
 
   // ---------- E-POSTA (SMTP) AYARLARI ----------
   const field = (l, inp, hint = '', cls = '') => `<label class="${cls}">${l}${inp}${hint ? `<small class="muted">${hint}</small>` : ''}</label>`;

@@ -63,7 +63,7 @@
       if (f.password.value !== f.password2.value) return msg(box, 'err', 'Şifreler eşleşmiyor.');
       busy(f, true);
       try {
-        const d = await api('register', {name: f.name.value, email: f.email.value, phone: f.phone.value, country: f.country.value, city: f.city.value, password: f.password.value, consent: f.consent.checked});
+        const d = await api('register', {name: f.name.value, email: f.email.value, phone: f.phone.value, country: f.country.value, city: f.city.value, password: f.password.value, consent: f.consent.checked, services: [...f.querySelectorAll('input[name=svc]:checked')].map(x => x.value), serviceNote: f.serviceNote?.value || ''});
         const mail = f.email.value; f.reset(); show('login');
         msg(box, 'ok', `Hesabınız oluşturuldu. <b>${esc(mail)}</b> adresinize gönderdiğimiz bağlantıyla e-postanızı doğrulayın, ardından giriş yapın.` + devNote(d));
       } catch (err) { msg(box, 'err', esc(err.message)); } finally { busy(f, false); }

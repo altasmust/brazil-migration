@@ -126,7 +126,8 @@ try {
   let up = await upload(); assert.equal(up.status, 200); for (const t of tasks.splice(0)) await t();
   let docs = (await call('zey', 'workspace', 'bootstrap')).data.items.filter(i => i.kind === 'document');
   assert.equal(docs[0].data.autoCheck, undefined); assert.equal(docs[0].data.status, 'Yüklendi');
-  assert.equal((await call('zey', 'workspace', 'applications', {service: 'Oturum İzni', from: 'Türkiye'})).status, 200);
+  assert.equal((await call('zey', 'workspace', 'applications', {service: 'Oturum İzni', from: 'Türkiye'})).status, 403); // müşteri kendi başvurusunu açamaz
+  assert.equal((await call('ali', 'workspace', 'applications', {customer: (await call('zey', 'workspace', 'bootstrap')).data.member.id, service: 'Oturum İzni', from: 'Türkiye'})).status, 200);
   up = await upload(); assert.equal(up.status, 200); for (const t of tasks.splice(0)) await t();
   docs = (await call('zey', 'workspace', 'bootstrap')).data.items.filter(i => i.kind === 'document' && i.id === up.data.id);
   assert.ok(docs[0].data.autoCheck); assert.equal(docs[0].data.status, 'İncelemede');

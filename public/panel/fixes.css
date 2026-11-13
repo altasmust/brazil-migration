@@ -1,0 +1,71 @@
+/* Panel düzeltmeleri (2026-11-13): hizalama, butonlar, profil, yorum formu, alt menü, telefon alanı */
+.topbar .account{display:flex;align-items:center;gap:14px;flex-shrink:0}
+.topbar .account>*{align-self:center;margin-top:0;margin-bottom:0}
+.topbar .bm-lang,.account .bm-lang{margin:0!important;display:inline-flex;align-items:center}
+.bm-lang select{height:40px;box-sizing:border-box;min-width:126px;padding:0 32px 0 14px!important;line-height:38px;white-space:nowrap;text-overflow:clip;overflow:visible}
+.topbar .account .btn,.topbar .account .bm-logout{height:40px;box-sizing:border-box;margin:0!important;width:auto!important;display:inline-flex;align-items:center;justify-content:center;padding:0 16px;line-height:1}
+.topbar .account .icon-button{display:inline-grid;place-items:center}
+/* profil rozeti: yazı uzasa da yuvarlak bozulmasın */
+.profile{min-width:0;max-width:250px;gap:11px}
+.profile .avatar{flex:0 0 40px;width:40px;height:40px;min-width:40px;max-width:40px;aspect-ratio:1/1;font-size:12px;box-sizing:border-box}
+.profile>span:nth-child(2){min-width:0}
+.profile strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:165px}
+.profile small{display:block;white-space:nowrap}
+/* hizmet kartı butonları */
+.service-card .svc-actions{display:grid;gap:10px;margin-top:18px}
+.service-card .svc-actions .btn{margin:0!important;width:100%}
+.svc-meta{display:flex;justify-content:space-between;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:14px;font-size:12px;color:var(--muted)}
+.svc-meta strong{color:var(--ink)}
+.svc-req{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:#f3f8ef;font-size:12px;color:#3d5a45;line-height:1.5}
+/* alt menü (Dosyalarım) */
+.topbar nav .nav-sub{position:relative;display:flex;align-items:stretch}
+.topbar nav .nav-sub>a:after{}
+.topbar nav .nav-sub .sub{position:absolute;top:calc(100% - 14px);left:-14px;min-width:210px;display:none;flex-direction:column;gap:2px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 14px 34px rgba(20,50,30,.14);z-index:30}
+.topbar nav .nav-sub:hover .sub,.topbar nav .nav-sub:focus-within .sub{display:flex}
+.topbar nav .nav-sub .sub a{height:auto;padding:10px 12px;border-radius:8px;color:#3a4a3f;font-size:13px}
+.topbar nav .nav-sub .sub a:hover{background:#eef5e9;color:var(--forest)}
+.topbar nav .nav-sub .sub a:after{display:none}
+.doc-switch{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 22px}
+.doc-switch a{display:grid;gap:3px;padding:14px 18px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--ink)}
+.doc-switch a b{font-size:14px;font-weight:600}.doc-switch a span{font-size:12px;color:var(--muted)}
+.doc-switch a.on{border-color:var(--forest);background:#f1f7ec;box-shadow:inset 0 0 0 1px var(--forest)}
+@media(max-width:640px){.doc-switch{grid-template-columns:1fr}.topbar nav .nav-sub .sub{position:fixed;left:18px;right:18px;top:auto}}
+/* yorum formu */
+#bm-review .bmr-form{display:grid;gap:16px}
+#bm-review .bmr-form label{display:grid;gap:7px!important;margin:0!important;font-size:13px;font-weight:600}
+#bm-review .bmr-form textarea,#bm-review .bmr-form input:not([type=checkbox]),#bm-review .bmr-form select{width:100%;box-sizing:border-box;margin:0!important;min-height:46px}
+#bm-review .bmr-form textarea{min-height:120px}
+#bm-review .bmr-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:end}
+#bm-review .bmr-stars{margin:2px 0 4px}
+#bm-review .bmr-ok{display:flex!important;align-items:flex-start;gap:10px!important;font-weight:400!important;line-height:1.55}
+#bm-review .bmr-ok input[type=checkbox]{flex:0 0 18px;width:18px!important;height:18px;min-height:0!important;margin:2px 0 0!important;padding:0}
+#bm-review .bmr-act{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+#bm-review .bmr-act .btn{width:auto!important;margin:0!important}
+@media(max-width:760px){#bm-review .bmr-row{grid-template-columns:1fr}}
+/* telefon (ülke kodu + numara) */
+.phone-field{display:grid;gap:7px}
+.phone-field .pf-row{display:grid;grid-template-columns:minmax(120px,170px) minmax(0,1fr);gap:8px}
+.phone-field select,.phone-field input{margin:0!important;width:100%;box-sizing:border-box}
+.phone-field small{color:var(--muted);font-size:11.5px}
+/* destek konuları / dosya eki */
+.attach-note{font-size:12px;color:var(--muted);margin:6px 0 0}
+.tk-files{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.tk-files a{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--forest);background:#f6faf3}
+/* yol haritası */
+.svc-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.svc-tabs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-size:12px;color:#3a4a3f;cursor:pointer}
+.svc-tabs button.on{background:var(--forest);border-color:var(--forest);color:#fff}
+.stage-edit{display:grid;gap:8px;margin:12px 0}
+.stage-edit .row{display:grid;grid-template-columns:1fr 130px auto;gap:8px;align-items:center}
+.stage-edit input,.stage-edit select{margin:0!important;width:100%;box-sizing:border-box}
+@media(max-width:560px){.stage-edit .row{grid-template-columns:1fr 1fr}.stage-edit .row input{grid-column:1/-1}}
+/* görüşme daveti şeridi */
+.meet-banner{position:sticky;top:98px;z-index:15;display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#1b5e20;color:#fff;padding:12px max(18px,calc((100vw - 1332px)/2))}
+.meet-banner b{font-weight:600}.meet-banner .btn{background:#fff;color:#1b5e20;border-color:#fff;width:auto!important;margin:0!important}
+/* üst çubuk sığsın (Çıkış sağdan taşmasın) */
+.topbar{gap:22px}
+.topbar nav{gap:20px;min-width:0}
+.profile strong{max-width:130px}
+.topbar .account{gap:10px}
+#content:focus,#content:focus-visible{outline:none}
+@media(max-width:1280px){.topbar nav{gap:14px}.topbar nav a{font-size:12px}.profile>span:nth-child(2){display:none}}

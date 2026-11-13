@@ -91,6 +91,19 @@ const one = (db, s, ...v) => q(db, s, ...v).first();
 const rows = async (db, s, ...v) => (await q(db, s, ...v).all()).results;
 const getItem = async (db, id) => { const r = await one(db, 'SELECT * FROM items WHERE id=?', id); return r ? {...r, data: parse(r.data)} : null; };
 const putItem = (db, id, kind, owner, data) => q(db, 'INSERT INTO items(id,kind,owner,data,created,updated) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated=excluded.updated', id, kind, owner, JSON.stringify(data), now(), now());
+// Kayıt sırasında müşterinin seçtiği hizmetler → "Hizmetlerim"de başvuru olarak görünür (müşteri sonradan kendi başvuru açamaz).
+const REG_SERVICES = ['Oturum İzni', 'Şirket Kurulum', 'Vergi Numarası', 'Vatandaşlık', 'Vize', 'Diğer'];
+const REG_COUNTRIES = ['Brezilya', 'Türkiye', 'Azerbaycan', 'Kuzey Makedonya', 'Rusya', 'İspanya', 'İran', 'Suudi Arabistan', 'Türkmenistan', 'Özbekistan', 'Kırgızistan', 'Endonezya'];
+function regApplications(db, pid, advisor, b, loc) {
+  const want = [...new Set((Array.isArray(b.services) ? b.services : []).map(x => clean(x, 40)).filter(x => REG_SERVICES.includes(x)))].slice(0, 4);
+  if (!want.length) return [];
+  const cc = clean(b.country, 60), from = REG_COUNTRIES.includes(cc) ? cc : REG_COUNTRIES.includes(loc?.country) ? loc.country : 'Türkiye';
+  const note = clean(b.serviceNote, 500);
+  return [
+    ...want.map(service => putItem(db, uuid(), 'application', pid, {service, from: from === 'Brezilya' ? 'Türkiye' : from, to: 'Brezilya (São Paulo)', status: 'Başvuru alındı', advisor, renewal: null, stages: null, requested: true, note})),
+    notice(db, advisor, 'Yeni müşterinin talebi: ' + want.join(', '), 'applications'),
+  ];
+}
 const notice = (db, owner, title, link) => q(db, 'INSERT INTO items(id,kind,owner,data,created,updated) VALUES(?,?,?,?,?,?)', uuid(), 'notice', owner, JSON.stringify({title, link, read: false}), now(), now());
 const audit = (db, actor, action, target) => q(db, 'INSERT INTO items(id,kind,owner,data,created,updated) VALUES(?,?,?,?,?,?)', uuid(), 'audit', 'owner', JSON.stringify({actor, action, target}), now(), now());
 async function body(req) {
@@ -242,6 +255,7 @@ export async function handleAuth(req, env, route) {
       putItem(db, 'meta-' + pid, 'account_meta', pid, {type: 'customer', phone: clean(b.phone, 40), country: loc?.country || clean(b.country, 60), city: loc?.city || clean(b.city, 80), lat: loc?.lat ?? null, lng: loc?.lng ?? null, assignedBy: reason}),
       putItem(db, 'profile-' + pid, 'profile', pid, {name, phone: clean(b.phone, 40), address: [loc?.city, loc?.country].filter(Boolean).join(', ')}),
       notice(db, advisor, 'Yeni müşteri kaydı: ' + name + ' (' + reason + ')', 'customers'),
+      ...regApplications(db, pid, advisor, b, loc),
     ]);
     const mail = await sendVerify(db, req, user, name);
     return json({ok: true, verifyRequired: true, mailSent: mail.sent, devLink: mail.devLink});
@@ -1004,6 +1018,15 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     return json({ok: true});
   }
   if (route === 'settings/analytics' && req.method === 'POST') { let d; try { d = cleanAnalytics(b); } catch (e) { fail(400, e.message); } d.updated = now(); await db.batch([putItem(db, 'config-analytics', 'config', 'owner', d), audit(db, actor, 'settings.analytics', Object.keys(d).filter(k => d[k] && k !== 'updated').join(',') || 'none')]); invalidateSite(); return json({analytics: d}); }
+  if (route === 'meet/invite' && req.method === 'POST') { // yönetici → müşteriyi görüntülü görüşmeye çağırır
+    const cid = clean(b.id, 80), c = await one(db, "SELECT id, name FROM people WHERE id=? AND role='customer' AND status='active'", cid);
+    if (!c) fail(404, 'Müşteri bulunamadı.');
+    const AL = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', room = Array.from(crypto.getRandomValues(new Uint8Array(8)), x => AL[x % 32]).join('');
+    await db.batch([putItem(db, 'invite-' + uuid(), 'meet_invite', cid, {room, by: 'owner', byName: 'Brazil Migration', exp: now() + 2 * 36e5}), notice(db, cid, 'Brazil Migration sizi görüntülü görüşmeye çağırıyor.', 'meet'), audit(db, actor, 'meet.invite', cid)]);
+    return json({ok: true, room, name: c.name, url: '/gorusme/?oda=' + room + '&otomatik=1&dil=pt'});
+  }
+  if (route === 'settings/support-topics' && req.method === 'GET') { const cur = await getItem(db, 'config-support-topics'); return json({topics: cur?.data?.topics?.length ? cur.data.topics : ['Genel soru', 'Belge hakkında', 'Fatura / ödeme', 'Başvuru durumu', 'Randevu / görüşme', 'Teknik sorun', 'Diğer']}); }
+  if (route === 'settings/support-topics' && req.method === 'POST') { const topics = [...new Set((Array.isArray(b.topics) ? b.topics : []).map(x => clean(x, 60)).filter(Boolean))].slice(0, 30); if (!topics.length) fail(400, 'En az bir konu olmalı.'); await db.batch([putItem(db, 'config-support-topics', 'config', 'owner', {topics, updated: now()}), audit(db, actor, 'settings.support-topics', String(topics.length))]); return json({topics}); }
   if (route === 'settings/seo' && req.method === 'POST') { const d = cleanSeo(b); d.updated = now(); await db.batch([putItem(db, 'config-seo', 'config', 'owner', d), audit(db, actor, 'settings.seo', d.noindexAll ? 'noindex' : 'index')]); invalidateSite(); return json({seo: d}); }
   if (route === 'settings/company' && req.method === 'POST') {
     const T = (k, n = 200) => clean(b[k], n), url = k => { const v = clean(b.socials?.[k], 300); return /^https:\/\//.test(v) ? v : ''; };

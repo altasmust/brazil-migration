@@ -943,10 +943,11 @@ window.addEventListener('beforeunload', () => send({ type:'bye' }));
     }
   } catch(e){}
   const qs = new URLSearchParams(location.search);
-  if (qs.get('oda')) return;
   try {
     const r = await fetch('/api/workspace/meeting', {credentials:'same-origin', cache:'no-store'}); if (!r.ok) return;
     const d = await r.json();
+    if (d.role === 'customer'){ customerGate(d, qs); return; }
+    if (qs.get('oda')) return;
     if (d.name && !$('name').value) $('name').value = d.name;
     if (d.room){
       $('room').value = cleanRoom(d.room); S.auto = true; formRole = 'guest';
@@ -955,6 +956,33 @@ window.addEventListener('beforeunload', () => send({ type:'bye' }));
     }
   } catch(e){}
 })();
+
+/* Müşteri girişi: yalnızca danışman/avukat/muhasebe davet gönderdiğinde (veya planlı görüşme saatinde) odaya girilebilir.
+   Ad soyad ve müşteri numarası panel hesabından otomatik gelir, değiştirilemez. */
+function customerGate(d, qs){
+  const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const nameEl = $('name'), pt = S.me === 'pt';
+  nameEl.maxLength = 90; nameEl.value = d.name + ' · ' + d.code; nameEl.readOnly = true; nameEl.setAttribute('aria-readonly', 'true');
+  const card = document.createElement('div'); card.className = 'bm-cust';
+  card.innerHTML = '<span class="bm-cust-av">' + esc((d.name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()) + '</span><div><b>' + esc(d.name) + '</b><small>' + (pt ? 'Nº do cliente' : 'Müşteri No') + ': ' + esc(d.code) + '</small></div>';
+  nameEl.closest('label').before(card);
+  nameEl.closest('label').hidden = true;
+  $('room').closest('label').hidden = true;
+  $('createBtn').hidden = true;
+  formRole = 'guest'; $('joinBtn').className = 'btn btn-primary'; $('joinBtn').type = 'submit'; $('createBtn').type = 'button';
+  const wait = document.createElement('p'); wait.className = 'bm-wait'; wait.setAttribute('role', 'status'); $('joinBtn').parentNode.before(wait);
+  const ob = window.begin; window.begin = role => { if (!cleanRoom($('room').value)) return; return ob('guest'); };
+  let started = false;
+  const apply = info => {
+    const room = info && info.room ? cleanRoom(info.room) : '';
+    $('room').value = room; $('joinBtn').disabled = !room;
+    if (room){ S.auto = true; wait.className = 'bm-wait ok'; wait.textContent = info.invite ? (pt ? (info.invite.by || 'Seu consultor') + ' está chamando você para a reunião.' : (info.invite.by || 'Danışmanınız') + ' sizi görüşmeye çağırıyor.') : (pt ? 'Sua reunião agendada está pronta.' : 'Planlı görüşmeniz hazır.'); }
+    else { wait.className = 'bm-wait'; wait.textContent = pt ? 'Aguardando o convite do seu consultor. Quando chegar, o botão “Entrar na sala” será liberado.' : 'Danışmanınızın daveti bekleniyor. Davet geldiğinde “Odaya katıl” düğmesi açılır.'; }
+    if (room && info.invite && qs.get('otomatik') === '1' && !started && !S.room){ started = true; setTimeout(() => begin('guest'), 400); }
+  };
+  apply(d);
+  setInterval(async () => { if (!$('call').hidden || S.room) return; try { const r = await fetch('/api/workspace/meeting', {credentials:'same-origin', cache:'no-store'}); if (r.ok) apply(await r.json()); } catch(e){} }, 5000);
+}
 
 /* ---------- Mobil: tam ekran görüntü, dokununca menü, ön/arka kamera ---------- */
 (function bmMobile(){

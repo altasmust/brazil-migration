@@ -17,7 +17,8 @@ assert.equal((await call('team',alice,{name:'Hack'})).status,403);
 assert.equal((await call('team',owner,{name:'Staff',email:staff[1],permissions:{documents:1},scope:[a.data.member.id]})).status,200);
 let st=await call('bootstrap',staff);assert.equal(st.status,200);assert.equal(st.data.customers.length,1);
 assert.equal((await call('applications',staff,{customer:a.data.member.id,service:'Vize',from:'Türkiye'})).status,403);
-assert.equal((await call('applications',alice,{customer:b.data.member.id,service:'Vize',from:'Türkiye'})).status,200);a=await call('bootstrap',alice);assert.equal(a.data.items.find(i=>i.kind==='application').owner,a.data.member.id);
+assert.equal((await call('applications',alice,{customer:b.data.member.id,service:'Vize',from:'Türkiye'})).status,403); // müşteri kendi başvurusunu açamaz; danışman açar
+a=await call('bootstrap',alice);assert.equal(a.data.items.filter(i=>i.kind==='application').length,0);
 function fileForm(){const f=new FormData();f.set('file',new Blob(['%PDF-1.7 fake document for API tests'],{type:'application/pdf'}),'doc.pdf');f.set('slot','0');return f}
 let f=await call('upload',alice,fileForm());assert.equal(f.status,200);assert.equal((await call('file/'+f.data.id,bob)).status,403);assert.equal((await call('file/'+f.data.id,staff)).status,200);
 assert.equal((await call('upload',staff,fileForm())).status,404);
