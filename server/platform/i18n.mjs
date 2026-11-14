@@ -15,12 +15,25 @@ const decode = s => s.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&
 const hasWord = s => /\p{L}{2,}/u.test(s);
 
 let D = null;
+let EXTRA = new Map(), EXTRA_AT = 0;
+// Yönetici panelinde girilen ek çeviriler (items: config-i18n-extra). Dosya sözlüğünün üstüne biner; sürüm güncellenince de kaybolmaz.
+export async function loadExtra(db, force = false) {
+  if (!force && Date.now() - EXTRA_AT < 30000) return;
+  EXTRA_AT = Date.now();
+  try {
+    const r = await db.prepare("SELECT data FROM items WHERE id='config-i18n-extra'").first();
+    const t = JSON.parse(r?.data || '{}').t || {};
+    EXTRA = new Map(Object.entries(t).map(([k, v]) => [norm(k), String(v)]));
+    D = null;
+  } catch { /* tablo yok / bozuk veri: ek çeviri yok say */ }
+}
 const DIR = () => join(/* turbopackIgnore: true */ process.cwd(), 'server', 'platform', 'i18n');
 export function dict(lang = 'en') {
   if (D && D.lang === lang) return D;
   let raw = {slugs: {}, t: {}};
   try { raw = JSON.parse(readFileSync(join(DIR(), lang + '.json'), 'utf8')); } catch (e) { console.error('[i18n]', e.message); }
   const t = new Map(); for (const [k, v] of Object.entries(raw.t || {})) if (v) t.set(norm(k), v);
+  for (const [k, v] of EXTRA) if (v) t.set(k, v); // yönetici panelinden girilen ek çeviriler dosyadakini ezer
   const toEn = new Map(Object.entries({...(raw.slugs || {}), '/blog/': '/en/blog/'})), toTr = new Map([...toEn].map(([a, b]) => [b, a]));
   D = {lang, t, toEn, toTr, raw};
   return D;

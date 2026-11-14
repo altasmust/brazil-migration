@@ -50,9 +50,9 @@ export async function staticPages() {
 
 // ---------- saved site state (short in-memory cache, shared by all requests) ----------
 let state = null, stateAt = 0;
-export function invalidateSite() { stateAt = 0; renderCache.clear(); }
+export function invalidateSite() { stateAt = 0; renderCache.clear(); enCache.clear(); }
 import {loadSplits} from './commission.mjs';
-import {dict as i18nDict, translateRoot, lookup as lookupI18n} from './i18n.mjs';
+import {dict as i18nDict, translateRoot, lookup as lookupI18n, loadExtra} from './i18n.mjs';
 import {publishedReviews, reviewsHTML, subscribeHTML, PRICE_KEYS} from './growth.mjs';
 export async function siteState(db) {
   if (state && Date.now() - stateAt < 15000) return state;
@@ -515,6 +515,7 @@ function applyLangLinks(root, trPath, enPath, S, {draft = false, noAlt = false} 
 // /en/... sayfası: Türkçe sayfa render edilir, sonra çevrilir.
 const enCache = new Map();
 export async function renderEn(db, enPath, {draft = false, missing = null} = {}) {
+  await loadExtra(db);
   const d = i18nDict('en'), bm = /^\/en\/blog\/(?:([a-z0-9-]{2,90})\/)?$/.exec(enPath);
   const trPath = bm ? '/blog/' + (bm[1] ? bm[1] + '/' : '') : d.toTr.get(enPath);
   if (!trPath) return null;
