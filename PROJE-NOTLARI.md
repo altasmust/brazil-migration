@@ -459,3 +459,4 @@
 - **Görsel alt metinleri** (`site.mjs applyImgAlt`): bayrak ve pazarlama görselleri için dile göre otomatik alt; TR ve EN'de uygulanır.
 - **SEO**: noindex sayfalar (/gorusme/ vb.) sitemap'ten çıkarıldı; blog başlık/açıklamaları kısaltıldı; `migration-seo-v1` yalnızca varsayılan metni değiştirir (admin düzenlemesi korunur).
 - Hatırlatma: önce commit, sonra `scripts/package.mjs`.
+- 2026-11-14: "Çevrilmemiş metin bulunan sayfalar" listesi (KYC kimlik doğrulama, bayrak/alt metinleri, oturum/vatandaşlık/şirket görsel alt metinleri) için 16 yeni EN sözlük anahtarı eklendi; yerel tarama 0 eksik. Canlıda liste hâlâ görünürse yeni zip yüklenmemiş demektir (Güncellemeler sayfasında sürüm kontrol edilir).
