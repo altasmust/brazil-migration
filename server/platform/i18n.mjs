@@ -14,31 +14,37 @@ const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&
 const decode = s => s.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n)).replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)));
 const hasWord = s => /\p{L}{2,}/u.test(s);
 
-let D = null;
-let EXTRA = new Map(), EXTRA_AT = 0;
+// Site dilleri: Türkçe kaynak sayfadan çevrilir. prefix = adres öneki, locale = og:locale.
+export const SITE_LANGS = {en: {prefix: '/en', locale: 'en_US', code: 'EN', name: 'English', flag: 'gb'}, pt: {prefix: '/pt', locale: 'pt_BR', code: 'PT', name: 'Português', flag: 'br'}};
+const DICTS = new Map();
+let EXTRA = {en: new Map(), pt: new Map()}, EXTRA_AT = 0;
 // Yönetici panelinde girilen ek çeviriler (items: config-i18n-extra). Dosya sözlüğünün üstüne biner; sürüm güncellenince de kaybolmaz.
 export async function loadExtra(db, force = false) {
   if (!force && Date.now() - EXTRA_AT < 30000) return;
   EXTRA_AT = Date.now();
   try {
     const r = await db.prepare("SELECT data FROM items WHERE id='config-i18n-extra'").first();
-    const t = JSON.parse(r?.data || '{}').t || {};
-    EXTRA = new Map(Object.entries(t).map(([k, v]) => [norm(k), String(v)]));
-    D = null;
+    const j = JSON.parse(r?.data || '{}');
+    // en: j.t (eski biçim), diğer diller: j.l[lang]
+    const by = {en: j.t || {}, ...(j.l || {})};
+    EXTRA = {}; for (const l of Object.keys(SITE_LANGS)) EXTRA[l] = new Map(Object.entries(by[l] || {}).map(([k, v]) => [norm(k), String(v)]));
+    DICTS.clear();
   } catch { /* tablo yok / bozuk veri: ek çeviri yok say */ }
 }
 const DIR = () => join(/* turbopackIgnore: true */ process.cwd(), 'server', 'platform', 'i18n');
 export function dict(lang = 'en') {
-  if (D && D.lang === lang) return D;
+  if (DICTS.has(lang)) return DICTS.get(lang);
   let raw = {slugs: {}, t: {}};
   try { raw = JSON.parse(readFileSync(join(DIR(), lang + '.json'), 'utf8')); } catch (e) { console.error('[i18n]', e.message); }
   const t = new Map(); for (const [k, v] of Object.entries(raw.t || {})) if (v) t.set(norm(k), v);
-  for (const [k, v] of EXTRA) if (v) t.set(k, v); // yönetici panelinden girilen ek çeviriler dosyadakini ezer
-  const toEn = new Map(Object.entries({...(raw.slugs || {}), '/blog/': '/en/blog/'})), toTr = new Map([...toEn].map(([a, b]) => [b, a]));
-  D = {lang, t, toEn, toTr, raw};
+  for (const [k, v] of (EXTRA[lang] || [])) if (v) t.set(k, v); // yönetici panelinden girilen ek çeviriler dosyadakini ezer
+  const pre = SITE_LANGS[lang]?.prefix || '/' + lang;
+  const toEn = new Map(Object.entries({...(raw.slugs || {}), '/blog/': pre + '/blog/'})), toTr = new Map([...toEn].map(([a, b]) => [b, a]));
+  const D = {lang, t, toEn, toL: toEn, toTr, raw, prefix: pre};
+  DICTS.set(lang, D);
   return D;
 }
-export function reloadDict() { D = null; }
+export function reloadDict() { DICTS.clear(); }
 
 // sayı içeren dinamik metinler: "15 dakika" → "{0} dakika" anahtarıyla da aranır
 export function lookup(key, d = dict()) {
@@ -141,7 +147,7 @@ export function translateRoot(root, {lang = 'en', path = '/', trPath = '/', miss
   // bağlantılar ve dil meta verisi
   root.querySelectorAll('a[href]').forEach(a => a.setAttribute('href', mapHref(a.getAttribute('href'), d)));
   const html = root.querySelector('html'); if (html) html.setAttribute('lang', lang);
-  root.querySelector('meta[property="og:locale"]')?.setAttribute('content', 'en_US');
+  root.querySelector('meta[property="og:locale"]')?.setAttribute('content', SITE_LANGS[lang]?.locale || 'en_US');
   root.querySelectorAll('link[rel="canonical"],meta[property="og:url"]').forEach(l => { const at = l.getAttribute('href') ? 'href' : 'content'; const u = l.getAttribute(at) || ''; l.setAttribute(at, u.replace(/^(https?:\/\/[^/]+)?(\/.*)$/, (_, h, p) => (h || '') + mapHref(p, d))); });
   return root;
 }

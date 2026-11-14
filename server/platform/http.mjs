@@ -91,35 +91,37 @@ export function site() {
       const db = getDatabase();
       if (route === 'page') {
         const path = req.headers.get('x-bm-path') || url.searchParams.get('p') || '/';
-        if (/^\/en(\/|$)/.test(path)) {
-          // İngilizce: yayında değilse yalnız yönetici önizleme anahtarıyla; aksi halde 404 (Google'a hiç görünmez)
-          const {siteState, enPublished, renderEn} = await import('./site.mjs');
+        const lm = /^\/(en|pt)(\/|$)/.exec(path);
+        if (lm) {
+          // Yabancı dil: yayında değilse yalnız yönetici önizleme anahtarıyla; aksi halde 404 (Google'a hiç görünmez)
+          const L = lm[1], {siteState, langPublished, renderLang} = await import('./site.mjs');
           const st = await siteState(db), key = st.i18n?.previewKey;
-          const pub = enPublished(st), prev = !pub && key && readCookieRaw(req, 'bm_lang_prev') === key;
-          const r = (pub || prev) ? await renderEn(db, path === '/en' ? '/en/' : path, {draft: prev}) : null;
+          const pub = langPublished(st, L), prev = !pub && key && readCookieRaw(req, 'bm_lang_prev') === key;
+          const r = (pub || prev) ? await renderLang(db, L, path === '/' + L ? '/' + L + '/' : path, {draft: prev}) : null;
           if (!r) { const nf = await renderPage(db, '/__yok__/'); return htmlOut(req, nf.html, {status: 404, headers: {...htmlHeaders, 'X-Robots-Tag': 'noindex'}}); }
           return htmlOut(req, r.html, {status: 200, headers: prev ? {...htmlHeaders, 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex, nofollow'} : htmlHeaders});
         }
         const r = await renderPage(db, path);
         // Taslak önizleme açık yönetici: Türkçe sayfada da "English" düğmesi (yalnız bu yanıtta, önbelleğe girmez)
         if (r.status === 200 && (req.headers.get('cookie') || '').includes('bm_lang_prev=')) {
-          const {siteState, enPublished, langMenuHTML, LANG_CSS} = await import('./site.mjs');
+          const {siteState, langMenuHTML, LANG_CSS} = await import('./site.mjs');
           const st = await siteState(db), key = st.i18n?.previewKey;
-          if (!enPublished(st) && key && readCookieRaw(req, 'bm_lang_prev') === key) {
+          if (key && readCookieRaw(req, 'bm_lang_prev') === key) {
             const sw = langMenuHTML('tr', path, st, {preview: true});
             if (sw) return htmlOut(req, r.html.replace('<button type="button" class="theme-toggle"', sw + '<button type="button" class="theme-toggle"').replace('</head>', LANG_CSS + '</head>'), {status: 200, headers: {...htmlHeaders, 'Cache-Control': 'private, no-store'}});
           }
         }
         return htmlOut(req, r.html, {status: r.status, headers: htmlHeaders});
       }
-      if (route === 'i18n/en.js') {
-        const {siteState, enPublished} = await import('./site.mjs'); const {dict} = await import('./i18n.mjs');
-        const st = await siteState(db), key = st.i18n?.previewKey;
+      const im = /^i18n\/(en|pt)\.js$/.exec(route);
+      if (im) {
+        const L = im[1], {siteState, langPublished} = await import('./site.mjs'); const {dict} = await import('./i18n.mjs');
+        const st = await siteState(db), key = st.i18n?.previewKey, enPublished = s2 => langPublished(s2, L);
         if (!enPublished(st) && !(key && readCookieRaw(req, 'bm_lang_prev') === key)) return new Response('', {status: 404});
-        const d = dict('en'), rt = new Set(d.raw.rt || []), t = {}; for (const k of rt) { const v = d.t.get(k); if (v != null) t[k] = v; }
+        const d = dict(L), rt = new Set(d.raw.rt || []), t = {}; for (const k of rt) { const v = d.t.get(k); if (v != null) t[k] = v; }
         const {readFile} = await import('node:fs/promises'); const {join} = await import('node:path');
         const code = await readFile(join(process.cwd(), 'server', 'platform', 'i18n', 'runtime.js'), 'utf8');
-        return htmlOut(req, 'window.BM_I18N=' + JSON.stringify({lang: 'en', t, slugs: d.raw.slugs}).replace(/</g, '\\u003c') + ';\n' + code, {headers: {'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': enPublished(st) ? 'public, max-age=3600' : 'private, no-store', 'X-Content-Type-Options': 'nosniff'}});
+        return htmlOut(req, 'window.BM_I18N=' + JSON.stringify({lang: L, t, slugs: d.raw.slugs}).replace(/</g, '\\u003c') + ';\n' + code, {headers: {'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': enPublished(st) ? 'public, max-age=3600' : 'private, no-store', 'X-Content-Type-Options': 'nosniff'}});
       }
       if (route.startsWith('media/')) {
         const id = route.slice(6); if (!/^[a-f0-9-]{8,40}\.(png|jpe?g|webp|gif|svg)$/i.test(id)) return new Response('Not found', {status: 404});
@@ -133,7 +135,7 @@ export function site() {
       return new Response('Not found', {status: 404});
     } catch (e) {
       console.error('[site]', e);
-      if (route === 'page' && /^\/en(\/|$)/.test(req.headers.get('x-bm-path') || '')) return new Response('Not found', {status: 404});
+      if (route === 'page' && /^\/(en|pt)(\/|$)/.test(req.headers.get('x-bm-path') || '')) return new Response('Not found', {status: 404});
       if (route === 'page') { const html = await readStatic(req.headers.get('x-bm-path') || url.searchParams.get('p') || '/'); if (html) return new Response(html, {headers: htmlHeaders}); }
       return new Response('Hata', {status: 500});
     }

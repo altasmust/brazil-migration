@@ -65,3 +65,10 @@
     addEventListener('pagehide', () => S.cancel());
   }
 })();
+// Dış kaynaklı kapak/görsel yüklenemezse (engel, yavaş ağ, silinmiş fotoğraf) kırık simge yerine yerel görsele dön
+(() => {
+  const FB = '/sao-paulo-day-hq-960.webp';
+  const fix = img => { if (img.dataset.fb) return; if (img.complete && img.naturalWidth > 0) return; if (!img.complete) return; img.dataset.fb = '1'; img.removeAttribute('srcset'); img.src = FB; };
+  document.addEventListener('error', e => { const t = e.target; if (t && t.tagName === 'IMG' && !t.dataset.fb) { t.dataset.fb = '1'; t.removeAttribute('srcset'); t.src = FB; } }, true);
+  document.querySelectorAll('img').forEach(fix);
+})();

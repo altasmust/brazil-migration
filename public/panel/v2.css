@@ -72,7 +72,7 @@ body[data-v2=customer] .dashboard-bottom>:nth-child(3){grid-column:2;grid-row:2}
 #bm-tip.on{opacity:1;transform:none}
 #bm-tip:before{content:"";position:absolute;left:var(--ax,24px);top:-5px;width:10px;height:10px;background:#12301d;transform:rotate(45deg);border-radius:2px}
 #bm-tip.up:before{top:auto;bottom:-5px}
-@media(hover:none){#bm-tip{display:none}}
+
 
 /* ---- başvuru türüne göre görseller ---- */
 .permit-visual .identity-card.v2{--c1:#dcebd0;--c2:#bcd8a6;--ink:#1d4a29}
@@ -125,6 +125,7 @@ body[data-v2=partner] .topbar nav a{font-size:12.5px}
 .topbar .account .meet-pill{display:inline-flex;align-items:center;gap:9px;height:40px;padding:0 16px 0 14px;border-radius:999px;background:var(--forest);color:#fff!important;font-size:13px;font-weight:600;white-space:nowrap;box-shadow:0 6px 16px -6px rgba(27,94,32,.55);transition:transform .15s,box-shadow .15s}
 .topbar .account .meet-pill:before{content:"";width:8px;height:8px;border-radius:50%;background:#8be28f;box-shadow:0 0 0 0 rgba(139,226,143,.6);animation:meetPulse 2.2s infinite}
 .topbar .account .meet-pill:hover{transform:translateY(-1px);box-shadow:0 10px 20px -8px rgba(27,94,32,.6)}
+.topbar .account .meet-pill .mp-s{display:none}
 @keyframes meetPulse{70%{box-shadow:0 0 0 8px rgba(139,226,143,0)}100%{box-shadow:0 0 0 0 rgba(139,226,143,0)}}
 @media(prefers-reduced-motion:reduce){.topbar .account .meet-pill:before{animation:none}}
 .meet-banner{top:76px}
@@ -154,12 +155,18 @@ body[data-v2=partner] .topbar nav a{font-size:12.5px}
 .topbar .profile svg,.topbar .profile .chev{display:none}
 .topbar nav>a,.topbar nav .nav-sub>a{padding:0 10px;font-size:13px}
 .topbar{gap:18px}
-@media(max-width:1320px){.topbar .brand{width:112px}.topbar nav>a,.topbar nav .nav-sub>a{padding:0 8px}.topbar .account .meet-pill .mp-x{display:none}.topbar .account .meet-pill{padding:0 14px 0 12px}}
+@media(max-width:1320px){.topbar .brand{width:112px}.topbar nav>a,.topbar nav .nav-sub>a{padding:0 8px}.topbar .account .meet-pill .mp-l{display:none}.topbar .account .meet-pill .mp-s{display:inline}.topbar .account .meet-pill{padding:0 14px 0 12px}}
 @media(max-width:1130px){.topbar nav>a,.topbar nav .nav-sub>a{padding:0 6px;font-size:12.5px}.topbar .account .bm-lang select{min-width:64px;width:64px}}
 @media(max-width:1020px){.topbar .brand{width:96px}.topbar .profile{display:none}}
 
-.topbar .account .meet-pill .mp-x{margin-left:-9px}
 @media(max-width:1230px){.topbar .profile,.topbar .account-line{display:none}.topbar nav>a,.topbar nav .nav-sub>a{padding:0 7px}}
-@media(max-width:1150px){.topbar .profile{display:inline-flex}.topbar .brand{width:130px}.topbar .account .meet-pill .mp-x{display:inline}.topbar{justify-content:space-between}}
+@media(max-width:1150px){.topbar .profile{display:inline-flex}.topbar .brand{width:130px}.topbar .account .meet-pill .mp-l{display:inline}.topbar .account .meet-pill .mp-s{display:none}.topbar{justify-content:space-between}}
 @media(max-width:1150px){.topbar nav>a,.topbar nav .nav-sub .sub a{padding:0 11px!important;font-size:13px!important;font-weight:500;color:#4d5d52}.topbar nav>a.active,.topbar nav .sub a.active{color:var(--forest);font-weight:600}}
-@media(max-width:520px){.topbar .profile{display:none}.topbar .account .meet-pill .mp-x{display:none}.topbar .account{gap:6px}.topbar .brand{width:110px}}
+@media(max-width:520px){.topbar .profile{display:none}.topbar .account .meet-pill .mp-l{display:none}.topbar .account .meet-pill .mp-s{display:inline}.topbar .account{gap:6px}.topbar .brand{width:110px}}
+
+/* yardım ikonu */
+.help-i{display:inline-grid;place-items:center;width:19px;height:19px;margin:0 0 0 9px;padding:0;border:1.5px solid #9fb8a5;border-radius:50%;background:#fff;color:#4d6b53;font:600 11px/1 Georgia,serif;font-style:italic;cursor:help;vertical-align:middle;position:relative;top:-1px;transition:background .15s,color .15s,border-color .15s}
+.help-i:hover,.help-i:focus-visible{background:#1b5e20;border-color:#1b5e20;color:#fff;outline:none}
+.page-heading h1 .help-i{width:22px;height:22px;font-size:12.5px}
+#bm-tip{max-width:320px;background:#16363a;font-size:13px;line-height:1.55}
+#bm-tip:before{background:#16363a}

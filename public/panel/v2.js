@@ -52,6 +52,7 @@
       $('#content').innerHTML = f?.ready ? f.view('team') : '<div class="card card-pad">Hesap bilgileriniz yükleniyor…</div>';
     }
     decorate();
+    addHelp();
   }
   const baseRender = render;
   render = function () { baseRender(); after(); };
@@ -101,7 +102,7 @@
     else if (top && !HIST && !HP) hist().then(l => { if (l.length && $('.dashboard-top') && !$('.mt-recent')) $('.dashboard-top').insertAdjacentHTML('afterend', recentCard(l)); });
   }
   const content = $('#content');
-  if (content) new MutationObserver(() => decorate()).observe(content, {childList: true});
+  if (content) new MutationObserver(() => { decorate(); addHelp(); }).observe(content, {childList: true});
 
   // ---------------- canlı bildirimler ----------------
   const NT = partner
@@ -126,8 +127,8 @@
     const unread = NOTES.filter(n => !n.read).length;
     const bell = $('#notifications-button');
     if (bell) { bell.classList.toggle('has-new', unread > 0); bell.setAttribute('aria-label', `Bildirimler${unread ? ', ' + unread + ' okunmamış' : ''}`); }
-    box.innerHTML = `<div class="section-head"><h2>Bildirimler</h2><button class="text-button" id="read-notifications" data-tip="Tüm bildirimleri okundu yapar; kayıtlar silinmez.">Okundu işaretle</button></div>` +
-      (NOTES.length ? NOTES.slice(0, 25).map(n => `<article class="${n.read ? 'read' : 'unread'}" data-go="${esc(n.link || '')}" data-tip="${esc(HINT[n.link] || 'Ayrıntı için tıklayın.')}"><span class="notification-dot ${n.read ? '' : 'amber'}"></span><div><strong>${esc(n.title)}</strong><span class="nt-hint">${esc(HINT[n.link] || '')}</span><span class="nt-time">${esc(ago(n.created))}</span></div></article>`).join('') : '<div class="nt-empty">Henüz bildirim yok. Belge, fatura, destek ve görüşme işlemleri burada görünür.</div>');
+    box.innerHTML = `<div class="section-head"><h2>Bildirimler</h2><button class="text-button" id="read-notifications">Okundu işaretle</button></div>` +
+      (NOTES.length ? NOTES.slice(0, 25).map(n => `<article class="${n.read ? 'read' : 'unread'}" data-go="${esc(n.link || '')}"><span class="notification-dot ${n.read ? '' : 'amber'}"></span><div><strong>${esc(n.title)}</strong><span class="nt-hint">${esc(HINT[n.link] || '')}</span><span class="nt-time">${esc(ago(n.created))}</span></div></article>`).join('') : '<div class="nt-empty">Henüz bildirim yok. Belge, fatura, destek ve görüşme işlemleri burada görünür.</div>');
   }
   async function pollNotes() {
     if (document.hidden) return;
@@ -153,59 +154,47 @@
   window.addEventListener('bm-live-refresh', pollNotes);
 
   // ---------------- ipucu balonları ----------------
-  const TIPS = [
-    // menü
-    ['a[href="#overview"]', 'Başvuru durumu, kalan süreler ve son hareketler tek ekranda.'],
-    ['a[href="#customers"]', 'Size atanan müşterilerin dosyalarını açın veya görüşmeye çağırın.'],
-    ['.nav-sub>a[href="#documents"]', 'Belgeler: Giden = yüklenen belgeler, Gelen = ekipten gelen dosyalar.'],
-    ['.sub a[href="#documents"]', 'Başvuru için yüklenen belgeler ve gönderdiğiniz dosyalar.'],
-    ['.sub a[href="#documents-in"]', 'Ekibin size / müşteriye gönderdiği sözleşme ve sonuç dosyaları.'],
-    ['a[href="#finance"]', partner ? 'Faturalar, ödemeler ve kazançlarınız.' : 'Faturalarınızı görün ve online ödeyin.'],
-    ['a[href="#affiliate"]', 'Referans bağlantınızı kopyalayın, banner kodlarını alın; tıklamadan kazanca tüm adımları izleyin.'],
-    ['a[data-more]', 'Referanslar, KYC, ekip yetkileri ve işlem geçmişi.'],
-    ['a[href="#extra-liveaudit"]', 'Hesabınızdaki belge, fatura ve yetki işlemlerinin kaydı.'],
-    ['a[href="#kyc"]', 'Müşteri belgelerini ve kimlik doğrulamasını inceleyin; onaylayın veya reddedin.'],
-    ['a[href="#reports"]', 'Tüm başvurular ve aşamaları.'],
-    ['a[href="#services"]', 'Başvurularınızın aşamasını izleyin, süresi dolanları yenileyin.'],
-    ['a[href="#support"]', 'Danışmanınıza talep yazın; yanıt gelince bildirim alırsınız.'],
-    ['a[href="#meetings"]', 'Biten görüşmelerin tarihi, süresi ve konuşma özeti.'],
-    ['a[href="#team"]', 'Çalışanlarınızı ekleyin; bölüm ve müşteri bazında yetki verin.'],
-    ['a[href="/panel/vize/"]', 'Vize başvuru formunu adım adım doldurun; danışmanınız görür.'],
-    ['a.bm-meet-link', 'Canlı çevirili görüntülü görüşme: başlatın veya davetle katılın.'],
-    ['#notifications-button', 'Yaptığınız ve size gelen işlemler burada listelenir; tıklayınca ilgili sayfaya gidersiniz.'],
-    ['#profile-button', 'Profilinizi ve iletişim bilgilerinizi düzenleyin.']
+  // Yardım ikonları (ⓘ): sayfa başlıklarında ve kart başlıklarında; üzerine gelince kısa açıklama çıkar. Menülerde/butonlarda balon yok.
+  const HELP_P = partner ? {
+    overview: 'Genel bakış: müşteri sayınız, başvuru durumu, kalan süreler ve son hareketler tek ekranda. Kartlardaki düğmelerle ilgili sayfaya geçersiniz.',
+    customers: 'Size atanan müşteriler. “Dosyayı aç” müşterinin belgelerini ve başvurularını gösterir; “Görüşmeye çağır” müşteriye bildirim gönderir ve müşteri davetle odaya girer.',
+    documents: 'Giden: müşterinin başvuru için yüklediği belgeler. Gelen: ekibin müşteriye gönderdiği sözleşme ve sonuç dosyaları. Önce üstten müşteriyi seçin.',
+    'documents-in': 'Gelen: ekibin müşteriye gönderdiği sözleşme ve sonuç dosyaları. “Belge Gönder” ile yeni dosya ekleyebilirsiniz; müşteri bildirim alır.',
+    finance: 'Faturalar, ödeme durumu ve kazançlarınız. Ödeme teyidini yalnızca banka kaydını kontrol ettikten sonra verin.',
+    affiliate: 'Referans bağlantınızı paylaşın; tıklama, kayıt ve satışlar burada izlenir. Banner kodlarını reklamlarınızda kullanabilirsiniz.',
+    kyc: 'Müşteri belgelerini önizleyin; onaylayın ya da gerekçesiyle reddedin. Her kimlik doğrulaması KYC kredinizden düşer.',
+    reports: 'Başvuruların listesi ve durumları. “Detaylar” ile rota, tarih ve durumu görür, yetkiniz varsa güncellersiniz.',
+    meetings: 'Biten görüşmelerin tarihi, süresi ve özeti. Görüşmeyi bitirdiğinizde döküm ve özet müşteri dosyasına otomatik kaydedilir.',
+    team: 'Çalışan ekleyin ve hangi bölümlere, hangi müşterilere erişeceğini seçin. Davet bağlantısını çalışanla siz paylaşırsınız.',
+    'extra-liveaudit': 'Hesabınızdaki belge, fatura ve yetki işlemlerinin kaydı. Kim, ne zaman, ne yaptı buradan izlenir.'
+  } : {
+    overview: 'Başvurunuzun aşaması, kalan süreler ve son hareketler. Eksik belge varsa Dosyalarım’dan yükleyin.',
+    documents: 'Giden: sizin yüklediğiniz belgeler (zorunlu olanlar işaretlidir). Gelen: danışmanınızın size gönderdiği dosyalar.',
+    'documents-in': 'Danışmanınızın ve ekibimizin size gönderdiği belgeler, sözleşmeler ve sonuç dosyaları. İndirebilir veya önizleyebilirsiniz.',
+    finance: 'Faturalarınız ve ödeme durumları. Ödenmemiş fatura varsa “Online Öde” ile ödeyebilirsiniz.',
+    services: 'Başvurularınızın aşaması ve durumu. Süresi dolan hizmeti “Yenile” ile yeniden başlatırsınız.',
+    support: 'Danışmanınıza talep yazın. Atanmış danışmanınız varsa ona, yoksa yönetime gider; yanıt gelince bildirim alırsınız.',
+    meetings: 'Danışmanınızla yaptığınız görüşmelerin tarihi, süresi ve özeti.',
+    'extra-liveprofile': 'Ad, telefon ve fatura bilgilerinizi güncelleyin; profil fotoğrafı ekleyin.'
+  };
+  const HC = [
+    [/^KYC Doğrulama$|^Kimlik doğrulama$/, partner ? 'Kimliği doğrulanan müşteri “doğrulanmış” rozeti alır. Belgeleri KYC sayfasından onaylar veya reddedersiniz.' : 'Kimliğinizi pasaport/kimlik ve canlı selfie ile doğrularsınız. Doğrulamadan sonra belgeleriniz uzman incelemesine gider.'],
+    [/Başvurunuz ne aşamada/, 'Başvurunun hangi adımda olduğunu gösterir. Tamamlanan adımlar yeşil işaretlenir.'],
+    [/kalan süre/i, 'Oturum veya vizenin bitiş tarihine kalan gün. 60 günden az kalınca yenileme uyarısı çıkar.'],
+    [/^Ekip ve erişim$/, 'Her çalışan yalnızca yetkili olduğu bölümlere ve atanmış müşterilere erişir.'],
+    [/^Son hareketler$/, 'Hesabınızdaki son işlemler ve bildirimler. Tamamı için zil simgesine bakın.'],
+    [/^Son görüşmeler$/, 'Biten görüşmelerin tarih, süre ve özeti. “Tümü” ile hepsini açın.'],
+    [/Belge hazırlık durumu/, 'Zorunlu 5 belgeden kaçının yüklendiğini gösterir.'],
+    [/^Referans performansınız$/, 'Bağlantınızın tıklama, kayıt ve satış sayıları.'],
+    [/Birlikte ilerleyelim/, 'Destek ve iletişim kısayolları.']
   ];
-  const BTN = [
-    [/^Yeni Başvuru$/i, 'Yeni bir başvuru açar; ilgili kişilere bildirim gider.'],
-    [/Dosyayı aç/i, 'Müşterinin belgelerini, başvurularını ve faturalarını açar.'],
-    [/Görüşmeye çağır/i, 'Müşteriye bildirim gider; müşteri “Davete Katıl” ile odaya girer. Davet 2 saat geçerlidir. Görüşmeyi bitirince kayıt ve özet otomatik oluşur.'],
-    [/Vize formu/i, 'Müşterinin doldurduğu vize başvuru formunu görüntüler.'],
-    [/^(Yükle|Değiştir)$/i, 'PDF, JPG veya PNG seçin (en fazla 10 MB). Yüklenince ilgili kişiye bildirim gider.'],
-    [/^Gör$|^Önizle$/i, 'Belgeyi bu sayfadan çıkmadan önizleyin.'],
-    [/^İndir$|Döküm dosyasını indir/i, 'Dosyayı cihazınıza indirir.'],
-    [/Belge Gönder/i, 'Müşterinin dosyasına belge gönderir; müşteri bildirim alır.'],
-    [/Fatura Gönder/i, 'Fatura oluşturur ve ilgili kişiye bildirir.'],
-    [/Ödemeyi Teyit Et/i, 'Banka/sağlayıcı kaydını kontrol edip ödemeyi onaylar; kazanç kaydedilir.'],
-    [/Destek Talebi|Talep Oluştur/i, 'Konuyu yazın; talep atanmış danışmana, yoksa yönetime gider.'],
-    [/Randevu/i, 'Tarih ve saat önerin; danışman onayladığında bildirim gelir.'],
-    [/Ekibimi yönet|Kullanıcı Oluştur/i, 'Çalışan ekleyin ve hangi bölümlere erişeceğini seçin.'],
-    [/Referans Linki|Yeni Referans/i, 'Kampanya adı verin; size özel bağlantı oluşur.'],
-    [/Banner/i, 'Google Ads / site için hazır banner boyutları ve kodları.'],
-    [/^Kopyala$/i, 'Bağlantıyı panoya kopyalar.'],
-    [/^Detaylar$/i, 'Başvurunun rotası, durumu ve tarihini gösterir.'],
-    [/^Yenile$/i, 'Süresi dolan hizmet için yenileme başvurusu açar.'],
-    [/^Hizmetlerim$|^Başvurular$/i, 'Başvurularınızın listesine gider.'],
-    [/Destek merkezi/i, 'Sorularınız ve talepleriniz için.'],
-    [/Profilimi Düzenle/i, 'Ad, telefon ve fatura bilgilerinizi güncelleyin.'],
-    [/Kredi iste/i, 'KYC kredisi talebi yöneticiye gider.'],
-    [/^Tümü$/i, 'Tüm görüşme kayıtlarını açar.'],
-    [/^Çıkış$/i, 'Oturumu güvenle kapatır.']
-  ];
-  function applyTips(root = document) {
-    for (const [sel, tip] of TIPS) root.querySelectorAll(sel).forEach(el => { if (!el.dataset.tip) el.dataset.tip = tip; });
-    root.querySelectorAll('button,a.btn,.btn,.text-button').forEach(el => {
-      if (el.dataset.tip) return; const t = el.textContent.replace(/\s+/g, ' ').trim(); if (!t || t.length > 40) return;
-      const hit = BTN.find(([re]) => re.test(t)); if (hit) el.dataset.tip = hit[1];
+  const helpKey = () => { const h = location.hash.slice(1) || 'overview'; return h.startsWith('extra-') ? h : h; };
+  const mkHelp = text => `<button type="button" class="help-i" aria-label="Yardım" data-tip="${esc(text)}">i</button>`;
+  function addHelp() {
+    const h1 = document.querySelector('#content .page-heading h1');
+    if (h1 && !h1.dataset.help) { h1.dataset.help = '1'; const t = HELP_P[helpKey()]; if (t) h1.insertAdjacentHTML('beforeend', mkHelp(t)); }
+    document.querySelectorAll('#content .card h2:not([data-help])').forEach(h => {
+      h.dataset.help = '1'; const txt = h.textContent.trim(); const hit = HC.find(([re]) => re.test(txt)); if (hit) h.insertAdjacentHTML('beforeend', mkHelp(hit[1]));
     });
   }
   const tip = document.createElement('div'); tip.id = 'bm-tip'; tip.setAttribute('role', 'tooltip'); document.body.appendChild(tip);
@@ -217,14 +206,14 @@
     tip.style.left = left + 'px'; tip.style.top = top + 'px'; tip.style.setProperty('--ax', Math.max(12, Math.min(w - 22, r.left + r.width / 2 - left - 5)) + 'px'); tip.classList.add('on');
   }
   const hideTip = () => { clearTimeout(tt); cur = null; tip.classList.remove('on'); };
-  document.addEventListener('mouseover', e => { const el = e.target.closest?.('[data-tip]'); if (!el) { if (cur) hideTip(); return; } if (el === cur) return; clearTimeout(tt); tt = setTimeout(() => showTip(el), 320); });
-  document.addEventListener('mouseout', e => { const el = e.target.closest?.('[data-tip]'); if (el && !el.contains(e.relatedTarget)) hideTip(); });
-  document.addEventListener('focusin', e => { const el = e.target.closest?.('[data-tip]'); if (el) showTip(el); });
+  document.addEventListener('mouseover', e => { const el = e.target.closest?.('.help-i'); if (!el) { if (cur) hideTip(); return; } if (el === cur) return; clearTimeout(tt); tt = setTimeout(() => showTip(el), 320); });
+  document.addEventListener('mouseout', e => { const el = e.target.closest?.('.help-i'); if (el && !el.contains(e.relatedTarget)) hideTip(); });
+  document.addEventListener('focusin', e => { const el = e.target.closest?.('.help-i'); if (el) showTip(el); });
   document.addEventListener('focusout', hideTip);
+  document.addEventListener('click', e => { const el = e.target.closest?.('.help-i'); if (el) { e.preventDefault(); showTip(el); } });
   document.addEventListener('click', hideTip, true);
   document.addEventListener('scroll', hideTip, true);
-  let tipT; new MutationObserver(() => { clearTimeout(tipT); tipT = setTimeout(() => applyTips(), 120); }).observe(document.body, {childList: true, subtree: true});
-  applyTips();
+  
 
   // ---------------- ekip bağlantısı yetkisi ----------------
   window.addEventListener('bm-live-ready', () => {

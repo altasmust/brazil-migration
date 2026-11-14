@@ -94,43 +94,46 @@
   }); return wrap('Yedekler & Hata Kaydı', 'Otomatik veritabanı yedekleri, sağlık kontrolü ve ziyaretçi tarafı hata kaydı.'); };
 
 
-  // ---------------- Diller (İngilizce taslak) ----------------
+  // ---------------- Diller (İngilizce / Português taslak) ----------------
+  const LG = {en: {name: 'English', flag: 'gb', adj: 'İngilizce', code: 'EN'}, pt: {name: 'Português', flag: 'br', adj: 'Portekizce', code: 'PT'}};
+  let curLg = 'en';
   const langsPage = () => { run(async root => {
-    const d = (await A('i18n')).en;
-    const pub = d.published;
-    root.innerHTML = `<div class="bmg-2"><section class="panel bmg-p"><header class="panel-head"><h2><img src="/bm/flags/gb.svg" alt="" width="20" height="14" style="vertical-align:-2px"> English</h2><span class="bmc-login ${pub ? 'on' : 'wait'}">${pub ? 'Yayında' : 'Taslak'}</span></header>
-      <p class="bmg-hint">${pub ? 'İngilizce sayfalar ziyaretçilere ve Google’a açık. Türkçe sayfalarda dil düğmesi ve hreflang etiketleri görünüyor; İngilizce adresler sitemap’te.' : '<b>Taslak:</b> İngilizce sayfalar ziyaretçilere ve Google’a kapalı (404). Sitemap’e girmez, dil düğmesi görünmez, hiçbir sayfadan bağlantı almaz. Yalnız siz önizleme ile görürsünüz.'}</p>
+    const all = await A('i18n'), d = all[curLg], L = LG[curLg], pub = d.published, adj = L.adj;
+    root.innerHTML = `<div class="bmg-2"><section class="panel bmg-p"><header class="panel-head"><h2><img src="/bm/flags/${L.flag}.svg" alt="" width="20" height="14" style="vertical-align:-2px"> ${L.name}</h2><span class="bmc-login ${pub ? 'on' : 'wait'}">${pub ? 'Yayında' : 'Taslak'}</span></header>
+      <div class="form-actions" style="justify-content:flex-start;margin-bottom:8px">${Object.entries(LG).map(([k, v]) => `<button class="btn small ${k === curLg ? 'primary' : ''}" data-lg="sw" data-l="${k}">${v.name} · ${all[k].published ? 'Yayında' : 'Taslak'}</button>`).join('')}</div>
+      <p class="bmg-hint">${pub ? adj + ' sayfalar ziyaretçilere ve Google’a açık. Türkçe sayfalarda dil düğmesi ve hreflang etiketleri görünüyor; ' + adj + ' adresler sitemap’te.' : '<b>Taslak:</b> ' + adj + ' sayfalar ziyaretçilere ve Google’a kapalı (404). Sitemap’e girmez, dil düğmesi görünmez, hiçbir sayfadan bağlantı almaz. Yalnız siz önizleme ile görürsünüz.'}</p>
       <div class="form-actions" style="justify-content:flex-start;flex-wrap:wrap">
         ${pub ? '' : `<button class="btn primary small" data-lg="prev">${ic('eye')} ${d.preview ? 'Önizlemeyi aç' : 'Önizlemeyi başlat'}</button>${d.preview ? '<button class="btn small" data-lg="prevoff">Önizlemeyi kapat</button>' : ''}`}
         <button class="btn small" data-lg="scan">${ic('search')} Eksik çevirileri tara</button>
         <button class="btn ${pub ? '' : 'primary'} small" data-lg="${pub ? 'unpub' : 'pub'}">${pub ? 'Taslağa al' : 'Yayınla'}</button></div>
-      <p class="bmg-hint" style="margin-top:12px">Önerilen yayın zamanı: Search Console’da Türkçe sayfaların çoğu “Dizine eklendi” göründüğünde. Sözlükte ${d.strings} çeviri var; blog yazıları ve Türkiye–Brezilya karşılaştırması bilerek Türkçe bırakıldı.</p>
+      <p class="bmg-hint" style="margin-top:12px">Önerilen yayın zamanı: Search Console’da Türkçe sayfaların çoğu “Dizine eklendi” göründüğünde. Sözlükte ${d.strings} çeviri var; blog yazıları yalnız o dilde yazı eklendiyse görünür.</p>
       <div id="bmg-scan"></div></section>
-    <section class="panel bmg-p"><header class="panel-head"><h2>Dil menüsü</h2><span class="bmc-login ${pub ? 'on' : 'off'}">${pub ? 'Sitede görünüyor' : 'Gizli — yayına kadar'}</span></header>
-      <p class="bmg-hint">Sitenin üst menüsünde, tema düğmesinin yanında açılır dil seçimi (müşteri panelindeki gibi). ${pub ? 'Şu an ziyaretçilere açık.' : '<b>Yayınlayana kadar ziyaretçilere ve Google’a görünmez.</b> Önizleme açıkken yalnız siz kesik çerçeveli halini görürsünüz.'}</p>
-      <form class="bmg-form" id="bmg-lm"><div class="bmg-row"><label>Türkçe etiketi<input name="tr" maxlength="30" value="${esc(d.menu.labels?.tr || 'Türkçe')}"></label><label>İngilizce etiketi<input name="en" maxlength="30" value="${esc(d.menu.labels?.en || 'English')}"></label><label>Görünüm<select name="format">${[['code-label', 'TR · Türkçe'], ['label', 'Türkçe'], ['code', 'TR']].map(([v, l]) => `<option value="${v}" ${(d.menu.format || 'code-label') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
+    <section class="panel bmg-p"><header class="panel-head"><h2>Dil menüsü</h2><span class="bmc-login ${all.en.published || all.pt.published ? 'on' : 'off'}">${all.en.published || all.pt.published ? 'Sitede görünüyor' : 'Gizli — yayına kadar'}</span></header>
+      <p class="bmg-hint">Sitenin üst menüsünde, tema düğmesinin yanında açılır dil seçimi. Yalnız yayındaki diller ziyaretçilere görünür; önizleme açıkken yalnız siz kesik çerçeveli halini görürsünüz.</p>
+      <form class="bmg-form" id="bmg-lm"><div class="bmg-row"><label>Türkçe etiketi<input name="tr" maxlength="30" value="${esc(all.menu.labels?.tr || 'Türkçe')}"></label><label>İngilizce etiketi<input name="en" maxlength="30" value="${esc(all.menu.labels?.en || 'English')}"></label><label>Portekizce etiketi<input name="pt" maxlength="30" value="${esc(all.menu.labels?.pt || 'Português')}"></label><label>Görünüm<select name="format">${[['code-label', 'TR · Türkçe'], ['label', 'Türkçe'], ['code', 'TR']].map(([v, l]) => `<option value="${v}" ${(all.menu.format || 'code-label') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
       <div class="bmg-lmprev"><small>Önizleme</small><span class="bmg-pill"><select id="bmg-lmsel" aria-label="Önizleme"></select></span></div>
       <div class="form-actions"><button class="btn primary" type="submit">${ic('check')} Kaydet</button></div></form></section>
     <section class="panel bmg-p"><header class="panel-head"><h2>Sayfalar (${d.pages.length})</h2></header><ul class="bmg-ul">${d.pages.map(p => `<li><span><b>${esc(p.en)}</b><small>${esc(p.tr)}</small></span>${pub || d.preview ? `<a class="btn small" href="${esc(p.en)}" target="_blank" rel="noopener">${ic('eye')} Aç</a>` : ''}</li>`).join('')}</ul></section></div>`;
-    const f = $('#bmg-lm'); const upd = () => { const fm = f.format.value, t = (c, n) => fm === 'label' ? n : fm === 'code' ? c : c + ' · ' + n; $('#bmg-lmsel').innerHTML = `<option>${esc(t('TR', f.tr.value || 'Türkçe'))}</option><option>${esc(t('EN', f.en.value || 'English'))}</option>`; };
+    const f = $('#bmg-lm'); const upd = () => { const fm = f.format.value, t = (c, n) => fm === 'label' ? n : fm === 'code' ? c : c + ' · ' + n; $('#bmg-lmsel').innerHTML = `<option>${esc(t('TR', f.tr.value || 'Türkçe'))}</option><option>${esc(t('EN', f.en.value || 'English'))}</option><option>${esc(t('PT', f.pt.value || 'Português'))}</option>`; };
     f.addEventListener('input', upd); upd();
-    f.onsubmit = async e => { e.preventDefault(); try { await A('i18n/menu', 'POST', {labels: {tr: f.tr.value, en: f.en.value}, format: f.format.value}); say('Dil menüsü kaydedildi.'); } catch (err) { say(err.message); } };
-  }); return wrap('Diller', 'Sitenin İngilizce sürümü: taslak önizleme, dil menüsü ve yayın.'); };
+    f.onsubmit = async e => { e.preventDefault(); try { await A('i18n/menu', 'POST', {labels: {tr: f.tr.value, en: f.en.value, pt: f.pt.value}, format: f.format.value}); say('Dil menüsü kaydedildi.'); } catch (err) { say(err.message); } };
+  }); return wrap('Diller', 'Sitenin İngilizce ve Portekizce sürümleri: taslak önizleme, dil menüsü ve yayın.'); };
   document.addEventListener('click', async e => {
-    const b = e.target.closest('[data-lg]'); if (!b) return; const a = b.dataset.lg;
+    const b = e.target.closest('[data-lg]'); if (!b) return; const a = b.dataset.lg, L = LG[curLg], adj = L.adj;
     try {
-      if (a === 'prev') { await A('i18n/preview', 'POST', {on: true}); window.open('/en/', '_blank', 'noopener'); render(); }
+      if (a === 'sw') { curLg = b.dataset.l in LG ? b.dataset.l : 'en'; render(); }
+      else if (a === 'prev') { await A('i18n/preview', 'POST', {on: true}); window.open('/' + curLg + '/', '_blank', 'noopener'); render(); }
       else if (a === 'prevoff') { await A('i18n/preview', 'POST', {on: false}); render(); }
-      else if (a === 'pub') { if (!confirm('İngilizce sayfalar herkese ve Google’a açılacak; Türkçe sayfalara dil düğmesi ve hreflang eklenecek, İngilizce adresler sitemap’e girecek. Devam edilsin mi?')) return; await A('i18n/publish', 'POST', {published: true}); say('İngilizce yayında.'); render(); }
-      else if (a === 'unpub') { if (!confirm('İngilizce sayfalar ziyaretçilere kapatılsın mı? (Önizleme bağlantıları da sıfırlanır.)')) return; await A('i18n/publish', 'POST', {published: false}); say('İngilizce taslağa alındı.'); render(); }
-      else if (a === 'scan') { const box = $('#bmg-scan'); box.innerHTML = '<div class="loading">Taranıyor…</div>'; const r = await A('i18n/missing'); const TRW = /[çğışüöÇĞŞÜÖİ]/;
+      else if (a === 'pub') { if (!confirm(adj + ' sayfalar herkese ve Google’a açılacak; Türkçe sayfalara dil düğmesi ve hreflang eklenecek, ' + adj + ' adresler sitemap’e girecek. Devam edilsin mi?')) return; await A('i18n/publish', 'POST', {published: true, lang: curLg}); say(L.name + ' yayında.'); render(); }
+      else if (a === 'unpub') { if (!confirm(adj + ' sayfalar ziyaretçilere kapatılsın mı? (Önizleme bağlantıları da sıfırlanır.)')) return; await A('i18n/publish', 'POST', {published: false, lang: curLg}); say(L.name + ' taslağa alındı.'); render(); }
+      else if (a === 'scan') { const box = $('#bmg-scan'); box.innerHTML = '<div class="loading">Taranıyor…</div>'; const r = await A('i18n/missing?lang=' + curLg); const TRW = /[çğışüöÇĞŞÜÖİ]/;
         const all = new Map(); for (const p of r.pages) for (const m of (p.missing || [])) if (TRW.test(m.k)) { if (!all.has(m.k)) all.set(m.k, {k: m.k, kind: m.kind, pages: []}); all.get(m.k).pages.push(p.en); }
         const list = [...all.values()]; window.__bmgMiss = list;
-        box.innerHTML = list.length ? `<h3 class="bmg-h3">Çevrilmemiş ${list.length} metin</h3><p class="bmg-hint">Her metnin İngilizcesini yazıp <b>Kaydet</b>’e basın; kayıt hemen yayına yansır (yeni sürüm yüklemeye gerek yok). Etiket işaretleri (&lt;1&gt;…&lt;/1&gt;) aynen korunmalı.</p>
+        box.innerHTML = list.length ? `<h3 class="bmg-h3">Çevrilmemiş ${list.length} metin</h3><p class="bmg-hint">Her metnin ${adj}sini yazıp <b>Kaydet</b>’e basın; kayıt hemen yayına yansır (yeni sürüm yüklemeye gerek yok). Etiket işaretleri (&lt;1&gt;…&lt;/1&gt;) aynen korunmalı.</p>
           <div class="form-actions" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn primary small" data-lg="savestr">${ic('check')} Doldurulanları kaydet</button><button class="btn small" data-lg="dlmiss">Listeyi indir (JSON)</button></div>
-          <ul class="bmg-ul bmg-err">${list.map((m, i) => `<li style="display:block"><small>${esc(m.pages.slice(0, 3).join(' · '))}${m.pages.length > 3 ? ' +' + (m.pages.length - 3) : ''}${m.kind === 'attr' ? ' · görsel/etiket metni' : ''}</small><div style="margin:4px 0"><b>${esc(m.k)}</b></div><input data-ms="${i}" style="width:100%" placeholder="İngilizce karşılığı"></li>`).join('')}</ul>` : `<div class="bmc-empty sm">${ic('check')}<b>Eksik çeviri yok.</b><span>Tüm sayfalardaki metinlerin İngilizcesi mevcut.</span></div>`; }
-      else if (a === 'savestr') { const items = [...document.querySelectorAll('[data-ms]')].map(i => ({k: window.__bmgMiss[+i.dataset.ms].k, en: i.value})).filter(x => x.en.trim()); if (!items.length) return say('Önce İngilizce karşılıkları yazın.'); const r = await A('i18n/strings', 'POST', {items}); say(r.saved + ' çeviri kaydedildi.'); document.querySelector('[data-lg="scan"]').click(); }
-      else if (a === 'dlmiss') { const u = URL.createObjectURL(new Blob([JSON.stringify((window.__bmgMiss || []).map(m => ({tr: m.k, pages: m.pages})), null, 1)], {type: 'application/json'})); const l = document.createElement('a'); l.href = u; l.download = 'eksik-ceviriler.json'; l.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); }
+          <ul class="bmg-ul bmg-err">${list.map((m, i) => `<li style="display:block"><small>${esc(m.pages.slice(0, 3).join(' · '))}${m.pages.length > 3 ? ' +' + (m.pages.length - 3) : ''}${m.kind === 'attr' ? ' · görsel/etiket metni' : ''}</small><div style="margin:4px 0"><b>${esc(m.k)}</b></div><input data-ms="${i}" style="width:100%" placeholder="${adj} karşılığı"></li>`).join('')}</ul>` : `<div class="bmc-empty sm">${ic('check')}<b>Eksik çeviri yok.</b><span>Tüm sayfalardaki metinlerin ${L.name} karşılığı mevcut.</span></div>`; }
+      else if (a === 'savestr') { const items = [...document.querySelectorAll('[data-ms]')].map(i => ({k: window.__bmgMiss[+i.dataset.ms].k, en: i.value})).filter(x => x.en.trim()); if (!items.length) return say('Önce karşılıkları yazın.'); const r = await A('i18n/strings', 'POST', {items, lang: curLg}); say(r.saved + ' çeviri kaydedildi.'); document.querySelector('[data-lg="scan"]').click(); }
+      else if (a === 'dlmiss') { const u = URL.createObjectURL(new Blob([JSON.stringify((window.__bmgMiss || []).map(m => ({tr: m.k, pages: m.pages})), null, 1)], {type: 'application/json'})); const l = document.createElement('a'); l.href = u; l.download = 'eksik-ceviriler-' + curLg + '.json'; l.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); }
     } catch (err) { say(err.message); }
   });
 
@@ -217,7 +220,7 @@
     const el = document.createElement('details');
     el.innerHTML = '<summary>Pazarlama</summary><div class="dropdown"><a href="#yorumlar">Müşteri Yorumları</a><a href="#aboneler">Aboneler &amp; Bülten</a><a href="#fiyatlar">Paket Fiyatları</a></div>';
     if (site) site.after(el); else nav.appendChild(el);
-    site?.querySelector('.dropdown')?.insertAdjacentHTML('beforeend', '<a href="#diller">Diller (English)</a>');
+    site?.querySelector('.dropdown')?.insertAdjacentHTML('beforeend', '<a href="#diller">Diller (EN · PT)</a>');
     const ay = [...nav.querySelectorAll('details')].find(d => d.querySelector('summary')?.textContent.trim() === 'Ayarlar');
     ay?.querySelector('a[href="#durum"]')?.insertAdjacentHTML('afterend', '<a href="#yedekler">Yedekler &amp; Hata Kaydı</a><a href="#guncellemeler">Güncellemeler</a>');
   }

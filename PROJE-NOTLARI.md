@@ -472,3 +472,10 @@
 - **Yerleşim**: `v2.css` (metrik ızgara, süre kartları, alt kartlar 2 sütun).
 - Panel metinleri (v2) EN/FA panel sözlüğünde yok; Türkçe görünür.
 - 2026-11-14 (üst menü): müşteri + danışman panelleri yeni üst menü (`v2.css` "Yeni üst menü" bloğu): hap şeklinde aktif sekme, Dosyalarım ▾ (Giden/Gelen), danışmanda "Daha fazla ▾" (Referanslar, KYC, Ekip & Yetkiler, İşlem Geçmişi), "Görüşmeye katıl" yeşil hap düğme hesap alanında, dil seçici kısa kod (TR/EN/FA, `v2.js shortLang`). ≤1150px'te menü ikinci satırda kaydırmalı, alt menüler düz. Genel bakışta "Ekip & Yetkiler" hızlı düğmesi geri getirildi. Admin paneli etkilenmez.
+
+## 2026-11-14 — Yardım ikonları, panel EN/PT, site PT, SEO
+- Menü tooltip'leri kaldırıldı; yalnız sayfalardaki ⓘ (.help-i) yardım ikonları kaldı. "Ekibi yönet" etiketi eklendi.
+- Danışman/müşteri panelleri: `public/bm/i18n.js` artık TR/EN/PT/FA; veri `public/bm/i18n-data.json` ([tr,en,fa,pt] satırları, 1280). Yeni satırlarda FA = EN. Ülke adları Intl.DisplayNames ile.
+- Web sitesi Portekizce: `server/platform/i18n/pt.json` (slugs /pt/…), `SITE_LANGS` (i18n.mjs), `renderLang` (site.mjs), http.mjs `/en|/pt` + `i18n/<lang>.js`, i18n-admin dil bazlı (publish/preview/missing/strings/menu), Yönetici → Diller sayfasında EN/PT sekmeleri. PT yayını: Diller → Portekizce → Yayınla (taslakta 404). PT blog yazısı yok → /pt/blog/ 404, menüden gizli.
+- Tarama (TR/EN/PT, 95 sayfa): kırık link/dosya yok, title/desc tekrarı yok; birkaç meta description >170 karakter (PT/EN) kabul edildi.
+- Blog: tüm Unsplash görselleri açılıyor; yüklenemezse yerel görsele dönen yedek eklendi (blog.js v2).
