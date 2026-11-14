@@ -9,8 +9,24 @@ export function cleanMsgs(msgs) {
   return (Array.isArray(msgs) ? msgs : []).slice(0, 500).map(m => ({time: s(m.time, 12), who: s(m.who, 60), text: s(m.text), tr: s(m.tr)})).filter(m => m.text);
 }
 
+// Yapay zekâ anahtarı yokken (veya servis yanıt vermezse) dökümden kural tabanlı kısa özet: katılımcılar, öne çıkan ifadeler, sohbet mesajları.
+export function localSummary(lines, msgs) {
+  if (!lines.length && !msgs.length) return null;
+  const tr = l => (l.lang === 'tr' ? l.orig : (l.tr || l.orig)).replace(/\s+/g, ' ').trim();
+  const who = [...new Set([...lines.map(l => l.who), ...msgs.map(m => m.who)].filter(Boolean))];
+  const pick = lines.map((l, i) => ({i, t: tr(l), w: l.who})).filter(x => x.t.length >= 25).sort((a, b) => b.t.length - a.t.length).slice(0, 6).sort((a, b) => a.i - b.i);
+  const cut = t => t.length > 170 ? t.slice(0, 167) + '…' : t;
+  let out = `Konuşma özeti (otomatik)\nKatılımcılar: ${who.join(', ') || '—'}\nKonuşma sayısı: ${lines.length}${msgs.length ? ' · sohbet mesajı: ' + msgs.length : ''}`;
+  if (pick.length) out += '\n\nÖne çıkan ifadeler:\n' + pick.map(x => `• ${x.w ? x.w + ': ' : ''}${cut(x.t)}`).join('\n');
+  if (msgs.length) out += '\n\nSohbet mesajları:\n' + msgs.slice(0, 4).map(m => `• ${m.who ? m.who + ': ' : ''}${cut(m.text)}`).join('\n');
+  return out + '\n\nTam konuşma dökümü dosyalarınızda yer alır.';
+}
 export async function summarize(lines, msgs, langs) {
-  const key = process.env.ANTHROPIC_API_KEY; if (!key || !lines.length) return null;
+  const key = process.env.ANTHROPIC_API_KEY; if (!key) return localSummary(lines, msgs);
+  if (!lines.length) return null;
+  return (await aiSummarize(lines, msgs, langs, key)) || localSummary(lines, msgs);
+}
+async function aiSummarize(lines, msgs, langs, key) {
   const want = [...new Set(langs.filter(l => LN[l]))].slice(0, 2); if (!want.length) want.push('tr');
   const text = lines.map(l => `[${l.time}] ${l.who} (${l.lang}): ${l.orig}`).join('\n').slice(-60000)
     + (msgs.length ? '\n\nSohbet mesajları:\n' + msgs.map(m => `[${m.time}] ${m.who}: ${m.text}`).join('\n').slice(-8000) : '');

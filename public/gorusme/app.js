@@ -819,6 +819,9 @@ function downloadTranscript(){
 function endCall(){
   send({ type:'bye' });
   const dur = S.startedAt ? Date.now() - S.startedAt : 0;
+  // Görüşme kaydı: müşteri panelinde "Görüşmeye katıl" kalkar, tarih/süre/özet kartı görünür
+  if (S.room && S.wsUser) S.endP = fetch('/api/workspace/meet/end', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':'application/json' },
+    body:JSON.stringify({ room:S.room, start:S.startedAt, end:Date.now() }) }).catch(() => {});
   clearInterval(S.timerId);
   stopScreen(); teardownPeer();
   ttsStop();
@@ -1196,16 +1199,19 @@ function removeCap(slot){ const el = capEls[slot]; if (el){ el.remove(); delete 
     en:{ save:'Save to client file', saving:'Saving and preparing the summary…', saved:'Saved to file', sum:'Call summary', err:'Could not save' },
     fa:{ save:'ذخیره در پرونده مشتری', saving:'در حال ذخیره و تهیه خلاصه…', saved:'در پرونده ذخیره شد', sum:'خلاصه تماس', err:'ذخیره نشد' } };
   const tx = () => L[S.me] || L.tr;
-  fetch('/api/workspace/meeting', { credentials:'same-origin', cache:'no-store' }).then(r => r.ok ? r.json() : null).then(d => { if (d && d.name) S.wsUser = d.name; }).catch(() => {});
+  fetch('/api/workspace/meeting', { credentials:'same-origin', cache:'no-store' }).then(r => r.ok ? r.json() : null).then(d => { if (d && d.name) { S.wsUser = d.name; S.wsRole = d.role; } }).catch(() => {});
   new MutationObserver(() => {
     if ($('ended').hidden) return;
     const has = (S.lines && S.lines.length) || (S.msgList && S.msgList.length);
     const b = $('endSave'); b.hidden = !(S.wsUser && has); b.disabled = false; $('endSaveT').textContent = tx().save;
     $('endSum').hidden = true;
+    // Danışman/avukat görüşmeyi bitirince döküm + özet müşteri dosyasına otomatik kaydedilir
+    if (!b.hidden && S.wsRole && S.wsRole !== 'customer' && !S.autoSaved) { S.autoSaved = true; setTimeout(() => b.click(), 700); }
   }).observe($('ended'), { attributes:true, attributeFilter:['hidden'] });
   $('endSave').onclick = async () => {
     const b = $('endSave'); b.disabled = true; $('endSaveT').textContent = tx().saving;
     try {
+      if (S.endP) await S.endP;
       const r = await fetch('/api/workspace/meeting/save', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':'application/json' },
         body:JSON.stringify({ room:S.room, start:S.startedAt, end:Date.now(), peer:S.peerName || '', lines:S.lines || [], msgs:S.msgList || [] }) });
       const j = await r.json().catch(() => ({}));

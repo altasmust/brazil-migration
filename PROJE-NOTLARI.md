@@ -461,3 +461,13 @@
 - Hatırlatma: önce commit, sonra `scripts/package.mjs`.
 - 2026-11-14: "Çevrilmemiş metin bulunan sayfalar" listesi (KYC kimlik doğrulama, bayrak/alt metinleri, oturum/vatandaşlık/şirket görsel alt metinleri) için 16 yeni EN sözlük anahtarı eklendi; yerel tarama 0 eksik. Canlıda liste hâlâ görünürse yeni zip yüklenmemiş demektir (Güncellemeler sayfasında sürüm kontrol edilir).
 - 2026-11-14: **Ek çeviri sözlüğü** (items `config-i18n-extra`, `i18n.mjs loadExtra`, route `i18n/strings`): Diller → "Eksik çevirileri tara" artık tüm eksik metinleri tek tek listeler; yanına İngilizcesi yazılıp "Doldurulanları kaydet" ile canlıya (yeni zip gerekmeden) işlenir. Dosya sözlüğünü ezer; boş kaydedersen kayıt silinir. "Listeyi indir (JSON)" ile tüm eksikler alınabilir. Yerel tarama yalnız yerel veriyi görür; prod'a özgü (panelden girilen) metinler bu listeyle yakalanır.
+
+## Tur: Görüşme kayıtları, panel v2 (2026-11-14)
+- **Görüşme kaydı**: `/gorusme/` `endCall` → `POST workspace/meet/end` (oda, başlangıç, bitiş). Sunucu (`workspace.mjs sessUpsert`) `meet_session` öğesi yazar (id `meet-<oda>-<müşteri8>`): tarih, süre, host, özet, döküm dosyası. Davetin `ended` bayrağı kalkınca müşteride "Davete Katıl" şeridi ve oda gizlenir (yalnız personel bitirince davet kapanır). Personel bitirince döküm+özet otomatik kaydedilir. `meet/history` (GET) hem müşteri hem danışman için; sayfa `#meetings` ("Görüşmeler" menüsü) + genel bakışta "Son görüşmeler" kartı.
+- **Özet**: `ANTHROPIC_API_KEY` varsa yapay zekâ özeti; yoksa/başarısızsa `meeting-notes.mjs localSummary` (katılımcılar + öne çıkan ifadeler). Kartsız çalışır.
+- **Bildirimler**: `GET workspace/notices`; zil artık canlı liste (`public/panel/v2.js`), 30 sn yoklama, yeni gelende toast, tıklayınca ilgili sayfa. Profil, ekip, referans işlemleri de bildirim üretir.
+- **İpucu balonları**: `v2.js` `TIPS`/`BTN` tabloları, `data-tip` ile; yeni buton eklenirse metne göre eşleştirilir.
+- **Danışman paneli**: Dosyalarım alt menüsü (Giden/Gelen), "Ekip" ve "Görüşmeler" menü sayfaları; müşteri satırı butonları `row-actions`.
+- **Görseller**: başvuru türüne göre kart (oturum/şirket/vize/vatandaşlık/vergi/diğer) `v2.js visual()` + `v2.css`.
+- **Yerleşim**: `v2.css` (metrik ızgara, süre kartları, alt kartlar 2 sütun).
+- Panel metinleri (v2) EN/FA panel sözlüğünde yok; Türkçe görünür.

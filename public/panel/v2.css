@@ -1,0 +1,107 @@
+/* Panel v2 (2026-11-14): yerleşim düzeni, buton aralıkları, görüşme kayıtları, canlı bildirimler, ipucu balonları, başvuru görselleri */
+
+/* ---- genel yerleşim ---- */
+.metrics{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:20px}
+.metrics .metric{min-width:0}
+.dashboard-top{align-items:stretch}
+.deadlines{display:grid!important;grid-template-rows:1fr 1fr;gap:20px;align-content:stretch}
+.deadlines .deadline{display:flex;flex-direction:column;justify-content:center;margin:0!important;min-height:0}
+.deadlines .deadline-row{align-items:center}
+.dashboard-bottom{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:20px;align-items:stretch}
+.dashboard-bottom>.card{margin:0!important;min-width:0}
+body[data-v2=customer] .dashboard-bottom>:first-child{grid-row:1/3}
+body[data-v2=partner] .dashboard-bottom>:nth-child(2){grid-column:2;grid-row:1/3}
+body[data-v2=partner] .dashboard-bottom>:nth-child(1){grid-column:1;grid-row:1}
+body[data-v2=partner] .dashboard-bottom>:nth-child(3){grid-column:1;grid-row:2}
+body[data-v2=customer] .dashboard-bottom>:nth-child(2){grid-column:2;grid-row:1}
+body[data-v2=customer] .dashboard-bottom>:nth-child(3){grid-column:2;grid-row:2}
+.dashboard-bottom .file-row{padding:14px 0}
+@media(max-width:900px){.dashboard-bottom{grid-template-columns:1fr}body[data-v2] .dashboard-bottom>*{grid-column:auto!important;grid-row:auto!important}}
+.partner-hero,.dashboard-top{gap:20px}
+
+/* ---- buton aralıkları ---- */
+.row-actions{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center}
+.row-actions .btn,.file-actions .btn,.heading-actions .btn,.mail-row .btn{margin:0!important}
+.file-actions{display:flex;flex-wrap:wrap;gap:10px}
+.mail-row{gap:12px}
+.mail-row .btn+.btn{margin-left:0}
+.table-wrap td .btn{margin:0}
+.heading-actions{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center}
+.extension-actions{display:flex;flex-wrap:wrap;gap:10px 12px}
+
+/* ---- üst menü sığdır ---- */
+.topbar nav{gap:16px}
+.topbar nav a{white-space:nowrap}
+@media(max-width:1500px){.topbar nav{gap:13px}.topbar nav a{font-size:13px}}
+@media(max-width:1380px){.profile>span:nth-child(2){display:none}}
+
+/* ---- görüşme kayıtları ---- */
+.mt-list{display:grid;gap:16px}
+.mt-card{display:grid;gap:12px}
+.mt-head{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.mt-head h2{margin:0 0 4px;font-size:18px}
+.mt-head small{color:var(--muted);font-size:13px}
+.mt-chips{display:flex;flex-wrap:wrap;gap:8px}
+.mt-chips span{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12.5px;background:#f6faf3;color:#2c4a35}
+.mt-sum{margin:0;padding:14px 16px;border-radius:12px;background:#f3f8ef;color:#27402d;line-height:1.65;font-size:14px;white-space:pre-wrap}
+.mt-sum.none{background:#f7f7f4;color:var(--muted);font-style:italic}
+.mt-sumh{font-size:12px;font-weight:700;letter-spacing:.06em;color:#4d6b53;margin:0 0 -4px}
+.mt-recent{margin:20px 0 0}
+.mt-recent .mt-mini{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:start;padding:14px 0;border-top:1px solid var(--line)}
+.mt-recent .mt-mini:first-of-type{border-top:0}
+.mt-mini .mt-dot{width:38px;height:38px;border-radius:12px;background:#eaf3e4;display:grid;place-items:center;color:var(--forest)}
+.mt-mini b{display:block;font-size:14px}.mt-mini small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.mt-mini p{margin:6px 0 0;font-size:13px;line-height:1.55;color:#38523f;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mt-mini .mt-dur{font-size:12.5px;color:#2c4a35;background:#f1f7ec;border-radius:999px;padding:5px 11px;white-space:nowrap}
+@media(max-width:640px){.mt-recent .mt-mini{grid-template-columns:auto 1fr}.mt-mini .mt-dur{grid-column:2;justify-self:start}}
+
+/* ---- canlı bildirimler ---- */
+#notifications{max-height:min(70vh,560px);overflow:auto}
+#notifications article{cursor:pointer;border-radius:10px;transition:background .15s}
+#notifications article:hover{background:#f3f8ef}
+#notifications article.unread strong{color:#10351c}
+#notifications article.read{opacity:.72}
+#notifications .nt-hint{display:block;font-size:12px;color:#6a7a6e;margin:2px 0 0;line-height:1.45}
+#notifications .nt-time{display:block;font-size:11.5px;color:#8a968d;margin-top:3px}
+#notifications .nt-empty{padding:22px 8px;text-align:center;color:var(--muted);font-size:14px}
+.bell i{display:none}
+.bell.has-new i{display:block}
+
+/* ---- ipucu balonu ---- */
+#bm-tip{position:fixed;z-index:9999;max-width:290px;padding:10px 13px;border-radius:12px;background:#12301d;color:#f3f8ef;font-size:12.5px;line-height:1.5;box-shadow:0 10px 30px rgba(10,30,18,.28);pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .14s,transform .14s}
+#bm-tip.on{opacity:1;transform:none}
+#bm-tip:before{content:"";position:absolute;left:var(--ax,24px);top:-5px;width:10px;height:10px;background:#12301d;transform:rotate(45deg);border-radius:2px}
+#bm-tip.up:before{top:auto;bottom:-5px}
+@media(hover:none){#bm-tip{display:none}}
+
+/* ---- başvuru türüne göre görseller ---- */
+.permit-visual .identity-card.v2{--c1:#dcebd0;--c2:#bcd8a6;--ink:#1d4a29}
+.vis-card{position:relative;width:min(300px,92%);aspect-ratio:1.58;border-radius:18px;padding:16px 18px;color:var(--ink);box-shadow:0 18px 40px rgba(20,60,30,.18),inset 0 0 0 1px rgba(255,255,255,.5);overflow:hidden;display:grid;align-content:space-between;margin:0 auto 16px;transform:rotate(-4deg)}
+.vis-card small{font-size:7.5px;letter-spacing:.16em;opacity:.8;text-transform:uppercase}
+.vis-card .vt{font-weight:800;font-size:17px;letter-spacing:.04em}
+.vis-card .vr{display:flex;gap:12px;align-items:center}
+.vis-card .vp{width:46px;height:56px;border-radius:9px;background:rgba(255,255,255,.4);display:grid;place-items:center}
+.vis-card .vp svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.vis-card .vr strong{display:block;font-size:12px}.vis-card .vr span{display:block;font-size:8.5px;opacity:.75;letter-spacing:.06em}
+.vis-card .vb{height:12px;border-radius:3px;background:repeating-linear-gradient(90deg,currentColor 0 1px,transparent 1px 4px);opacity:.28}
+.vis-card:after{content:"";position:absolute;right:-40px;top:-50px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.26)}
+.vis-company{background:linear-gradient(135deg,#e3eef9,#b5cfe8);--ink:#17406b}
+.vis-visa{background:linear-gradient(160deg,#17503a,#0d3324);--ink:#e9f5d3;transform:rotate(3deg);aspect-ratio:1.38;width:min(250px,86%)}
+.vis-visa:after{background:rgba(212,236,164,.1)}
+.vis-visa .vstamp{position:absolute;right:16px;bottom:16px;width:62px;height:62px;border:2px solid #d7eca4;border-radius:50%;display:grid;place-items:center;color:#d7eca4;font-size:8px;font-weight:800;letter-spacing:.1em;transform:rotate(-14deg);text-align:center;line-height:1.3}
+.vis-citizen{background:linear-gradient(135deg,#fbf3d6,#ecd691);--ink:#5b4510}
+.vis-citizen .vseal{position:absolute;right:18px;bottom:16px;width:54px;height:54px;border-radius:50%;background:radial-gradient(circle,#f5d566,#c79a1e);display:grid;place-items:center;color:#fff;font-size:22px;box-shadow:0 4px 12px rgba(120,90,10,.3)}
+.vis-tax{background:linear-gradient(135deg,#f1e6f7,#d6bfe6);--ink:#4a2a63}
+.vis-other{background:linear-gradient(135deg,#efefe8,#d8d8cb);--ink:#3d4a3f}
+.vis-none{background:#f6faf3;border:2px dashed #bcd2b0;box-shadow:none;--ink:#4d6b53;place-items:center;text-align:center}
+.vis-none:after{display:none}
+.svc-vis{display:grid;place-items:center;padding:18px 0 4px;margin:-6px -6px 8px;background:radial-gradient(circle at 50% 40%,#f1f7ec,#fff 70%)}
+.svc-vis .vis-card{margin:0 auto;width:min(210px,80%);padding:12px 14px}
+.svc-vis .vis-card .vt{font-size:13px}.svc-vis .vis-card .vp{width:36px;height:44px}
+.svc-vis .vis-card .vstamp{width:46px;height:46px;font-size:6.5px}
+.svc-vis .vis-card .vseal{width:40px;height:40px;font-size:16px}
+.vis-permit{background:linear-gradient(135deg,#e4f1d8,#bcd8a6);--ink:#1d4a29}
+.vis-none{align-content:center;transform:none;border-radius:20px}
+.vis-none .vt{font-size:15px;margin-bottom:6px}.vis-none small{font-size:9.5px;letter-spacing:.04em;text-transform:none;opacity:.8}
+body[data-v2=partner] .topbar nav{gap:10px}
+body[data-v2=partner] .topbar nav a{font-size:12.5px}
