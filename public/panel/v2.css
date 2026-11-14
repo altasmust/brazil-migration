@@ -105,3 +105,61 @@ body[data-v2=customer] .dashboard-bottom>:nth-child(3){grid-column:2;grid-row:2}
 .vis-none .vt{font-size:15px;margin-bottom:6px}.vis-none small{font-size:9.5px;letter-spacing:.04em;text-transform:none;opacity:.8}
 body[data-v2=partner] .topbar nav{gap:10px}
 body[data-v2=partner] .topbar nav a{font-size:12.5px}
+
+/* ================= Yeni üst menü (müşteri + danışman panelleri) ================= */
+.topbar{height:76px;gap:22px;padding-inline:max(24px,calc((100vw - 1332px)/2));box-shadow:0 10px 30px -24px rgba(20,60,30,.35)}
+.topbar .brand{flex:0 0 auto;width:140px}
+.topbar nav{height:100%;flex:1;min-width:0;gap:2px;align-items:center;justify-content:flex-start}
+.topbar nav>a,.topbar nav .nav-sub>a{display:inline-flex;align-items:center;height:40px;padding:0 12px;border-radius:11px;font-size:13.5px;font-weight:500;color:#4d5d52;transition:background .15s,color .15s}
+.topbar nav>a:hover,.topbar nav .nav-sub>a:hover,.topbar nav .nav-sub:focus-within>a,.topbar nav .nav-sub.open>a{background:#f1f6ee;color:var(--forest)}
+.topbar nav>a.active,.topbar nav .nav-sub>a.active{background:#e6f1de;color:var(--forest);font-weight:600}
+.topbar nav a.active:after{display:none!important}
+.topbar nav .nav-sub{align-items:center;height:auto}
+.topbar nav .nav-sub>a:after{content:""!important;display:inline-block!important;position:static!important;width:6px!important;height:6px!important;margin:-3px 0 0 8px!important;border:solid currentColor!important;border-width:0 1.6px 1.6px 0!important;border-radius:0!important;background:none!important;transform:rotate(45deg);opacity:.55}
+.topbar nav .nav-sub .sub{top:calc(100% + 8px);left:0;min-width:230px;padding:8px;border-radius:14px;box-shadow:0 18px 44px -12px rgba(15,50,25,.28);gap:2px}
+.topbar nav .nav-sub .sub:before{content:"";position:absolute;left:0;right:0;top:-10px;height:10px}
+.topbar nav .nav-sub:hover .sub,.topbar nav .nav-sub:focus-within .sub,.topbar nav .nav-sub.open .sub{display:flex}
+.topbar nav .nav-sub .sub a{height:auto;padding:10px 12px;border-radius:9px;font-size:13.5px;color:#34473a;display:flex}
+.topbar nav .nav-sub .sub a:hover,.topbar nav .nav-sub .sub a.active{background:#eef5e9;color:var(--forest)}
+.topbar .account{gap:10px;margin-left:auto}
+.topbar .account .meet-pill{display:inline-flex;align-items:center;gap:9px;height:40px;padding:0 16px 0 14px;border-radius:999px;background:var(--forest);color:#fff!important;font-size:13px;font-weight:600;white-space:nowrap;box-shadow:0 6px 16px -6px rgba(27,94,32,.55);transition:transform .15s,box-shadow .15s}
+.topbar .account .meet-pill:before{content:"";width:8px;height:8px;border-radius:50%;background:#8be28f;box-shadow:0 0 0 0 rgba(139,226,143,.6);animation:meetPulse 2.2s infinite}
+.topbar .account .meet-pill:hover{transform:translateY(-1px);box-shadow:0 10px 20px -8px rgba(27,94,32,.6)}
+@keyframes meetPulse{70%{box-shadow:0 0 0 8px rgba(139,226,143,0)}100%{box-shadow:0 0 0 0 rgba(139,226,143,0)}}
+@media(prefers-reduced-motion:reduce){.topbar .account .meet-pill:before{animation:none}}
+.meet-banner{top:76px}
+@media(max-width:1500px){.profile>span:nth-child(2){display:none}.topbar .account .bm-lang select{min-width:104px}}
+@media(max-width:1240px){.topbar nav>a,.topbar nav .nav-sub>a{padding:0 9px;font-size:13px}.topbar .brand{width:120px}.topbar .account .meet-pill{padding:0 13px 0 12px;font-size:12.5px}}
+@media(max-width:1060px){.topbar nav>a,.topbar nav .nav-sub>a{padding:0 7px;font-size:12.5px}.topbar .account .bm-lang{display:none}}
+/* küçük ekranlar: ikinci satırda kaydırmalı menü, alt menüler düz liste */
+@media(max-width:1150px){
+  .topbar{height:auto;padding:12px 18px 0;gap:8px 12px;flex-wrap:wrap}
+  .topbar nav{order:3;flex-basis:100%;height:52px;overflow-x:auto;justify-content:flex-start;gap:4px;scrollbar-width:none}
+  .topbar nav::-webkit-scrollbar{display:none}
+  .topbar nav .nav-sub,.topbar nav .nav-sub .sub{display:contents!important;position:static;box-shadow:none;border:0;padding:0;background:none}
+  .topbar nav .nav-sub .sub:before{display:none}
+  .topbar nav .nav-sub>a:after{display:none!important}
+  .topbar nav .nav-sub .sub a{height:40px;padding:0 12px;font-size:13px;white-space:nowrap;display:inline-flex;align-items:center}
+  .topbar nav .nav-more>a{display:none}
+  .topbar nav .nav-sub:has(.sub a[href="#documents"])>a{display:none}
+  .topbar .account .bm-lang{display:inline-flex}
+  .meet-banner{top:0}
+}
+/* ---- sığdırma ayarları (v2.1) ---- */
+.topbar .account .bm-lang select{min-width:74px;width:74px;padding:0 24px 0 14px!important;text-align:left}
+.topbar .account .bm-lang{margin:0!important}
+.topbar .account{gap:8px}
+.topbar .profile{gap:0;padding:0}
+.profile>span:nth-child(2){display:none!important}
+.topbar .profile svg,.topbar .profile .chev{display:none}
+.topbar nav>a,.topbar nav .nav-sub>a{padding:0 10px;font-size:13px}
+.topbar{gap:18px}
+@media(max-width:1320px){.topbar .brand{width:112px}.topbar nav>a,.topbar nav .nav-sub>a{padding:0 8px}.topbar .account .meet-pill .mp-x{display:none}.topbar .account .meet-pill{padding:0 14px 0 12px}}
+@media(max-width:1130px){.topbar nav>a,.topbar nav .nav-sub>a{padding:0 6px;font-size:12.5px}.topbar .account .bm-lang select{min-width:64px;width:64px}}
+@media(max-width:1020px){.topbar .brand{width:96px}.topbar .profile{display:none}}
+
+.topbar .account .meet-pill .mp-x{margin-left:-9px}
+@media(max-width:1230px){.topbar .profile,.topbar .account-line{display:none}.topbar nav>a,.topbar nav .nav-sub>a{padding:0 7px}}
+@media(max-width:1150px){.topbar .profile{display:inline-flex}.topbar .brand{width:130px}.topbar .account .meet-pill .mp-x{display:inline}.topbar{justify-content:space-between}}
+@media(max-width:1150px){.topbar nav>a,.topbar nav .nav-sub .sub a{padding:0 11px!important;font-size:13px!important;font-weight:500;color:#4d5d52}.topbar nav>a.active,.topbar nav .sub a.active{color:var(--forest);font-weight:600}}
+@media(max-width:520px){.topbar .profile{display:none}.topbar .account .meet-pill .mp-x{display:none}.topbar .account{gap:6px}.topbar .brand{width:110px}}

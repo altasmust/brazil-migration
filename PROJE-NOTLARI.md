@@ -471,3 +471,4 @@
 - **Görseller**: başvuru türüne göre kart (oturum/şirket/vize/vatandaşlık/vergi/diğer) `v2.js visual()` + `v2.css`.
 - **Yerleşim**: `v2.css` (metrik ızgara, süre kartları, alt kartlar 2 sütun).
 - Panel metinleri (v2) EN/FA panel sözlüğünde yok; Türkçe görünür.
+- 2026-11-14 (üst menü): müşteri + danışman panelleri yeni üst menü (`v2.css` "Yeni üst menü" bloğu): hap şeklinde aktif sekme, Dosyalarım ▾ (Giden/Gelen), danışmanda "Daha fazla ▾" (Referanslar, KYC, Ekip & Yetkiler, İşlem Geçmişi), "Görüşmeye katıl" yeşil hap düğme hesap alanında, dil seçici kısa kod (TR/EN/FA, `v2.js shortLang`). ≤1150px'te menü ikinci satırda kaydırmalı, alt menüler düz. Genel bakışta "Ekip & Yetkiler" hızlı düğmesi geri getirildi. Admin paneli etkilenmez.

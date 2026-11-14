@@ -42,6 +42,7 @@
   // ---------------- sayfa yönlendirme (render sarmalayıcı) ----------------
   function markNav(h) {
     document.querySelectorAll('[data-page]').forEach(a => { const on = a.dataset.page === h; a.classList.toggle('active', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
+    document.querySelectorAll('.nav-more').forEach(g => g.querySelector(':scope>a')?.classList.toggle('active', !!g.querySelector('.sub a.active')));
   }
   function after() {
     const h = location.hash.slice(1) || 'overview';
@@ -161,6 +162,8 @@
     ['.sub a[href="#documents-in"]', 'Ekibin size / müşteriye gönderdiği sözleşme ve sonuç dosyaları.'],
     ['a[href="#finance"]', partner ? 'Faturalar, ödemeler ve kazançlarınız.' : 'Faturalarınızı görün ve online ödeyin.'],
     ['a[href="#affiliate"]', 'Referans bağlantınızı kopyalayın, banner kodlarını alın; tıklamadan kazanca tüm adımları izleyin.'],
+    ['a[data-more]', 'Referanslar, KYC, ekip yetkileri ve işlem geçmişi.'],
+    ['a[href="#extra-liveaudit"]', 'Hesabınızdaki belge, fatura ve yetki işlemlerinin kaydı.'],
     ['a[href="#kyc"]', 'Müşteri belgelerini ve kimlik doğrulamasını inceleyin; onaylayın veya reddedin.'],
     ['a[href="#reports"]', 'Tüm başvurular ve aşamaları.'],
     ['a[href="#services"]', 'Başvurularınızın aşamasını izleyin, süresi dolanları yenileyin.'],
@@ -227,6 +230,15 @@
   window.addEventListener('bm-live-ready', () => {
     const m = window.BMFeatures?.member?.();
     if (partner && m && !(m.role === 'owner' || (m.permissions?.team || 0) >= 1)) $('#nav-team')?.remove();
+  });
+  // Dil seçici üst çubukta kısa (TR/EN/FA) görünür; sığmayan ekranlarda menüyü bozmaz
+  const shortLang = () => document.querySelectorAll('.topbar .bm-lang select').forEach(s => { if (s.dataset.sh) return; s.dataset.sh = '1'; s.title = 'Dil / Language'; [...s.options].forEach(o => { o.textContent = o.value.toUpperCase(); }); });
+  new MutationObserver(shortLang).observe($('.topbar') || document.body, {childList: true, subtree: true}); shortLang();
+  // "Daha fazla" menüsü: dokunmatikte tıkla-aç
+  document.addEventListener('click', e => {
+    const mb = e.target.closest('[data-more]');
+    document.querySelectorAll('.nav-sub.open').forEach(g => { if (!mb || !g.contains(mb)) g.classList.remove('open'); });
+    if (mb) { e.preventDefault(); mb.parentElement.classList.toggle('open'); }
   });
   render();
 })();
