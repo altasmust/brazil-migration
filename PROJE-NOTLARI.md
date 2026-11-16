@@ -486,3 +486,4 @@
 - Meta: EN/PT başlık ≤~62, açıklama ≤160'a kısaltıldı; `applySeo` aşırı uzun başlık/açıklamayı otomatik sınırlar (blog dahil).
 - 2026-11-17: Next.js 16.4.3 → 16.4.6 (güvenlik yaaması, npm audit 0 açık); build ve testler geçti.
 - 2026-11-17: Next 16.4.6 ile elle brotli/gzip sıkıştırma bozuk sayfa üretti (başlık düşüyor). http.mjs htmlOut artık sıkıştırmıyor; Next kendisi gzip yapıyor. Elle Content-Encoding ayarlama.
+- 2026-11-17: Yönetici üst menü çubuğu büyütüldü (ui-revision.css, ≥1101px: yükseklik 60, yazı 14.5px, geniş dolgu).
