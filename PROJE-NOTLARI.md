@@ -479,3 +479,8 @@
 - Web sitesi Portekizce: `server/platform/i18n/pt.json` (slugs /pt/…), `SITE_LANGS` (i18n.mjs), `renderLang` (site.mjs), http.mjs `/en|/pt` + `i18n/<lang>.js`, i18n-admin dil bazlı (publish/preview/missing/strings/menu), Yönetici → Diller sayfasında EN/PT sekmeleri. PT yayını: Diller → Portekizce → Yayınla (taslakta 404). PT blog yazısı yok → /pt/blog/ 404, menüden gizli.
 - Tarama (TR/EN/PT, 95 sayfa): kırık link/dosya yok, title/desc tekrarı yok; birkaç meta description >170 karakter (PT/EN) kabul edildi.
 - Blog: tüm Unsplash görselleri açılıyor; yüklenemezse yerel görsele dönen yedek eklendi (blog.js v2).
+
+## 2026-11-17 — EN/PT varsayılan yayında
+- Diller artık varsayılan YAYINDA (`siteState`: `manual` işareti yoksa published=true). Yönetici Diller'de elle "Taslağa al" derse `manual:true` ile kapanır; "Yayınla" yine manual yazar.
+- Düzeltme: Türkçe sayfalarda dil menüsü/hreflang `applyLangLinks` imza hatasıyla kaybolmuştu → geri geldi. Blog'da PT yazı yoksa menü ve hreflang'da /pt/blog/ çıkmaz.
+- Meta: EN/PT başlık ≤~62, açıklama ≤160'a kısaltıldı; `applySeo` aşırı uzun başlık/açıklamayı otomatik sınırlar (blog dahil).

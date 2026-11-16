@@ -17,7 +17,7 @@ export async function i18nAdmin(req, db, route) {
   const pick = q => (q in SITE_LANGS ? q : 'en');
   if (route === 'i18n' && req.method === 'GET') {
     const has = (req.headers.get('cookie') || '').includes('bm_lang_prev=' + cfg.previewKey), out = {menu: cfg.menu || {}};
-    for (const L of Object.keys(SITE_LANGS)) { const d = dict(L); out[L] = {published: !!cfg[L]?.published, publishedAt: cfg[L]?.publishedAt || null, preview: !!(cfg.previewKey && has), pages: [...d.toL].map(([tr, en]) => ({tr, en})), strings: d.t.size}; }
+    for (const L of Object.keys(SITE_LANGS)) { const d = dict(L); out[L] = {published: cfg[L]?.manual ? !!cfg[L].published : true, publishedAt: cfg[L]?.publishedAt || null, preview: !!(cfg.previewKey && has), pages: [...d.toL].map(([tr, en]) => ({tr, en})), strings: d.t.size}; }
     return json({...out, preview: out.en.preview});
   }
   if (route === 'i18n/missing') {
@@ -59,7 +59,7 @@ export async function i18nAdmin(req, db, route) {
   }
   if (route === 'i18n/publish') {
     const L = pick(b.lang);
-    cfg[L] = {...cfg[L], published: !!b.published, publishedAt: b.published ? Date.now() : null};
+    cfg[L] = {...cfg[L], manual: true, published: !!b.published, publishedAt: b.published ? Date.now() : null};
     if (!b.published) cfg.previewKey = randomBytes(24).toString('base64url'); // taslağa alınınca eski önizleme bağlantıları geçersiz
     await setCfg(db, cfg); return json({ok: true, published: cfg[L].published});
   }

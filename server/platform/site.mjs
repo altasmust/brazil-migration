@@ -75,6 +75,8 @@ export async function siteState(db) {
     if (r.id === 'config-prices') s.prices = d;
     if (r.id === 'config-i18n') s.i18n = d;
   }
+  // Diller varsayılan olarak yayında; yalnız yönetici elle "Taslağa al" derse (manual) kapalı
+  s.i18n = {...(s.i18n || {})}; for (const l of Object.keys(SITE_LANGS)) if (!s.i18n[l]?.manual) s.i18n[l] = {...s.i18n[l], published: true};
   s.stamp = hash(stamp);
   if (state?.stamp !== s.stamp) renderCache.clear();
   state = s; stateAt = Date.now();
@@ -398,6 +400,10 @@ function setMeta(head, attr, key, value) {
   m.setAttribute('content', value);
 }
 function applySeo(root, path, seo = {}) {
+  // Arama sonuçlarında kesilmesin: çok uzun başlık/açıklama sınırlandırılır
+  seo = {...seo};
+  if (seo.title && seo.title.length > 70) seo.title = seo.title.replace(/ \| Brazil Migration( Blog)?$/, '');
+  if (seo.description && seo.description.length > 165) { const c = seo.description.slice(0, 160); seo.description = c.slice(0, c.lastIndexOf(' ') > 100 ? c.lastIndexOf(' ') : 160).replace(/[,;:.\s]+$/, '') + '…'; }
   const head = root.querySelector('head'); if (!head) return;
   const base = siteUrl();
   if (seo.title) { const t = head.querySelector('title'); if (t) t.set_content(esc(seo.title)); setMeta(head, 'property', 'og:title', seo.title); }
@@ -500,7 +506,7 @@ export const LANG_CSS = '<style>.bm-lang{position:relative;display:inline-flex;a
 export function langMenuHTML(cur, trPath, S, {preview = false} = {}) {
   const lab = S?.i18n?.menu?.labels || {}, fmt = S?.i18n?.menu?.format || 'code-label';
   const href = {tr: trPath};
-  for (const l of Object.keys(SITE_LANGS)) { const p = i18nDict(l).toL.get(trPath); if (p) href[l] = p; }
+  for (const l of Object.keys(SITE_LANGS)) { const p = i18nDict(l).toL.get(trPath); if (p && !(trPath.startsWith('/blog/') && !Object.values(S?.blog || {}).some(b => b.published && b.lang === l))) href[l] = p; }
   const opts = LANGS.filter(([k]) => href[k] && (k === 'tr' || langPublished(S, k) || preview || k === cur));
   if (opts.length < 2) return '';
   const text = ([k, code, name]) => { const n = lab[k] || name; return fmt === 'label' ? n : fmt === 'code' ? code : `${code} · ${n}`; };
@@ -508,7 +514,8 @@ export function langMenuHTML(cur, trPath, S, {preview = false} = {}) {
 }
 function applyLangLinks(root, trPath, S, {draft = false, noAlt = false} = {}) {
   const cur = root.querySelector('html')?.getAttribute('lang') || 'tr';
-  const pubs = Object.keys(SITE_LANGS).filter(l => langPublished(S, l) && i18nDict(l).toL.get(trPath));
+  const hasBlog = l => !trPath.startsWith('/blog/') || Object.values(S?.blog || {}).some(b => b.published && b.lang === l);
+  const pubs = Object.keys(SITE_LANGS).filter(l => langPublished(S, l) && i18nDict(l).toL.get(trPath) && hasBlog(l));
   if (cur === 'tr' && !pubs.length) return;
   if (cur !== 'tr' && !i18nDict(cur).toL.get(trPath)) return;
   const head = root.querySelector('head'), base = siteUrl();
@@ -579,7 +586,7 @@ export async function renderPage(db, path, {editor = false, preview = null, blog
   else return {status: 404, html: await notFound(db)};
   if (!root) return {status: 404, html: await notFound(db)};
   if (st?.menu || preview) applyMenu(root, (st || await siteState(db)).menu);
-  try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); if (!editor) { applyImgAlt(root, 'tr'); applyGlobalSeo(root, path, S.seo || {}); applyAnalytics(root, S.analytics || {}, path); applyLivePromo(root, path); applyGrowth(root, path, S); applyPerf(root); applyLangLinks(root, path, null, S); } } catch (e) { console.error('[site]', e.message); }
+  try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); if (!editor) { applyImgAlt(root, 'tr'); applyGlobalSeo(root, path, S.seo || {}); applyAnalytics(root, S.analytics || {}, path); applyLivePromo(root, path); applyGrowth(root, path, S); applyPerf(root); applyLangLinks(root, path, S); } } catch (e) { console.error('[site]', e.message); }
   if (path === '/' && !editor && st) { const why = root.querySelector('section.why'); const hb = homeBlogHTML(Object.values(st.blog || {}).filter(p => p.published)); const ft = root.querySelector('footer.site-footer'); if (ft && hb) { ft.insertAdjacentHTML('beforebegin', hb); root.querySelector('head')?.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/blog.css?v=1">'); } }
   let html = '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
   if (siteUrl()) html = html.replace(OLD_HOSTS, siteUrl());
