@@ -484,3 +484,4 @@
 - Diller artık varsayılan YAYINDA (`siteState`: `manual` işareti yoksa published=true). Yönetici Diller'de elle "Taslağa al" derse `manual:true` ile kapanır; "Yayınla" yine manual yazar.
 - Düzeltme: Türkçe sayfalarda dil menüsü/hreflang `applyLangLinks` imza hatasıyla kaybolmuştu → geri geldi. Blog'da PT yazı yoksa menü ve hreflang'da /pt/blog/ çıkmaz.
 - Meta: EN/PT başlık ≤~62, açıklama ≤160'a kısaltıldı; `applySeo` aşırı uzun başlık/açıklamayı otomatik sınırlar (blog dahil).
+- 2026-11-17: Next.js 16.4.3 → 16.4.6 (güvenlik yaaması, npm audit 0 açık); build ve testler geçti.
