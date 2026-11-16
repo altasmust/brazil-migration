@@ -66,7 +66,7 @@ const zc = new Map();
 function htmlOut(req, html, init) {
   const headers = {...(init.headers || {}), 'Vary': 'Accept-Encoding'};
   if (req.method === 'HEAD' || html == null) return new Response(null, {...init, headers});
-  const ae = req.headers.get('accept-encoding') || '', enc = /\bbr\b/.test(ae) ? 'br' : /\bgzip\b/.test(ae) ? 'gzip' : '';
+  const ae = req.headers.get('accept-encoding') || '', enc = ''; // sıkıştırmayı Next/sunucu yapar (elle sıkıştırma Next 16.4.6'da başlık kaybı → bozuk sayfa)
   if (!enc || html.length < 1024) return new Response(html, {...init, headers});
   const key = enc + ':' + createHash('sha1').update(html).digest('base64');
   let buf = zc.get(key);
