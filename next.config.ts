@@ -7,6 +7,19 @@ const CSP = [
   "base-uri 'self'", "object-src 'none'", "worker-src 'self' blob:",
 ].join('; ');
 
+// Başvuru formu (/basvuru/) firmaların kendi sitesine iframe ile gömülebilir; yalnız bu sayfa için çerçevelemeye https sitelerden izin verilir.
+const baseHeaders = (csp: string, frame: boolean) => [
+  {key: 'X-Content-Type-Options', value: 'nosniff'},
+  {key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin'},
+  ...(frame ? [{key: 'X-Frame-Options', value: 'SAMEORIGIN'}] : []),
+  {key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains'},
+  {key: 'Content-Security-Policy', value: csp},
+  {key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), display-capture=(self), geolocation=(self), payment=(self), usb=(), interest-cohort=()'},
+  {key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups'},
+  {key: 'X-Permitted-Cross-Domain-Policies', value: 'none'},
+  {key: 'X-DNS-Prefetch-Control', value: 'on'},
+];
+
 const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   skipTrailingSlashRedirect: true,
@@ -26,17 +39,8 @@ const nextConfig: NextConfig = {
     return [{source: '/api/health', destination: '/api/auth/health'}];
   },
   async headers() {
-    return [{source: '/:path*', headers: [
-      {key: 'X-Content-Type-Options', value: 'nosniff'},
-      {key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin'},
-      {key: 'X-Frame-Options', value: 'SAMEORIGIN'},
-      {key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains'},
-      {key: 'Content-Security-Policy', value: CSP},
-      {key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), display-capture=(self), geolocation=(self), payment=(self), usb=(), interest-cohort=()'},
-      {key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups'},
-      {key: 'X-Permitted-Cross-Domain-Policies', value: 'none'},
-      {key: 'X-DNS-Prefetch-Control', value: 'on'},
-    ]},
+    return [{source: '/((?!basvuru(?:/|$)).*)', headers: baseHeaders(CSP, true)},
+    {source: '/basvuru/:path*', headers: baseHeaders(CSP.replace("frame-ancestors 'self'", 'frame-ancestors https:'), false)},
     // static assets: images/fonts cached for a week, scripts/styles for an hour (they are versioned with ?v=)
     {source: '/:all*(png|jpg|jpeg|webp|svg|ico|woff2)', headers: [{key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400'}]},
     {source: '/:all*(js|css)', headers: [{key: 'Cache-Control', value: 'public, max-age=3600, stale-while-revalidate=86400'}]},

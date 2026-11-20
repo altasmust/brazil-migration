@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Başvuru formu</title>
+<style>
+:root{--brand:#1b5e20;--bg:#f4f7f2;--ink:#17261b;--mute:#68776b;--line:#d7dfd2}
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+.firm{display:flex;align-items:center;gap:12px;margin:6px 0 16px}.firm img{max-height:46px;max-width:180px;object-fit:contain}.firm b{font-size:19px;color:var(--brand)}
+.card{background:#fff;border:1px solid #e3e9de;border-radius:18px;padding:22px 20px;box-shadow:0 6px 24px rgba(23,38,27,.06)}
+h1{font-size:22px;margin:0 0 6px}.intro{color:var(--mute);margin:0 0 18px}
+label{display:block;font-weight:600;font-size:14px;margin:0 0 14px}label span{display:block;margin-bottom:5px}
+input,select,textarea{width:100%;font:inherit;font-weight:400;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--brand) 40%,transparent);border-color:var(--brand)}
+.consent{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:13.5px;color:var(--mute)}.consent input{width:20px;height:20px;margin-top:2px;flex:none}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+button{width:100%;font:inherit;font-weight:700;border:0;border-radius:12px;padding:13px;background:var(--brand);color:#fff;cursor:pointer;margin-top:6px}button:disabled{opacity:.6;cursor:wait}
+.err{background:#fdeceb;color:#8f2a24;border-radius:10px;padding:10px 12px;font-size:14px;margin:0 0 14px}
+.ok{text-align:center;padding:18px 0}.ok .tick{width:56px;height:56px;border-radius:50%;background:var(--brand);color:#fff;font-size:30px;display:grid;place-items:center;margin:0 auto 12px}
+.lang{display:flex;gap:6px;justify-content:flex-end;margin-bottom:8px}.lang a{font-size:12px;color:var(--mute);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:2px 9px;background:#fff}.lang a.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="lang" id="lang"></div>
+  <div class="firm" id="firm"></div>
+  <div class="card" id="card"><p class="intro">…</p></div>
+</div>
+<script>
+(() => {
+  const T0 = Date.now();
+  const L = {
+    tr: {name: 'Ad soyad', email: 'E-posta', phone: 'Telefon / WhatsApp', country: 'Yaşadığınız ülke', service: 'İlgilendiğiniz hizmet', pick: '— seçin —', message: 'Kısaca durumunuz', send: 'Gönder', sending: 'Gönderiliyor…', closed: 'Bu form şu anda kapalı.', fail: 'Gönderilemedi. Lütfen tekrar deneyin.', needName: 'Adınızı yazın.', needEmail: 'Geçerli bir e-posta girin.', needConsent: 'Devam etmek için onay kutusunu işaretleyin.'},
+    en: {name: 'Full name', email: 'Email', phone: 'Phone / WhatsApp', country: 'Country you live in', service: 'Service you are interested in', pick: '— select —', message: 'Briefly describe your situation', send: 'Send', sending: 'Sending…', closed: 'This form is currently closed.', fail: 'Could not send. Please try again.', needName: 'Please enter your name.', needEmail: 'Please enter a valid email.', needConsent: 'Please tick the consent box to continue.'},
+    pt: {name: 'Nome completo', email: 'E-mail', phone: 'Telefone / WhatsApp', country: 'País onde você mora', service: 'Serviço de interesse', pick: '— selecione —', message: 'Descreva brevemente sua situação', send: 'Enviar', sending: 'Enviando…', closed: 'Este formulário está fechado no momento.', fail: 'Não foi possível enviar. Tente novamente.', needName: 'Informe seu nome.', needEmail: 'Informe um e-mail válido.', needConsent: 'Marque a caixa de consentimento para continuar.'}
+  };
+  const qs = new URLSearchParams(location.search), nav = (navigator.language || 'tr').slice(0, 2);
+  const lang = L[qs.get('l')] ? qs.get('l') : L[nav] ? nav : 'tr', t = L[lang];
+  document.documentElement.lang = lang;
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+  document.getElementById('lang').innerHTML = Object.keys(L).map(k => '<a href="?l=' + k + '" class="' + (k === lang ? 'on' : '') + '">' + k.toUpperCase() + '</a>').join('');
+  const card = document.getElementById('card');
+  fetch('/api/auth/sales/form', {cache: 'no-store'}).then(r => r.json()).then(c => {
+    if (!c.enabled) { card.innerHTML = '<p class="intro">' + esc(t.closed) + '</p>'; return; }
+    const f = c.firm || {};
+    if (/^#[0-9a-f]{6}$/i.test(f.color || '')) document.documentElement.style.setProperty('--brand', f.color);
+    document.title = (c.title || 'Başvuru') + (f.name ? ' · ' + f.name : '');
+    document.getElementById('firm').innerHTML = (f.logo ? '<img src="' + esc(f.logo) + '" alt="' + esc(f.name) + '">' : '') + (f.logo ? '' : '<b>' + esc(f.name) + '</b>');
+    card.innerHTML = '<h1>' + esc(c.title) + '</h1><p class="intro">' + esc(c.intro || '') + '</p><div class="err" id="err" hidden></div>' +
+      '<form id="f" novalidate><div class="hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>' +
+      '<label><span>' + t.name + '</span><input name="name" required maxlength="100" autocomplete="name"></label><label><span>' + t.email + '</span><input name="email" type="email" required maxlength="254" autocomplete="email"></label>' +
+      (c.askPhone ? '<label><span>' + t.phone + '</span><input name="phone" type="tel" maxlength="40" autocomplete="tel"></label>' : '') + (c.askCountry ? '<label><span>' + t.country + '</span><input name="country" maxlength="60" autocomplete="country-name"></label>' : '') +
+      '<label><span>' + t.service + '</span><select name="service"><option value="">' + t.pick + '</option>' + (c.services || []).map(s => '<option>' + esc(s) + '</option>').join('') + '</select></label>' +
+      '<label><span>' + t.message + '</span><textarea name="message" rows="3" maxlength="1500"></textarea></label>' +
+      '<label class="consent"><input type="checkbox" name="consent"><span style="margin:0;font-weight:400">' + esc(c.consentText) + '</span></label><button type="submit">' + t.send + '</button></form>';
+    const form = document.getElementById('f'), err = document.getElementById('err');
+    const show = m => { err.textContent = m; err.hidden = false; err.scrollIntoView({block: 'nearest'}); };
+    form.addEventListener('submit', async e => {
+      e.preventDefault(); err.hidden = true; const d = Object.fromEntries(new FormData(form)), btn = form.querySelector('button');
+      if ((d.name || '').trim().length < 2) return show(t.needName);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((d.email || '').trim())) return show(t.needEmail);
+      if (!form.consent.checked) return show(t.needConsent);
+      btn.disabled = true; btn.textContent = t.sending;
+      try {
+        const r = await fetch('/api/auth/sales/lead', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...d, consent: true, ts: T0})}), j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || t.fail);
+        card.innerHTML = '<div class="ok"><div class="tick">✓</div><h1>' + esc(j.message || c.thanks || '') + '</h1></div>';
+        try { parent !== window && parent.postMessage({type: 'bm-lead-sent'}, '*'); } catch {}
+      } catch (x) { show(x.message || t.fail); btn.disabled = false; btn.textContent = t.send; }
+    });
+  }).catch(() => { card.innerHTML = '<p class="intro">' + esc(t.fail) + '</p>'; });
+})();
+</script>
+</body>
+</html>

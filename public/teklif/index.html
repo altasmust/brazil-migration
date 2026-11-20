@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Teklif ve sözleşme</title>
+<style>
+:root{--brand:#1b5e20;--bg:#f4f7f2;--ink:#17261b;--mute:#68776b;--line:#d7dfd2}
+*{box-sizing:border-box}body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:760px;margin:0 auto;padding:18px 16px 50px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 0 14px}.firm{display:flex;align-items:center;gap:10px}.firm img{max-height:44px;max-width:170px;object-fit:contain}.firm b{font-size:19px;color:var(--brand)}
+.lang{display:flex;gap:6px}.lang a{font-size:12px;color:var(--mute);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:2px 9px;background:#fff}.lang a.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.card{background:#fff;border:1px solid #e3e9de;border-radius:18px;padding:22px 20px;box-shadow:0 6px 24px rgba(23,38,27,.06);margin-bottom:16px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 10px}.mute{color:var(--mute);font-size:14px;margin:0 0 14px}
+table{width:100%;border-collapse:collapse;font-size:15px}th{text-align:left;font-size:12.5px;color:var(--mute);font-weight:600;border-bottom:1px solid var(--line);padding:6px 4px}td{padding:9px 4px;border-bottom:1px solid #eef1eb;vertical-align:top}td.n,th.n{text-align:right;white-space:nowrap}
+.sum{margin-top:12px;display:grid;gap:4px;justify-items:end;font-size:15px}.sum .tot{font-size:22px;font-weight:700;color:var(--brand)}
+.note{background:#f5f7f3;border-radius:12px;padding:11px 14px;font-size:14px;white-space:pre-wrap;margin-top:14px}
+.banner{border-radius:12px;padding:12px 14px;font-size:15px;margin-bottom:14px}.banner.ok{background:#e6f3e7;color:#1b5e20}.banner.bad{background:#fdeceb;color:#8f2a24}.banner.warn{background:#fff8e6;color:#6d5410}
+label{display:block;font-weight:600;font-size:14px;margin:0 0 12px}label span{display:block;margin-bottom:5px}
+input[type=text],textarea{width:100%;font:inherit;font-weight:400;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+.chk{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:14px;color:var(--mute)}.chk input{width:20px;height:20px;margin-top:2px;flex:none}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}button,a.btn{font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 18px;background:var(--brand);color:#fff;cursor:pointer;text-decoration:none;display:inline-block}button.sec,a.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}button:disabled{opacity:.6;cursor:wait}
+.doc{white-space:pre-wrap;word-break:break-word;font:14.5px/1.65 Georgia,"Times New Roman",serif;background:#fffefb;border:1px solid #e8e4d6;border-radius:12px;padding:18px;max-height:480px;overflow:auto}
+.tabs{display:flex;gap:6px;margin:0 0 10px}.tabs button{background:#fff;color:var(--ink);border:1px solid var(--line);padding:7px 14px;font-weight:600}.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+#pad{width:100%;height:170px;border:1.5px dashed #9fb0a2;border-radius:12px;background:#fff;touch-action:none;display:block}
+.typed{font:italic 34px/1.3 "Brush Script MT","Segoe Script","Snell Roundhand",cursive;border-bottom:1px solid #333;padding:6px 4px;min-height:58px;word-break:break-word}
+.evid{background:#eef7ef;border:1px solid #cfe5d1;border-radius:12px;padding:12px 14px;font-size:13.5px}.evid dl{display:grid;grid-template-columns:150px 1fr;gap:5px 10px;margin:8px 0 0}.evid dt{color:var(--mute)}.evid dd{margin:0;word-break:break-all}.evid code{font-size:11.5px}.evid img{max-height:70px;background:#fff;border:1px solid #d9e6da;border-radius:8px;padding:4px}
+.legal{font-size:12.5px;color:var(--mute);margin-top:12px}.err{background:#fdeceb;color:#8f2a24;border-radius:10px;padding:10px 12px;font-size:14px;margin:0 0 12px}
+@media(max-width:560px){.evid dl{grid-template-columns:1fr}.top{flex-wrap:wrap}}
+@media print{body{background:#fff}.lang,.btns,.noprint{display:none!important}.card{box-shadow:none;border:0;padding:0}.doc{max-height:none;overflow:visible;border:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div class="firm" id="firm"></div><div class="lang noprint" id="lang"></div></div>
+  <div id="root"><div class="card"><p class="mute">…</p></div></div>
+</div>
+<script>
+(() => {
+  const L = {
+    tr: {quote: 'Teklif', contract: 'Sözleşme', no: 'No', valid: 'Geçerlilik', item: 'Kalem', qty: 'Adet', price: 'Birim', amount: 'Tutar', sub: 'Ara toplam', disc: 'İndirim', tax: 'Vergi', total: 'Toplam', pay: 'Ödeme', notes: 'Notlar ve koşullar', yourName: 'Adınız soyadınız', agreeQ: 'Teklifin kapsamını ve koşullarını okudum, kabul ediyorum.', accept: 'Teklifi kabul ediyorum', reject: 'Reddet', rejectAsk: 'Teklifi reddetmek istediğinize emin misiniz?',
+      accepted: 'Bu teklif kabul edildi', rejected: 'Bu teklif reddedildi', expired: 'Bu teklifin geçerlilik süresi doldu. Güncel teklif için lütfen firmayla iletişime geçin.', thanks: 'Teşekkürler! Teklifi kabul ettiniz.', thanksRej: 'Yanıtınız iletildi.', signNow: 'Sözleşmeyi incele ve imzala', viewContract: 'Sözleşmeyi görüntüle', contractSoon: 'Sözleşme hazırlandığında e-postanıza gönderilecek.',
+      signTitle: 'İmzala', typeTab: 'Yazarak', drawTab: 'Çizerek', clear: 'Temizle', fullName: 'Ad soyad (sözleşmedeki gibi)', consent: 'Sözleşme metnini okudum, anladım ve elektronik ortamda imzalamayı kabul ediyorum.', sign: 'Sözleşmeyi imzala', draw: 'Parmağınızla veya fareyle çizin', signed: 'Bu sözleşme imzalandı', void: 'Bu sözleşme iptal edildi.', evid: 'İmza kaydı', by: 'İmzalayan', when: 'Zaman', method: 'Yöntem', mTyped: 'Yazılı imza', mDrawn: 'Çizili imza', hash: 'Belge özeti (SHA-256)', seal: 'İmza mührü', print: 'Yazdır / PDF kaydet', verify: 'Belge bütünlüğünü doğrula', verOk: 'Doğrulandı: metin imza anındaki haliyle aynı.', verBad: 'UYARI: metin imza anındaki özetle eşleşmiyor.', verNo: 'Bu tarayıcı doğrulamayı desteklemiyor.',
+      legal: 'Bu işlem basit elektronik imzadır: bağlantı, onayınız, ad-soyadınız, zaman ve cihaz bilgisi ile belgenin özeti kaydedilir. Nitelikli e-imza değildir.', needName: 'Adınızı eksiksiz yazın.', needAgree: 'Devam etmek için onay kutusunu işaretleyin.', needDraw: 'Lütfen imzanızı çizin.', fail: 'İşlem tamamlanamadı.', notfound: 'Bağlantı geçersiz veya süresi dolmuş. Lütfen firmadan yeni bağlantı isteyin.', sending: 'Gönderiliyor…'},
+    en: {quote: 'Quote', contract: 'Contract', no: 'No.', valid: 'Valid until', item: 'Item', qty: 'Qty', price: 'Unit', amount: 'Amount', sub: 'Subtotal', disc: 'Discount', tax: 'Tax', total: 'Total', pay: 'Payment', notes: 'Notes and terms', yourName: 'Your full name', agreeQ: 'I have read and accept the scope and terms of this quote.', accept: 'Accept quote', reject: 'Decline', rejectAsk: 'Are you sure you want to decline this quote?',
+      accepted: 'This quote has been accepted', rejected: 'This quote was declined', expired: 'This quote has expired. Please contact the firm for an updated quote.', thanks: 'Thank you! You accepted the quote.', thanksRej: 'Your response was sent.', signNow: 'Review and sign the contract', viewContract: 'View contract', contractSoon: 'The contract will be emailed to you when it is ready.',
+      signTitle: 'Sign', typeTab: 'Type', drawTab: 'Draw', clear: 'Clear', fullName: 'Full name (as in the contract)', consent: 'I have read and understood the contract and agree to sign it electronically.', sign: 'Sign contract', draw: 'Draw with your finger or mouse', signed: 'This contract has been signed', void: 'This contract was cancelled.', evid: 'Signature record', by: 'Signed by', when: 'Time', method: 'Method', mTyped: 'Typed signature', mDrawn: 'Drawn signature', hash: 'Document digest (SHA-256)', seal: 'Signature seal', print: 'Print / save as PDF', verify: 'Verify document integrity', verOk: 'Verified: the text is identical to what was signed.', verBad: 'WARNING: the text does not match the digest recorded at signing.', verNo: 'This browser does not support verification.',
+      legal: 'This is a simple electronic signature: the link, your consent, your name, time and device details, and a digest of the document are recorded. It is not a qualified e-signature.', needName: 'Please enter your full name.', needAgree: 'Please tick the box to continue.', needDraw: 'Please draw your signature.', fail: 'Could not complete the action.', notfound: 'This link is invalid or has expired. Please ask the firm for a new link.', sending: 'Sending…'},
+    pt: {quote: 'Orçamento', contract: 'Contrato', no: 'Nº', valid: 'Válido até', item: 'Item', qty: 'Qtd', price: 'Unit.', amount: 'Valor', sub: 'Subtotal', disc: 'Desconto', tax: 'Imposto', total: 'Total', pay: 'Pagamento', notes: 'Observações e condições', yourName: 'Seu nome completo', agreeQ: 'Li e aceito o escopo e as condições deste orçamento.', accept: 'Aceitar orçamento', reject: 'Recusar', rejectAsk: 'Tem certeza de que deseja recusar este orçamento?',
+      accepted: 'Este orçamento foi aceito', rejected: 'Este orçamento foi recusado', expired: 'Este orçamento expirou. Entre em contato com a empresa para um orçamento atualizado.', thanks: 'Obrigado! Você aceitou o orçamento.', thanksRej: 'Sua resposta foi enviada.', signNow: 'Revisar e assinar o contrato', viewContract: 'Ver contrato', contractSoon: 'O contrato será enviado ao seu e-mail quando estiver pronto.',
+      signTitle: 'Assinar', typeTab: 'Digitar', drawTab: 'Desenhar', clear: 'Limpar', fullName: 'Nome completo (como no contrato)', consent: 'Li e entendi o contrato e concordo em assiná-lo eletronicamente.', sign: 'Assinar contrato', draw: 'Desenhe com o dedo ou o mouse', signed: 'Este contrato foi assinado', void: 'Este contrato foi cancelado.', evid: 'Registro da assinatura', by: 'Assinado por', when: 'Data e hora', method: 'Método', mTyped: 'Assinatura digitada', mDrawn: 'Assinatura desenhada', hash: 'Resumo do documento (SHA-256)', seal: 'Selo da assinatura', print: 'Imprimir / salvar PDF', verify: 'Verificar integridade do documento', verOk: 'Verificado: o texto é idêntico ao que foi assinado.', verBad: 'ATENÇÃO: o texto não corresponde ao resumo registrado na assinatura.', verNo: 'Este navegador não suporta a verificação.',
+      legal: 'Esta é uma assinatura eletrônica simples: o link, seu consentimento, seu nome, data/hora, dados do dispositivo e o resumo do documento são registrados. Não é assinatura eletrônica qualificada.', needName: 'Informe seu nome completo.', needAgree: 'Marque a caixa para continuar.', needDraw: 'Desenhe sua assinatura.', fail: 'Não foi possível concluir a ação.', notfound: 'Link inválido ou expirado. Peça um novo link à empresa.', sending: 'Enviando…'}
+  };
+  const qs = new URLSearchParams(location.search), nav = (navigator.language || 'tr').slice(0, 2), lang = L[qs.get('l')] ? qs.get('l') : L[nav] ? nav : 'tr', t = L[lang], loc = {tr: 'tr-TR', en: 'en-US', pt: 'pt-BR'}[lang];
+  document.documentElement.lang = lang;
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+  const $ = s => document.querySelector(s), root = $('#root');
+  const money = (c, cur) => (c / 100).toLocaleString(loc, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + cur;
+  const when = ms => new Date(ms).toLocaleString(loc, {dateStyle: 'medium', timeStyle: 'short'});
+  const day = d => { try { return new Date(d + 'T00:00:00').toLocaleDateString(loc, {dateStyle: 'medium'}); } catch { return d; } };
+  const keep = ['q', 's'].filter(k => qs.get(k)).map(k => k + '=' + encodeURIComponent(qs.get(k))).join('&');
+  $('#lang').innerHTML = Object.keys(L).map(k => '<a href="?' + keep + '&l=' + k + '" class="' + (k === lang ? 'on' : '') + '">' + k.toUpperCase() + '</a>').join('');
+  const brand = f => { f = f || {}; if (/^#[0-9a-f]{6}$/i.test(f.color || '')) document.documentElement.style.setProperty('--brand', f.color); $('#firm').innerHTML = f.logo ? '<img src="' + esc(f.logo) + '" alt="' + esc(f.name) + '">' : '<b>' + esc(f.name || '') + '</b>'; };
+  const post = async (path, body) => { const r = await fetch('/api/auth/' + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)}), j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || t.fail); return j; };
+  const notFound = () => { root.innerHTML = '<div class="card"><div class="banner bad">' + esc(t.notfound) + '</div></div>'; };
+
+  // ---------------- Teklif ----------------
+  async function quote(tok) {
+    const r = await fetch('/api/auth/sales/quote?t=' + encodeURIComponent(tok), {cache: 'no-store'}); if (!r.ok) return notFound();
+    const q = await r.json(); brand(q.firm); document.title = t.quote + ' ' + q.number + ' · ' + (q.firm.name || '');
+    const rows = q.lines.map(l => '<tr><td>' + esc(l.name) + '</td><td class="n">' + l.qty + '</td><td class="n">' + money(l.price, q.currency) + '</td><td class="n">' + money(l.qty * l.price, q.currency) + '</td></tr>').join('');
+    const pc = n => (lang === 'tr' ? '%' + n : n + '%'), dAmt = q.sub - Math.round(q.sub * (1 - q.discount / 100)), taxAmt = q.amount - (q.sub - dAmt);
+    const contract = q.contract ? '<a class="btn" href="' + esc(q.contract.url) + '&l=' + lang + '">' + esc(q.contract.status === 'signed' ? t.viewContract : t.signNow) + '</a>' : '';
+    let action = '';
+    if (q.status === 'sent') action = '<div class="card noprint" id="act"><div class="err" id="err" hidden></div><label><span>' + t.yourName + '</span><input type="text" id="nm" value="' + esc(q.name) + '" maxlength="100"></label><label class="chk"><input type="checkbox" id="ag"><span>' + t.agreeQ + '</span></label><div class="btns"><button id="acc">' + t.accept + '</button><button class="sec" id="rej">' + t.reject + '</button></div></div>';
+    else if (q.status === 'accepted') action = '<div class="banner ok">' + t.accepted + (q.decision ? ' · ' + esc(q.decision.by) + ' · ' + when(q.decision.at) : '') + '</div><div class="btns">' + (contract || '<p class="mute">' + t.contractSoon + '</p>') + '</div>';
+    else if (q.status === 'rejected') action = '<div class="banner bad">' + t.rejected + '</div>'; else if (q.status === 'expired') action = '<div class="banner warn">' + t.expired + '</div>';
+    root.innerHTML = '<div class="card"><h1>' + esc(q.title) + '</h1><p class="mute">' + t.no + ' ' + esc(q.number) + ' · ' + esc(q.name) + (q.validUntil ? ' · ' + t.valid + ': ' + day(q.validUntil) : '') + '</p><table><thead><tr><th>' + t.item + '</th><th class="n">' + t.qty + '</th><th class="n">' + t.price + '</th><th class="n">' + t.amount + '</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div class="sum">' + (q.discount || q.tax ? '<span>' + t.sub + ': ' + money(q.sub, q.currency) + '</span>' : '') + (q.discount ? '<span>' + t.disc + ' ' + pc(q.discount) + ': −' + money(dAmt, q.currency) + '</span>' : '') + (q.tax ? '<span>' + t.tax + ' ' + pc(q.tax) + ': ' + money(taxAmt, q.currency) + '</span>' : '') + '<span class="tot">' + t.total + ': ' + money(q.amount, q.currency) + '</span></div>' +
+      (q.installments ? '<div class="note"><b>' + t.pay + ':</b> ' + (q.installments.schedule ? '<br>' + q.installments.schedule.map(x => x.n + '. ' + (x.due ? day(x.due) + ' — ' : '') + money(x.amount, q.currency)).join('<br>') : esc(q.installments.text)) + '</div>' : '') + (q.notes ? '<div class="note"><b>' + t.notes + ':</b>\n' + esc(q.notes) + '</div>' : '') + '</div>' + action;
+    const err = $('#err'), show = m => { err.textContent = m; err.hidden = false; };
+    const decide = async (decision, btn) => {
+      err && (err.hidden = true); const name = $('#nm').value.trim();
+      if (decision === 'accept') { if (name.length < 2) return show(t.needName); if (!$('#ag').checked) return show(t.needAgree); } else if (!confirm(t.rejectAsk)) return;
+      btn.disabled = true; const old = btn.textContent; btn.textContent = t.sending;
+      try { const j = await post('sales/quote/decide', {t: tok, decision, name, agree: $('#ag').checked}); $('#act').innerHTML = '<div class="banner ' + (decision === 'accept' ? 'ok' : 'warn') + '">' + (decision === 'accept' ? t.thanks : t.thanksRej) + '</div>' + (j.contractUrl ? '<div class="btns"><a class="btn" href="' + esc(j.contractUrl) + '&l=' + lang + '">' + t.signNow + '</a></div>' : ''); }
+      catch (e) { show(e.message); btn.disabled = false; btn.textContent = old; }
+    };
+    if ($('#acc')) { $('#acc').onclick = e => decide('accept', e.target); $('#rej').onclick = e => decide('reject', e.target); }
+  }
+
+  // ---------------- Sözleşme ----------------
+  const sha256 = async s => { if (!(window.crypto && crypto.subtle)) return ''; const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); };
+  async function contract(tok) {
+    const r = await fetch('/api/auth/sales/contract?t=' + encodeURIComponent(tok), {cache: 'no-store'}); if (!r.ok) return notFound();
+    const c = await r.json(); brand(c.firm); document.title = c.title + ' · ' + (c.firm.name || '');
+    let panel = '';
+    if (c.status === 'void') panel = '<div class="banner bad">' + t.void + '</div>';
+    else if (c.status === 'signed') { const s = c.signature; panel = '<div class="banner ok">' + t.signed + '</div><div class="evid"><b>' + t.evid + '</b><dl><dt>' + t.by + '</dt><dd>' + esc(s.name) + '</dd><dt>' + t.when + '</dt><dd>' + when(s.at) + '</dd><dt>' + t.method + '</dt><dd>' + (s.method === 'drawn' ? t.mDrawn : t.mTyped) + (s.image ? '<br><img alt="" src="' + esc(s.image) + '">' : '') + '</dd><dt>' + t.hash + '</dt><dd><code>' + esc(c.bodyHash) + '</code></dd><dt>' + t.seal + '</dt><dd><code>' + esc(s.seal) + '</code></dd></dl></div><div class="btns noprint"><button onclick="print()">' + t.print + '</button><button class="sec" id="ver">' + t.verify + '</button></div><p id="vres" class="mute"></p><p class="legal">' + t.legal + '</p>'; }
+    else panel = '<div class="card noprint" id="sg"><h2>' + t.signTitle + '</h2><div class="err" id="err" hidden></div><label><span>' + t.fullName + '</span><input type="text" id="nm" value="' + esc(c.name) + '" maxlength="100" autocomplete="name"></label><div class="tabs"><button type="button" id="tT" class="on">' + t.typeTab + '</button><button type="button" id="tD">' + t.drawTab + '</button></div><div id="typed" class="typed"></div><div id="drawBox" hidden><canvas id="pad" width="700" height="200" aria-label="' + t.draw + '"></canvas><div class="btns"><button type="button" class="sec" id="clr">' + t.clear + '</button></div></div><label class="chk" style="margin-top:14px"><input type="checkbox" id="cs"><span>' + t.consent + '</span></label><div class="btns"><button id="go">' + t.sign + '</button></div><p class="legal">' + t.legal + '</p></div>';
+    root.innerHTML = '<div class="card"><h1>' + esc(c.title) + '</h1><p class="mute">' + t.no + ' ' + esc(c.number) + '</p><div class="doc" id="doc">' + esc(c.body) + '</div></div>' + panel;
+    if ($('#ver')) $('#ver').onclick = async () => { const h = await sha256(c.title + '\n' + c.body), v = $('#vres'); v.textContent = !h ? t.verNo : h === c.bodyHash ? t.verOk : t.verBad; v.style.color = h && h !== c.bodyHash ? '#8f2a24' : '#1b5e20'; };
+    if (!$('#sg')) return;
+    const nm = $('#nm'), typed = $('#typed'), cv = $('#pad'), ctx = cv.getContext('2d'), err = $('#err'); let mode = 'typed', drew = false, down = false;
+    const upd = () => { typed.textContent = nm.value; }; nm.oninput = upd; upd();
+    const tab = m => { mode = m; $('#tT').classList.toggle('on', m === 'typed'); $('#tD').classList.toggle('on', m === 'drawn'); typed.hidden = m !== 'typed'; $('#drawBox').hidden = m !== 'drawn'; };
+    $('#tT').onclick = () => tab('typed'); $('#tD').onclick = () => tab('drawn');
+    ctx.lineWidth = 3.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111';
+    const pt = e => { const b = cv.getBoundingClientRect(); return [(e.clientX - b.left) * cv.width / b.width, (e.clientY - b.top) * cv.height / b.height]; };
+    cv.addEventListener('pointerdown', e => { down = true; cv.setPointerCapture(e.pointerId); const [x, y] = pt(e); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + .01, y + .01); ctx.stroke(); drew = true; e.preventDefault(); });
+    cv.addEventListener('pointermove', e => { if (!down) return; const [x, y] = pt(e); ctx.lineTo(x, y); ctx.stroke(); e.preventDefault(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => cv.addEventListener(n, () => { down = false; }));
+    $('#clr').onclick = () => { ctx.clearRect(0, 0, cv.width, cv.height); drew = false; };
+    const show = m => { err.textContent = m; err.hidden = false; err.scrollIntoView({block: 'nearest'}); };
+    $('#go').onclick = async e => {
+      err.hidden = true; const name = nm.value.trim(); if (name.length < 3) return show(t.needName); if (mode === 'drawn' && !drew) return show(t.needDraw); if (!$('#cs').checked) return show(t.needAgree);
+      const btn = e.target; btn.disabled = true; btn.textContent = t.sending;
+      try { await post('sales/contract/sign', {t: tok, name, consent: true, method: mode, image: mode === 'drawn' ? cv.toDataURL('image/png') : undefined}); await contract(tok); window.scrollTo({top: 0, behavior: 'smooth'}); }
+      catch (x) { show(x.message); btn.disabled = false; btn.textContent = t.sign; }
+    };
+  }
+
+  if (qs.get('q')) quote(qs.get('q')).catch(notFound); else if (qs.get('s')) contract(qs.get('s')).catch(notFound); else notFound();
+})();
+</script>
+</body>
+</html>

@@ -3,6 +3,8 @@ import {handleTenantApi} from './tenant-api.mjs';
 import {listTenants, updateTenant, tenantById} from './tenant.mjs';
 import {assertQuota, usage, limitsFor, PLAN_NAMES} from './plans.mjs';
 import {casesAdmin, casesCustomer, maybeRunCaseReminders} from './cases.mjs';
+import {salesPublic, salesAdmin, maybeRunSalesReminders} from './sales.mjs';
+import {networkAdmin} from './network.mjs';
 // Unified login, registration, partner onboarding, admin account management and panel modules.
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
@@ -174,6 +176,29 @@ async function newAuthUser(db, email, password, verified) {
   await q(db, 'INSERT INTO auth_users VALUES(?,?,?,?,?,?,?,?)', id, email, hash, salt, verified ? 1 : 0, 0, 0, now()).run();
   return {id, email};
 }
+// Satış modülü: aday → müşteri dönüşümü (yönetimdeki "hesap oluştur" akışının müşteri koluyla aynı kurallar).
+async function createCustomerFromLead(db, req, f, actor) {
+  const email = clean(f.email, 254).toLowerCase(), name = clean(f.name, 100) || email;
+  if (!validEmail(email)) fail(400, 'Geçerli e-posta gerekli.');
+  if (email === OWNER_EMAIL()) fail(400, 'Bu e-posta yönetici hesabıdır.');
+  const same = await one(db, "SELECT id FROM people WHERE email=? AND role='customer'", email);
+  if (same) return {id: same.id, existing: true};
+  if (await one(db, 'SELECT id FROM people WHERE email=?', email) || await one(db, 'SELECT id FROM law_accounts WHERE email=?', email)) fail(409, 'Bu e-posta başka bir hesap türüyle kayıtlı.');
+  await assertQuota(db, 'customers');
+  let user = await one(db, 'SELECT * FROM auth_users WHERE email=?', email);
+  if (!user) user = await newAuthUser(db, email, null, true);
+  const loc = f.country ? locate(clean(f.country, 60), '') : null, advisor = (await nearestAdvisor(db, loc))?.id || 'owner', pid = uuid();
+  await db.batch([
+    insertPerson(db, {id: pid, uid: user.id, email, name, role: 'customer', manager: 'owner', permissions: {}, scope: 'all', advisor}),
+    notice(db, advisor, 'Yeni müşteri atandı: ' + name, 'customers'),
+    putItem(db, 'meta-' + pid, 'account_meta', pid, {type: 'customer', phone: clean(f.phone, 40), company: '', title: '', country: loc?.country || '', city: loc?.city || '', lat: loc?.lat ?? null, lng: loc?.lng ?? null, createdBy: 'lead'}),
+    putItem(db, 'profile-' + pid, 'profile', pid, {name, phone: clean(f.phone, 40), company: ''}),
+    audit(db, actor, 'account.create.customer', email),
+  ]);
+  const fresh = await one(db, 'SELECT * FROM auth_users WHERE id=?', user.id);
+  const mail = fresh.hash ? {sent: false} : await sendInvite(db, req, fresh, name, ACCOUNT_TYPES.customer);
+  return {id: pid, mailSent: mail.sent, devLink: mail.devLink, existingLogin: !!fresh.hash};
+}
 function readLocation(b, req) {
   const country = clean(b.country, 60), city = clean(b.city, 80);
   const l = country ? locate(country, city) : null;
@@ -207,7 +232,7 @@ export function ensureReminders(env) {
   if (!env?.DB) return;
   const T = currentTenant(); (globalThis.__bmRemT ??= new Map()).set(T.id, {t: T, db: env.DB});
   if (globalThis.__bmRem) return;
-  const tick = () => { for (const {t, db} of globalThis.__bmRemT.values()) runWithTenant(t, async () => { await runReminders(db); await maybeRunCaseReminders(db); }).catch(e => console.error('[reminder]', e.message)); };
+  const tick = () => { for (const {t, db} of globalThis.__bmRemT.values()) runWithTenant(t, async () => { await runReminders(db); await maybeRunCaseReminders(db); await maybeRunSalesReminders(db); }).catch(e => console.error('[reminder]', e.message)); };
   globalThis.__bmRem = setInterval(tick, 60e3); if (globalThis.__bmRem.unref) globalThis.__bmRem.unref();
   setTimeout(tick, 3000);
 }
@@ -220,6 +245,7 @@ export async function handleAuth(req, env, route) {
   if (route === 'health' && req.method === 'GET') return health(db);
   if (req.method !== 'GET') sameOrigin(req);
   { const g = await growthPublic(req, db, route); if (g) return g; }
+  { const g = await salesPublic(req, db, route); if (g) return g; }
   if (route === 'payment-methods' && req.method === 'GET') return json({methods: enabledMethods(await loadPayments(db)).map(m => m.id === 'havale' ? m : {id: m.id, name: m.name})});
   if (route === 'cities' && req.method === 'GET') return json({countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES});
   if (route === 'config' && req.method === 'GET') return json({mail: mailConfigured(), verifier: verifierConfigured(), adminSeparate: adminHosts().length > 0, whatsapp: (cfgEnv('WHATSAPP_NUMBER') || '').replace(/\D/g, '') || null});
@@ -675,6 +701,8 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   { const g = await updatesAdmin(req, db, route, {audit, actor}); if (g) return g; }
   { const g = await i18nAdmin(req, db, route); if (g) return g; }
   { const g = await casesAdmin(req, db, route, {audit, actor}); if (g) return g; }
+  { const g = await salesAdmin(req, db, route, {audit, actor, createCustomer: (d, r, f) => createCustomerFromLead(d, r, f, actor)}); if (g) return g; }
+  { const g = await networkAdmin(req, db, route, {audit, actor}); if (g) return g; }
 
   if (route === 'meta' && req.method === 'GET') return json({types: ACCOUNT_TYPES, perms: PERMS, permLabels: PERM_LABELS, defaults: DEFAULT_PERMS, panels: PANELS, countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES, mail: mailConfigured(), verifier: verifierConfigured()});
 
