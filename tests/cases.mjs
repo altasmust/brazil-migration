@@ -104,6 +104,37 @@ try {
   assert.equal((await adm('cases/tasks/delete', {id: r.data.id})).status, 200);
   assert.equal((await adm('cases/templates/delete', {id: oturum.id})).status, 409);                                          // kullanımdaki şablon silinemez
 
+  // akıllı atama: mevcut durum/ilerleme tanınır, özel aşamalar ve "Aktif" durumu korunur, bitiş tarihi süreye aktarılır
+  const jd = async id => JSON.parse((await get('SELECT data FROM items WHERE id=?', id)).data);
+  await mkCustomer('c3', 'Carla Souza', 'carla@test.com');
+  await run("INSERT INTO items(id,kind,owner,data,created,updated) VALUES('a3','application','c3',?,?,?)", JSON.stringify({service: 'Oturum İzni', from: 'Türkiye', to: 'Brezilya (São Paulo)', status: 'Avukatta', advisor: 'owner', stages: null}), Date.now(), Date.now());
+  await run("INSERT INTO items(id,kind,owner,data,created,updated) VALUES('a4','application','c3',?,?,?)", JSON.stringify({service: 'Oturum İzni', from: 'Türkiye', to: 'Brezilya (São Paulo)', status: 'Aktif', advisor: 'owner', stages: null, expiry: '2027-05-10'}), Date.now(), Date.now());
+  const custom = [{n: 'Evrak', s: 'done'}, {n: 'Konsolosluk', s: 'doing'}, {n: 'Sonuç', s: 'wait'}];
+  await run("INSERT INTO items(id,kind,owner,data,created,updated) VALUES('a5','application','c3',?,?,?)", JSON.stringify({service: 'Vize', from: 'Türkiye', to: 'Brezilya (São Paulo)', status: 'Belgeler bekleniyor', advisor: 'owner', stages: custom}), Date.now(), Date.now());
+  await run("INSERT INTO items(id,kind,owner,data,created,updated) VALUES('a6','application','c3',?,?,?)", JSON.stringify({service: 'Vize', from: 'Türkiye', to: 'Brezilya (São Paulo)', status: 'Belgeler bekleniyor', advisor: 'owner', stages: custom}), Date.now(), Date.now());
+  assert.equal((await adm('cases/auto', {})).data.assigned, 4);
+  let cs = (await adm('cases/case?id=a3')).data.state; assert.equal(cs.stage, 2); assert.equal(cs.stages[2], 'Avukat incelemesi');      // "Avukatta" → avukat incelemesi
+  assert.equal((await jd('a3')).status, 'Avukatta');                                                                                             // durum bozulmadı
+  cs = (await adm('cases/case?id=a4')).data.state; assert.equal(cs.stage, cs.stages.length - 1);                                                // "Aktif" → son aşama
+  assert.equal((await jd('a4')).status, 'Aktif');                                                                                                // oturum kartı "Aktif" kalır
+  assert.equal(cs.deadlines.find(d => d.label === 'Oturum izni bitişi').date, '2027-05-10');                                                      // bitiş tarihi süreye aktarıldı
+  cs = (await adm('cases/case?id=a5')).data.state; assert.deepEqual(cs.stages, ['Evrak', 'Konsolosluk', 'Sonuç']); assert.equal(cs.stage, 1);  // özel aşamalar korundu
+  assert.deepEqual((await jd('a5')).stages, custom);                                                                                             // müşterinin yol haritasına dokunulmadı
+  assert.ok(cs.checklist.length >= 5);                                                                                                           // şablondan belge listesi geldi
+  assert.equal((await adm('cases/move', {applicationId: 'a5', stage: 2})).status, 200);
+  assert.deepEqual((await jd('a5')).stages.map(s => s.n + ':' + s.s), ['Evrak:done', 'Konsolosluk:done', 'Sonuç:done']); assert.equal((await jd('a5')).status, 'Tamamlandı');
+  assert.equal((await adm('cases/move', {applicationId: 'a5', stage: 3})).status, 400);                                                           // kendi aşama sayısını aşamaz
+  r = await adm('cases/board'); assert.equal(r.data.cases.find(c => c.applicationId === 'a5').stages.length, 3);
+  // şablon aşamalarını açıkça isteme: ilerleme eşlenir, eski liste iç nota yazılır
+  const vize = (await adm('cases/templates')).data.templates.find(x => x.builtin === 'vize');
+  assert.equal((await adm('cases/assign', {applicationId: 'a6', templateId: vize.id, keepStages: false})).status, 200);
+  cs = (await adm('cases/case?id=a6')).data.state; assert.deepEqual(cs.stages, vize.stages); assert.equal(cs.stage, Math.round(1 / 2 * (vize.stages.length - 1)));
+  assert.ok(cs.events.some(e => !e.visible && e.text.includes('Önceki aşamalar: Evrak → Konsolosluk → Sonuç')));
+  // şablon değiştirince konum korunur
+  const oturum2 = (await adm('cases/templates')).data.templates.find(x => x.builtin === 'aile');
+  assert.equal((await adm('cases/assign', {applicationId: 'a3', templateId: oturum2.id})).status, 200);
+  assert.equal((await adm('cases/case?id=a3')).data.state.stages[(await adm('cases/case?id=a3')).data.state.stage], 'Avukat incelemesi');
+
   // firma izolasyonu: başka firmanın veritabanında bu dosyalar görünmez
   const other = await createTenant({name: 'Öteki Göç', slug: 'oteki', ownerEmail: 'o@oteki.test'});
   await runWithTenant(other, async () => {
@@ -113,7 +144,7 @@ try {
   });
   assert.equal((await adm('cases/yok')).status, 404);
 
-  console.log('PASS: case templates, assignment, stage board + roadmap sync, checklist/document links, deadlines + reminders, task board, customer view, isolation');
+  console.log('PASS: case templates, smart assignment (progress/custom stages kept),  stage board + roadmap sync, checklist/document links, deadlines + reminders, task board, customer view, isolation');
 } finally {
   rmSync(dir, {recursive: true, force: true});
 }

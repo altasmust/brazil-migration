@@ -96,27 +96,59 @@ const loadState = async (db, appId) => { const r = await first(db, 'SELECT * FRO
 const saveState = (db, appId, owner, st) => put(db, 'cs-' + appId, 'case_state', owner, st);
 async function appOf(db, id) { const r = await first(db, "SELECT * FROM items WHERE id=? AND kind='application'", clean(id, 80)); if (!r) fail(404, 'Başvuru bulunamadı.'); return {...r, d: parse(r.data)}; }
 
-// Yol haritasını (müşteri panelinin okuduğu application.data.stages) ve kapanış durumunu şablon aşamasıyla eşitler.
-async function syncApplication(db, app, st) {
+// Yol haritasını (müşteri panelinin okuduğu application.data.stages) şablon aşamasıyla eşitler.
+// touchStatus: yalnız aşama taşımada kapanış durumunu günceller; "Aktif" (oturum kartı etkin) ve "Tamamlandı" durumları korunur.
+async function syncApplication(db, app, st, touchStatus = true) {
   const d = {...app.d, stages: stageStates(st.stages, st.stage)};
-  const last = st.stage >= st.stages.length - 1;
-  if (last) d.status = 'Tamamlandı'; else if (d.status === 'Tamamlandı') d.status = 'Aktif';
+  if (touchStatus) {
+    const last = st.stage >= st.stages.length - 1;
+    if (last) { if (d.status !== 'Aktif' && d.status !== 'Tamamlandı') d.status = 'Tamamlandı'; } else if (d.status === 'Tamamlandı') d.status = 'Aktif';
+  }
   await put(db, app.id, 'application', app.owner, d);
 }
 
-async function assign(db, app, tpl, by) {
+// ---- Akıllı atama yardımcıları: mevcut ilerlemeyi tanır ----
+const focusIdx = states => { const i = states.findIndex(s => s.s === 'doing'); if (i >= 0) return i; const w = states.findIndex(s => s.s === 'wait'); return w >= 0 ? w : Math.max(0, states.length - 1); };
+// Elle düzenlenmiş aşama listesi (application.data.stages dolu ve en az 2 aşama) varsa döndürür.
+const customStages = d => { if (!Array.isArray(d.stages)) return null; const c = d.stages.filter(x => x && clean(x.n, 60)).slice(0, 20).map(x => ({n: clean(x.n, 60), s: ['done', 'doing', 'wait'].includes(x.s) ? x.s : 'wait'})); return c.length >= 2 ? c : null; };
+// Eski başvuru durumundan şablondaki başlangıç aşamasını bulur (müşteri panelinin eski varsayılanıyla uyumlu).
+function startStage(names, status) {
+  const last = names.length - 1, pick = (re, fb) => { const i = names.findIndex(n => re.test(n)); return i >= 0 ? i : fb; };
+  if (status === 'Belgeler bekleniyor') return pick(/belge/i, Math.min(1, last));
+  if (status === 'Avukatta') return pick(/avukat|inceleme/i, Math.min(2, last));
+  if (status === 'Aktif' || status === 'Tamamlandı') return last;
+  return /^Başvuru alındı/.test(names[0]) ? Math.min(1, last) : 0;
+}
+// Aşama listesi değişirken konumu korur: önce ad eşleşmesi, yoksa oransal konum.
+function mapStage(fromNames, fromIdx, toNames) {
+  const exact = toNames.findIndex(n => n.toLowerCase() === String(fromNames[fromIdx] || '').toLowerCase()); if (exact >= 0) return exact;
+  if (fromNames.length < 2) return 0;
+  return Math.max(0, Math.min(toNames.length - 1, Math.round(fromIdx / (fromNames.length - 1) * (toNames.length - 1))));
+}
+
+// keepStages (varsayılan açık): dosyada elle düzenlenmiş aşamalar varsa onlar korunur (müşterinin yol haritasına dokunulmaz);
+// şablondan yalnız belge listesi, görevler ve süreler gelir. Kapalıysa şablonun aşamaları kullanılır, ilerleme eşlenir.
+async function assign(db, app, tpl, by, {keepStages = true} = {}) {
   if (!tpl || !Array.isArray(tpl.stages)) fail(404, 'Şablon bulunamadı.');
-  const old = await loadState(db, app.id);
-  const start = /^Başvuru alındı/.test(tpl.stages[0]) ? Math.min(1, tpl.stages.length - 1) : 0;
+  const old = await loadState(db, app.id), cs = old ? null : customStages(app.d), keep = !!(cs && keepStages);
+  let names, stage;
+  if (old) { names = tpl.stages.slice(); stage = mapStage(old.st.stages, old.st.stage, names); }
+  else if (keep) { names = cs.map(x => x.n); stage = focusIdx(cs); }
+  else if (cs) { names = tpl.stages.slice(); stage = mapStage(cs.map(x => x.n), focusIdx(cs), names); }
+  else { names = tpl.stages.slice(); stage = startStage(names, app.d.status); }
   const prev = new Map((old?.st.checklist || []).map(c => [c.name, c]));
-  const st = {applicationId: app.id, templateId: tpl.id, templateName: tpl.name, stage: start, stages: tpl.stages.slice(),
+  const deadlines = [...(old?.st.deadlines || []), ...tpl.deadlines.filter(x => !(old?.st.deadlines || []).some(d => d.label === x.label)).map(x => ({id: x.id || short(), label: x.label, date: '', remind: [60, 30, 14, 7, 1], sent: {}}))];
+  // Başvuruda kayıtlı geçerlilik/bitiş tarihi varsa ilgili süreye aktarılır
+  if (validDate(String(app.d.expiry || ''))) { const dl = deadlines.find(x => !x.date && /bitiş/i.test(x.label) && /(oturum|vize|kart)/i.test(x.label)); if (dl) dl.date = app.d.expiry; }
+  const st = {applicationId: app.id, templateId: tpl.id, templateName: tpl.name, stage, stages: names,
     checklist: tpl.checklist.map(c => ({...prev.get(c.name), id: c.id, name: c.name, required: c.required, hint: c.hint, status: prev.get(c.name)?.status || 'bekleniyor'})),
-    deadlines: [...(old?.st.deadlines || []), ...tpl.deadlines.filter(x => !(old?.st.deadlines || []).some(d => d.label === x.label)).map(x => ({id: x.id || short(), label: x.label, date: '', remind: [60, 30, 14, 7, 1], sent: {}}))],
-    events: old?.st.events || []};
-  pushEvent(st, 'assign', `Dosyanız “${tpl.name}” süreciyle takip edilmeye başlandı.`, by);
+    deadlines, events: old?.st.events || []};
+  pushEvent(st, 'assign', `Dosyanız “${tpl.name}” süreciyle takip edilmeye başlandı.${keep ? ' Mevcut aşamalarınız korundu.' : ''}`, by);
+  if (cs && !keep) pushEvent(st, 'note', 'Önceki özel aşamalar: ' + cs.map(x => x.n).join(' → '), by, false);
+  else if (old && JSON.stringify(old.st.stages) !== JSON.stringify(names)) pushEvent(st, 'note', 'Önceki aşamalar: ' + old.st.stages.join(' → '), by, false);
   await saveState(db, app.id, app.owner, st);
-  if (!old) for (const t of tpl.tasks || []) await put(db, 'ct-' + uuid().slice(0, 12), 'case_task', app.owner, {caseId: app.id, title: t.title, status: 'todo', stage: t.stage, due: new Date(now() + (t.dueDays || 0) * DAY).toISOString().slice(0, 10), created: now()});
-  await syncApplication(db, app, st);
+  if (!old) for (const t of tpl.tasks || []) await put(db, 'ct-' + uuid().slice(0, 12), 'case_task', app.owner, {caseId: app.id, title: t.title, status: 'todo', stage: Math.min(t.stage, names.length - 1), due: new Date(now() + (t.dueDays || 0) * DAY).toISOString().slice(0, 10), created: now()});
+  if (!keep) await syncApplication(db, app, st, false);
   return st;
 }
 
@@ -164,7 +196,7 @@ export async function casesAdmin(req, db, route, {audit, actor} = {}) {
   if (route === 'cases/assign' && req.method === 'POST') {
     const b = await readBody(req), app = await appOf(db, b.applicationId);
     const r = await first(db, "SELECT id,data FROM items WHERE id=? AND kind='case_template'", clean(b.templateId, 40)); if (!r) fail(404, 'Şablon bulunamadı.');
-    await assign(db, app, {id: r.id, ...parse(r.data)}, actor || 'Yönetici'); await log('case.assign', app.id); return json({ok: true});
+    await assign(db, app, {id: r.id, ...parse(r.data)}, actor || 'Yönetici', {keepStages: b.keepStages !== false}); await log('case.assign', app.id); return json({ok: true});
   }
   if (route === 'cases/auto' && req.method === 'POST') {
     const tpls = (await all(db, "SELECT id,data FROM items WHERE kind='case_template' ORDER BY created")).map(r => ({id: r.id, ...parse(r.data)}));

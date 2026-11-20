@@ -37,12 +37,13 @@
   };
   function drawBoard(root) {
     root = root || $('#bcs-root'); if (!root) return;
-    const t = BD.templates.find(x => x.id === SEL), cases = BD.cases.filter(c => c.templateId === SEL);
+    const t = BD.templates.find(x => x.id === SEL), all = BD.cases.filter(c => c.templateId === SEL), same = c => t && c.stages.join('\u0001') === t.stages.join('\u0001'), cases = all.filter(same), custom = all.filter(c => !same(c));
+    const customHTML = custom.length ? '<section class="panel bcs-p"><header class="panel-head"><h2>Özel aşamalı dosyalar (' + custom.length + ')</h2></header><p class="bcs-hint">Bu dosyaların aşamaları elle düzenlenmişti; müşterinin yol haritası aynen korundu. Aşamayı buradan değiştirin.</p><ul class="bcs-ul">' + custom.map(c => '<li><div><b>' + esc(c.customer) + '</b> <small>' + esc(c.service) + '</small></div><div class="bcs-inl"><select data-cs-stage="' + c.applicationId + '">' + c.stages.map((s, i) => opt(i, (i + 1) + '. ' + s, i === c.stage)).join('') + '</select><button class="btn small" data-cs-open="' + c.applicationId + '">Dosyayı aç</button></div></li>').join('') + '</ul></section>' : '';
     const cols = t ? t.stages.map((name, i) => '<div class="bcs-col" data-cs-col="' + i + '"><h3>' + esc(name) + ' <span>' + cases.filter(c => c.stage === i).length + '</span></h3>' + (cases.filter(c => c.stage === i).map(cardHTML).join('') || '<p class="bcs-empty">—</p>') + '</div>').join('') : '';
     root.innerHTML = unassignedHTML() +
       '<div class="bcs-bar"><label>Şablon <select data-cs-tplsel>' + BD.templates.map(x => opt(x.id, x.name + ' (' + BD.cases.filter(c => c.templateId === x.id).length + ')', x.id === SEL)).join('') + '</select></label><a class="btn small" href="#sablonlar">Şablonları düzenle</a></div>' +
       (t ? '<div class="bcs-board" id="bcs-board">' + cols + '</div>' : '<div class="bmc-empty sm"><b>Henüz şablon yok.</b><span>Şablonlar sayfasından hazır şablonları yükleyin.</span></div>') +
-      (t && !cases.length ? '<p class="bcs-hint">Bu şablonu kullanan dosya yok. Başvurular otomatik atanmaz; yukarıdaki listeden atayın.</p>' : '');
+      customHTML + (t && !all.length ? '<p class="bcs-hint">Bu şablonu kullanan dosya yok. Başvurular otomatik atanmaz; yukarıdaki listeden atayın.</p>' : '');
   }
   const refresh = async () => { if (routes[route()]) render(); };
   const move = async (app, stage) => { try { await A('cases/move', 'POST', {applicationId: app, stage}); await refresh(); if (CUR === app && $('#modal').open) openCase(app); } catch (e) { say(e.message); } };
@@ -117,8 +118,8 @@
     try {
       let b;
       if ((b = $c('[data-cs-mv]'))) { e.stopPropagation(); const c = BD.cases.find(x => x.applicationId === b.dataset.app); if (!c) return; const n = c.stage + Number(b.dataset.csMv); if (n >= 0 && n < c.stages.length) await move(c.applicationId, n); return; }
-      if ((b = $c('[data-cs-assign]'))) { if (!confirm('Dosya şablona atanacak; müşterinin yol haritası şablonun aşamalarıyla güncellenir. Devam edilsin mi?')) return; const id = b.dataset.csAssign, sel = $('[data-cs-pick="' + id + '"]'); await A('cases/assign', 'POST', {applicationId: id, templateId: sel.value}); say('Dosya şablona atandı.'); BD = await A('cases/board'); drawBoard(); return; }
-      if ($c('[data-cs-auto]')) { if (!confirm(BD.unassigned.length + ' başvuru hizmet türüne uygun şablona atanacak; müşterilerin yol haritası şablonun aşamalarıyla güncellenir. Devam edilsin mi?')) return; const r = await A('cases/auto', 'POST', {}); say(r.assigned + ' dosya şablona atandı.'); BD = await A('cases/board'); drawBoard(); return; }
+      if ((b = $c('[data-cs-assign]'))) { if (!confirm('Dosya şablona atanacak. Mevcut ilerleme ve elle düzenlenmiş aşamalar korunur; şablondan belge listesi, görevler ve süreler eklenir. Devam edilsin mi?')) return; const id = b.dataset.csAssign, sel = $('[data-cs-pick="' + id + '"]'); await A('cases/assign', 'POST', {applicationId: id, templateId: sel.value}); say('Dosya şablona atandı.'); BD = await A('cases/board'); drawBoard(); return; }
+      if ($c('[data-cs-auto]')) { if (!confirm(BD.unassigned.length + ' başvuru hizmet türüne uygun şablona atanacak. Her dosyanın mevcut ilerlemesi ve elle düzenlenmiş aşamaları korunur; şablondan belge listesi, görevler ve süreler eklenir. Devam edilsin mi?')) return; const r = await A('cases/auto', 'POST', {}); say(r.assigned + ' dosya şablona atandı.'); BD = await A('cases/board'); drawBoard(); return; }
       if ((b = $c('[data-cs-open]'))) { await openCase(b.dataset.csOpen); return; }
       if ((b = $c('[data-cs-chk-del]'))) { if (confirm('Bu belge kalemi dosyadan kaldırılsın mı?')) await act(() => A('cases/checklist/remove', 'POST', {applicationId: CUR, itemId: b.dataset.csChkDel})); return; }
       if ($c('[data-cs-chk-add]')) { const v = $('#bcs-newdoc').value.trim(); if (v) await act(() => A('cases/checklist/add', 'POST', {applicationId: CUR, name: v}), 'Belge istendi; müşteri bilgilendirildi.'); return; }
