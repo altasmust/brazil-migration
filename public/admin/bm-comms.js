@@ -93,14 +93,14 @@
   });
 
   // ---------------- Yönlendirme ve menü ----------------
-  const routes = {gelenkutusu: inboxPage, sablonlar: tplPage};
-  Object.assign(names, {gelenkutusu: 'Gelen Kutusu', sablonlar: 'Mesaj Şablonları'});
+  const routes = {gelenkutusu: inboxPage, mesajsablonlari: tplPage};
+  Object.assign(names, {gelenkutusu: 'Gelen Kutusu', mesajsablonlari: 'Mesaj Şablonları'});
   const _ov = overview;
   overview = function () { const r = route(); return routes[r] ? routes[r]() : _ov(); };
   const nav = $('#navigation');
   if (nav && !nav.querySelector('a[href="#gelenkutusu"]')) {
     const el = document.createElement('details');
-    el.innerHTML = '<summary>İletişim</summary><div class="dropdown"><a href="#gelenkutusu">Gelen Kutusu</a><a href="#sablonlar">Mesaj Şablonları</a></div>';
+    el.innerHTML = '<summary>İletişim</summary><div class="dropdown"><a href="#gelenkutusu">Gelen Kutusu</a><a href="#mesajsablonlari">Mesaj Şablonları</a></div>';
     const sum = n => [...nav.querySelectorAll('details')].find(d => d.querySelector('summary')?.textContent.trim() === n);
     const after = sum('Partner Ağı') || sum('Satış') || sum('Dosyalar');
     if (after) after.after(el); else nav.appendChild(el);

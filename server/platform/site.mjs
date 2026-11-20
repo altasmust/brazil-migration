@@ -270,6 +270,8 @@ function applyFooterPartner(root) {
   const fc = root.querySelector('footer.site-footer .footer-contact');
   if (!fc || fc.querySelector('a.footer-partner')) return;
   fc.insertAdjacentHTML('beforeend', '<a class="btn footer-partner" href="/partner-ol/">Partner olmak istiyorum</a>');
+  // Firma dizini bağlantısı: footer menüsü düzenleyiciden değişmiş ve listede yoksa küçük bir bağlantı olarak eklenir
+  if (!root.querySelector('footer.site-footer a[href="/firmalar/"]')) fc.insertAdjacentHTML('beforeend', '<a class="footer-dir" href="/firmalar/" style="display:inline-block;margin-top:10px;font-size:13px">Firma dizini</a>');
 }
 function applyTrust(root, st) {
   applyFooterPartner(root);
@@ -398,7 +400,7 @@ function applyGlobalSeo(root, path, g) {
   if (!get('property', 'og:type')) setMeta(head, 'property', 'og:type', 'website');
   if (!get('property', 'og:locale')) setMeta(head, 'property', 'og:locale', 'tr_TR');
   setMeta(head, 'property', 'og:site_name', site);
-  const img0 = get('property', 'og:image') || (g.ogImage ? (/^https?:/.test(g.ogImage) ? g.ogImage : base + g.ogImage) : base + '/sao-paulo-day-hq.png');
+  const img0 = get('property', 'og:image') || (g.ogImage ? (/^https?:/.test(g.ogImage) ? g.ogImage : base + g.ogImage) : base + '/og-sao-paulo.jpg');
   if (!get('property', 'og:image')) setMeta(head, 'property', 'og:image', img0);
   if (base) {
     if (!head.querySelector('link[rel="canonical"]')) head.insertAdjacentHTML('beforeend', `<link rel="canonical" href="${esc(base + path)}">`);

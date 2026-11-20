@@ -218,7 +218,7 @@
         <section><h3>${ic('search')} Genel</h3>${f('siteName', 'Site adı', g.siteName, 'Brazil Migration', 'Arama sonuçlarında ve paylaşım kartlarında görünür (og:site_name).', 60)}
           ${f('titleSuffix', 'Başlık eki (isteğe bağlı)', g.titleSuffix, '| Brazil Migration', 'Doluysa, adı içermeyen sayfa başlıklarının sonuna eklenir. Başlıklar 60 karakteri geçmesin.', 40)}
           <label class="bmy-f full"><span>Varsayılan açıklama</span><textarea class="bmy-in" name="description" rows="3" maxlength="300" placeholder="Açıklaması olmayan sayfalarda kullanılır (150–160 karakter önerilir).">${esc(g.description || '')}</textarea><small><b id="bmseo-n">${(g.description || '').length}</b> karakter</small></label></section>
-        <section><h3>${ic('eye')} Paylaşım (sosyal medya)</h3>${f('ogImage', 'Varsayılan paylaşım görseli', g.ogImage, '/sao-paulo-day-hq.png veya https://…', 'Görseli olmayan sayfalarda kullanılır. Önerilen 1200×630 px.', 400)}
+        <section><h3>${ic('eye')} Paylaşım (sosyal medya)</h3>${f('ogImage', 'Varsayılan paylaşım görseli', g.ogImage, '/og-sao-paulo.jpg veya https://…', 'Görseli olmayan sayfalarda kullanılır. Önerilen 1200×630 px.', 400)}
           ${f('twitter', 'X (Twitter) kullanıcı adı', g.twitter, '@brazilmigration', '', 40)}
           <div class="bmseo-prev"><small>Google önizlemesi</small><b>Brezilya Göçmenlik ve Şirket Kuruluşu | São Paulo 2026</b><span>${esc(site || 'https://brazilmigration.com')}/</span><p>${esc(g.description || 'Brezilya oturum izni, aile birleşimi, vatandaşlık ve şirket kuruluşu. Dil engeli olmadan, canlı çevirili 15 dakikalık ücretsiz ön görüşme.')}</p></div></section>
         <section><h3>${ic('shield')} Dizinleme</h3>
