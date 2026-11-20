@@ -1,3 +1,4 @@
+import {cfgEnv} from './tenant-context.mjs';
 import zlib from 'node:zlib';
 import {createHash} from 'node:crypto';
 // Glue between Next.js route handlers and the existing (Cloudflare-style) server modules.
@@ -5,11 +6,13 @@ import {getDatabase} from './db.mjs';
 import {refreshConfig} from './config.mjs';
 import {renderPage, readStatic, sitemapXML} from './site.mjs';
 import {getBucket} from './storage.mjs';
+import {withTenant} from './tenant.mjs';
+import {scopedEnv, currentTenant} from './tenant-context.mjs';
 import {withIdentity, isAdminRequest, onAdminHost, adminHosts} from './auth.mjs';
 import {handleAuth, handlePlatform, handlePlatformAdmin, partnerGate, maybeVerifyCustomerUpload, iyzicoCallback, asaasReturnCb, asaasWebhookCb} from './api.mjs';
 
 export function getEnv() {
-  return {...process.env, DB: getDatabase(), BUCKET: getBucket()};
+  return scopedEnv({DB: getDatabase(), BUCKET: getBucket()});
 }
 
 const errorResponse = e => {
@@ -20,14 +23,17 @@ const notFound = () => Response.json({error: 'Bulunamadı.'}, {status: 404});
 
 // area: workspace | advisor | kyc | lawyer | admin | visitors | referral
 export function legacy(area, handler, opts = {}) {
-  return async (req, ctx) => {
+  return (req, ctx) => withTenant(req, () => legacyRun(area, handler, opts, req, ctx));
+}
+function legacyRun(area, handler, opts, req, ctx) {
+  return (async () => {
     try {
       const adminArea = area === 'admin';
       if (adminHosts().length) {
         if (adminArea && !onAdminHost(req)) return notFound();
         if (!adminArea && onAdminHost(req) && !opts.adminHostToo) return notFound();
       }
-      await getDatabase().ready(); await refreshConfig(getDatabase().client, 30000); const env = getEnv();
+      await getDatabase().ready(); await refreshConfig(getDatabase(), 30000); const env = getEnv();
       const {req: r, user} = await withIdentity(env.DB, req);
       const route = new URL(req.url).pathname.replace(new RegExp('^/api/' + area + '/?'), '').replace(/\/$/, '');
       if (['workspace', 'advisor', 'kyc'].includes(area)) await partnerGate(env.DB, r, user, area, route);
@@ -39,13 +45,16 @@ export function legacy(area, handler, opts = {}) {
       }
       return res;
     } catch (e) { return errorResponse(e); }
-  };
+  })();
 }
 
 export function platform(kind, after) {
-  return async (req, ctx) => {
+  return (req, ctx) => withTenant(req, () => platformRun(kind, after, req, ctx));
+}
+function platformRun(kind, after, req, ctx) {
+  return (async () => {
     try {
-      await getDatabase().ready(); await refreshConfig(getDatabase().client, 30000); const env = getEnv();
+      await getDatabase().ready(); await refreshConfig(getDatabase(), 30000); const env = getEnv();
       const params = ctx?.params ? await ctx.params : {};
       const route = (params.path || []).join('/');
       if (kind === 'auth') return await handleAuth(req, env, route);
@@ -57,7 +66,7 @@ export function platform(kind, after) {
       const {req: r, user} = await withIdentity(env.DB, req);
       return await handlePlatform(r, env, route, {after, user});
     } catch (e) { return errorResponse(e); }
-  };
+  })();
 }
 export {isAdminRequest};
 const LANGSW_PREVIEW_CSS = '<style>.bm-langsw{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:7px 11px;border:1px dashed #8a6d1a;border-radius:6px;font-size:13px;font-weight:600;color:var(--ink,#183b2c);text-decoration:none}.bm-langsw img{border-radius:2px}@media(max-width:760px){.bm-langsw{min-height:36px;padding:6px 9px}.bm-langsw span{display:none}}</style>';
@@ -81,14 +90,24 @@ const readCookieRaw = (req, name) => { const m = (req.headers.get('cookie') || '
 
 // Public site pages (rewritten here by proxy.ts), uploaded site media, sitemap and robots.
 export function site() {
-  return async (req, ctx) => {
+  return (req, ctx) => withTenant(req, () => siteRun(req, ctx));
+}
+async function siteRun(req, ctx) {
+  {
     const params = ctx?.params ? await ctx.params : {};
     const route = (params.path || []).join('/');
     const url = new URL(req.url);
     const htmlHeaders = {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=0, must-revalidate'};
     try {
-      await getDatabase().ready(); await refreshConfig(getDatabase().client, 30000);
+      await getDatabase().ready(); await refreshConfig(getDatabase(), 30000);
       const db = getDatabase();
+      if (!currentTenant().isDefault) {                       // yabancı firma: kendi vitrini; ana firmanın sayfaları sızmaz
+        const T = currentTenant(), {tenantPage, tenantRobots, tenantSitemap} = await import('./tenant-site.mjs');
+        if (route === 'page') { const p = req.headers.get('x-bm-path') || url.searchParams.get('p') || '/'; const r = await tenantPage(T, p); return r ? htmlOut(req, r.html, {status: r.status, headers: htmlHeaders}) : new Response('Not found', {status: 404, headers: {'X-Robots-Tag': 'noindex'}}); }
+        if (route === 'robots') return new Response(tenantRobots(T), {headers: {'Content-Type': 'text/plain; charset=utf-8'}});
+        if (route === 'sitemap') return new Response(tenantSitemap(T), {headers: {'Content-Type': 'application/xml; charset=utf-8'}});
+        return new Response('Not found', {status: 404});
+      }
       if (route === 'page') {
         const path = req.headers.get('x-bm-path') || url.searchParams.get('p') || '/';
         const lm = /^\/(en|pt)(\/|$)/.exec(path);
@@ -131,7 +150,7 @@ export function site() {
         return new Response(obj.body, {headers: {'Content-Type': type, 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff', ...(ext === 'svg' ? {'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox"} : {})}});
       }
       if (route === 'sitemap') return new Response(await sitemapXML(db), {headers: {'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}});
-      if (route === 'robots') { const su = (process.env.SITE_URL || '').replace(/\/$/, ''); const base = !su || /chatgpt\.site/.test(su) ? 'https://brazilmigration.com' : su; const {siteState, robotsTXT} = await import('./site.mjs'); let g = {}; try { g = (await siteState(db)).seo || {}; } catch {} return new Response(robotsTXT(base, g), {headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}}); }
+      if (route === 'robots') { const su = (cfgEnv('SITE_URL') || '').replace(/\/$/, ''); const base = !su || /chatgpt\.site/.test(su) ? 'https://brazilmigration.com' : su; const {siteState, robotsTXT} = await import('./site.mjs'); let g = {}; try { g = (await siteState(db)).seo || {}; } catch {} return new Response(robotsTXT(base, g), {headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}}); }
       return new Response('Not found', {status: 404});
     } catch (e) {
       console.error('[site]', e);
@@ -144,14 +163,17 @@ export function site() {
 
 // /api/pay/iyzico/callback — iyzico'nun ödeme sonrası yönlendirmesi.
 export function pay() {
-  return async (req, ctx) => {
+  return (req, ctx) => withTenant(req, () => payRun(req, ctx));
+}
+async function payRun(req, ctx) {
+  {
     const params = ctx?.params ? await ctx.params : {};
     const route = (params.path || []).join('/');
     const back = (ok, msg) => new Response(null, {status: 303, headers: {Location: '/panel/?odeme=' + (ok ? 'basarili' : 'hata') + (msg ? '&mesaj=' + encodeURIComponent(String(msg).slice(0, 160)) : '') + '#finance', 'Cache-Control': 'no-store'}});
     if (route === 'asaas/webhook') {
       if (req.method !== 'POST') return new Response('Method not allowed', {status: 405});
       try {
-        await getDatabase().ready(); await refreshConfig(getDatabase().client, 30000);
+        await getDatabase().ready(); await refreshConfig(getDatabase(), 30000);
         const ev = await req.json().catch(() => null);
         const r = await asaasWebhookCb(getEnv(), req.headers.get('asaas-access-token') || '', ev);
         return new Response(JSON.stringify(r.body), {status: r.status, headers: {'Content-Type': 'application/json', 'Cache-Control': 'no-store'}});
@@ -159,7 +181,7 @@ export function pay() {
     }
     if (route === 'asaas/return') {
       try {
-        await getDatabase().ready(); await refreshConfig(getDatabase().client, 30000);
+        await getDatabase().ready(); await refreshConfig(getDatabase(), 30000);
         const r = await asaasReturnCb(getEnv(), String(new URL(req.url).searchParams.get('ref') || ''));
         if (r.ok && !r.paid && r.pending) return new Response(null, {status: 303, headers: {Location: '/panel/?odeme=bekliyor#finance', 'Cache-Control': 'no-store'}});
         return back(r.ok && r.paid, r.ok ? '' : r.reason);
@@ -167,7 +189,7 @@ export function pay() {
     }
     if (route !== 'iyzico/callback') return new Response('Not found', {status: 404});
     try {
-      await getDatabase().ready(); await refreshConfig(getDatabase().client, 30000);
+      await getDatabase().ready(); await refreshConfig(getDatabase(), 30000);
       let token = '';
       if (req.method === 'POST') { const ct = req.headers.get('content-type') || ''; if (/json/.test(ct)) token = (await req.json().catch(() => ({}))).token; else token = (await req.formData().catch(() => null))?.get('token'); }
       else token = new URL(req.url).searchParams.get('token');

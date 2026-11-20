@@ -1,3 +1,4 @@
+import {cfgEnv} from './tenant-context.mjs';
 // Görüşme dökümü → metin dosyası + (Anthropic anahtarı varsa) iki dilli yapay zekâ özeti
 const LN = {tr: 'Türkçe', pt: 'Português', en: 'English', fa: 'فارسی'};
 const s = (x, n = 2000) => String(x ?? '').replace(/[\u0000-\u0008\u000b-\u001f]/g, '').slice(0, n);
@@ -22,7 +23,7 @@ export function localSummary(lines, msgs) {
   return out + '\n\nTam konuşma dökümü dosyalarınızda yer alır.';
 }
 export async function summarize(lines, msgs, langs) {
-  const key = process.env.ANTHROPIC_API_KEY; if (!key) return localSummary(lines, msgs);
+  const key = cfgEnv('ANTHROPIC_API_KEY'); if (!key) return localSummary(lines, msgs);
   if (!lines.length) return null;
   return (await aiSummarize(lines, msgs, langs, key)) || localSummary(lines, msgs);
 }
@@ -44,7 +45,7 @@ ${text}`;
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {method: 'POST', signal: AbortSignal.timeout(60000),
       headers: {'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
-      body: JSON.stringify({model: process.env.AI_SUMMARY_MODEL || process.env.AI_VERIFY_MODEL || 'claude-sonnet-5-5', max_tokens: 2500, messages: [{role: 'user', content: prompt}]})});
+      body: JSON.stringify({model: cfgEnv('AI_SUMMARY_MODEL') || cfgEnv('AI_VERIFY_MODEL') || 'claude-sonnet-5-5', max_tokens: 2500, messages: [{role: 'user', content: prompt}]})});
     if (!r.ok) return null;
     const d = await r.json();
     return (d.content || []).map(c => c.text || '').join('').trim() || null;

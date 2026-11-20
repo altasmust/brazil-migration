@@ -11,5 +11,9 @@ export const MIGRATIONS=[
  [
   "0002_platform_auth.sql",
   "CREATE TABLE IF NOT EXISTS `auth_users` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`email` text NOT NULL,\n\t`hash` text,\n\t`salt` text,\n\t`verified` integer NOT NULL DEFAULT 0,\n\t`failed` integer NOT NULL DEFAULT 0,\n\t`locked_until` integer NOT NULL DEFAULT 0,\n\t`created` integer NOT NULL\n);\n--> statement-breakpoint\nCREATE UNIQUE INDEX IF NOT EXISTS `auth_email` ON `auth_users` (`email`);\n--> statement-breakpoint\nCREATE TABLE IF NOT EXISTS `auth_sessions` (\n\t`token` text PRIMARY KEY NOT NULL,\n\t`user` text NOT NULL,\n\t`scope` text NOT NULL,\n\t`expires` integer NOT NULL,\n\t`created` integer NOT NULL\n);\n--> statement-breakpoint\nCREATE TABLE IF NOT EXISTS `auth_tokens` (\n\t`token` text PRIMARY KEY NOT NULL,\n\t`user` text NOT NULL,\n\t`purpose` text NOT NULL,\n\t`expires` integer NOT NULL,\n\t`used` integer NOT NULL DEFAULT 0,\n\t`created` integer NOT NULL\n);\n--> statement-breakpoint\nCREATE INDEX IF NOT EXISTS `items_kind_owner` ON `items` (`kind`,`owner`);\n"
+ ],
+ [
+  "0003_tenants.sql",
+  "CREATE TABLE IF NOT EXISTS `tenants` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`slug` text NOT NULL,\n\t`name` text NOT NULL,\n\t`owner_email` text NOT NULL,\n\t`status` text NOT NULL DEFAULT 'active',\n\t`plan` text NOT NULL DEFAULT 'free',\n\t`domain` text,\n\t`db_driver` text NOT NULL,\n\t`db_url` text NOT NULL,\n\t`db_token` text,\n\t`lang` text NOT NULL DEFAULT 'tr',\n\t`country` text NOT NULL DEFAULT 'BR',\n\t`brand` text NOT NULL DEFAULT '{}',\n\t`created` integer NOT NULL,\n\t`updated` integer NOT NULL\n);\n--> statement-breakpoint\nCREATE UNIQUE INDEX IF NOT EXISTS `tenant_slug` ON `tenants` (`slug`);\n--> statement-breakpoint\nCREATE UNIQUE INDEX IF NOT EXISTS `tenant_domain` ON `tenants` (`domain`) WHERE `domain` IS NOT NULL;"
  ]
 ];

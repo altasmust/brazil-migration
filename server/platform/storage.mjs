@@ -2,6 +2,7 @@
 // Production: private Vercel Blob store. Development: files under .data/blobs.
 import {mkdir, readFile, writeFile, rm} from 'node:fs/promises';
 import {dirname, join, normalize} from 'node:path';
+import {currentTenant} from './tenant-context.mjs';
 
 const useBlob = () => !!(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID || process.env.VERCEL);
 
@@ -35,7 +36,12 @@ const fileBucket = {
   async delete(key) { await rm(join(/* turbopackIgnore: true */ root(), safeKey(key)), {force: true}); },
 };
 
-export function getBucket() { return useBlob() ? blobBucket : fileBucket; }
+// Firma dosyaları ana firmanınkilerden ve birbirlerinden ayrı öneklerde tutulur (t/<firma-id>/...).
+const prefixed = (b, p) => ({put: (k, d, o) => b.put(p + safeKey(k), d, o), get: k => b.get(p + safeKey(k)), delete: k => b.delete(p + safeKey(k))});
+export function getBucket() {
+  const base = useBlob() ? blobBucket : fileBucket, t = currentTenant();
+  return t.isDefault ? base : prefixed(base, 't/' + t.id + '/');
+}
 export function memoryBucket() {
   const m = new Map();
   return {async put(k, b) { m.set(k, b); }, async get(k) { if (!m.has(k)) return null; const b = m.get(k); return {body: b, async arrayBuffer() { return b instanceof ArrayBuffer ? b : new Uint8Array(b).buffer; }}; }, async delete(k) { m.delete(k); }};

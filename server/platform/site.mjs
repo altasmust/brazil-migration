@@ -1,3 +1,4 @@
+import {cfgEnv, currentTenant} from './tenant-context.mjs';
 import {kycShield, kvkkRosette} from './trust-badges.mjs';
 // Site content management. Public pages are the static HTML files in /public; changes made in the admin
 // (menu, texts/images/links, hidden elements, SEO, new pages) are stored in the items table and applied here
@@ -14,7 +15,7 @@ const PUBLIC = () => join(/* turbopackIgnore: true */ process.cwd(), 'public');
 export const PANEL = /^\/(admin|panel|partner|avukat|kyc)(\/|$)/;
 const OLD_HOSTS = /https?:\/\/brasil-yeni-baslangic\.fatih-altas\.chatgpt\.site/g;
 // Eski önizleme alan adı (chatgpt.site) veya boş SITE_URL → asıl alan adı
-const siteUrl = () => { const u = (process.env.SITE_URL || '').replace(/\/$/, ''); return !u || /chatgpt\.site/.test(u) ? 'https://brazilmigration.com' : u; };
+const siteUrl = () => { const u = (cfgEnv('SITE_URL') || '').replace(/\/$/, ''); return !u || /chatgpt\.site/.test(u) ? 'https://brazilmigration.com' : u; };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const parseJSON = s => { try { return JSON.parse(s || '{}'); } catch { return {}; } };
 export const hash = s => createHash('sha1').update(String(s)).digest('hex').slice(0, 12);
@@ -49,13 +50,13 @@ export async function staticPages() {
 }
 
 // ---------- saved site state (short in-memory cache, shared by all requests) ----------
-let state = null, stateAt = 0;
+let state = null, stateAt = 0, stateDb = null;   // yalnız ana firmanın veritabanı önbelleğe alınır; diğer firmalar her seferinde taze okunur
 export function invalidateSite() { stateAt = 0; renderCache.clear(); enCache.clear(); }
 import {loadSplits} from './commission.mjs';
 import {dict as i18nDict, translateRoot, lookup as lookupI18n, loadExtra, SITE_LANGS} from './i18n.mjs';
 import {publishedReviews, reviewsHTML, subscribeHTML, PRICE_KEYS} from './growth.mjs';
 export async function siteState(db) {
-  if (state && Date.now() - stateAt < 15000) return state;
+  if (state && stateDb === db && Date.now() - stateAt < 15000) return state;
   const rows = (await db.prepare("SELECT id, kind, data, updated FROM items WHERE kind IN ('site_menu','site_page','site_custom','blog_post') OR id IN ('config-company','config-payments','config-didit','config-analytics','config-seo','config-prices','config-i18n')").all()).results || [];
   const s = {menu: null, pages: {}, custom: {}, blog: {}, company: null, stamp: ''};
   try { s.reviews = await publishedReviews(db, 12); } catch { s.reviews = []; }
@@ -78,8 +79,9 @@ export async function siteState(db) {
   // Diller varsayılan olarak yayında; yalnız yönetici elle "Taslağa al" derse (manual) kapalı
   s.i18n = {...(s.i18n || {})}; for (const l of Object.keys(SITE_LANGS)) if (!s.i18n[l]?.manual) s.i18n[l] = {...s.i18n[l], published: true};
   s.stamp = hash(stamp);
+  if (!currentTenant().isDefault) return s;
   if (state?.stamp !== s.stamp) renderCache.clear();
-  state = s; stateAt = Date.now();
+  state = s; stateAt = Date.now(); stateDb = db;
   return s;
 }
 
@@ -265,7 +267,7 @@ export const cnpjFmt = d => d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '
 function applyTrust(root, st) {
   const f = root.querySelector('footer.site-footer'), fb = f?.querySelector('.footer-bottom'); if (!f || !fb || f.querySelector('.footer-trust')) return;
   const ic = n => `<bm-i class="ic ic-${n}" aria-hidden="true"></bm-i>`;
-  const dd = st?.didit || {}, didit = (dd.enabled ?? process.env.DIDIT_ENABLED === 'true') && !!(dd.apiKey || process.env.DIDIT_API_KEY);
+  const dd = st?.didit || {}, didit = (dd.enabled ?? cfgEnv('DIDIT_ENABLED') === 'true') && !!(dd.apiKey || cfgEnv('DIDIT_API_KEY'));
   const year = new Date().getFullYear(), V = '?v=1';
   const items = [
     `<span class="aw a-ssl" title="SSL güvenli bağlantı"><img src="/bm/trust/ssl.webp${V}" alt="SSL güvenli bağlantı" width="78" height="78" loading="lazy"></span>`,

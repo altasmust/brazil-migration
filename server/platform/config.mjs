@@ -1,3 +1,4 @@
+import {cfgSet} from './tenant-context.mjs';
 // Runtime settings saved from the admin panel (items table) are applied on top of process.env,
 // so every module (mail, Didit, owner e-mail in legacy modules) picks them up without a redeploy.
 const MAP = {
@@ -7,20 +8,23 @@ const MAP = {
   'config-waf': d => ({WAF_ENABLED: d.enabled === false ? 'off' : 'on', WAF_PANEL_TRUSTED: (d.trusted || []).join(',')}),
   'config-ai': d => d.apiKey ? {ANTHROPIC_API_KEY: d.apiKey, AI_VERIFY_MIN_CONFIDENCE: String(d.minConfidence || 0.85)} : {},
 };
-export function applyConfig(id, data) {
+export function applyConfig(id, data, target) {
   const f = MAP[id]; if (!f || !data) return;
-  for (const [k, v] of Object.entries(f(data))) { if (v === undefined || v === null) continue; process.env[k] = String(v); }
+  for (const [k, v] of Object.entries(f(data))) { if (v === undefined || v === null) continue; cfgSet(k, v, target); }
 }
-export async function loadConfig(client) {
+// target: null/undefined = ana firma (process.env); Map = o firmanın yapılandırma katmanı
+export async function loadConfig(client, target) {
   const ids = Object.keys(MAP);
   const rs = await client.execute({sql: `SELECT id, data FROM items WHERE id IN (${ids.map(() => '?').join(',')})`, args: ids});
-  for (const row of rs.rows) { try { applyConfig(row[0] ?? row.id, JSON.parse(row[1] ?? row.data)); } catch {} }
+  for (const row of rs.rows) { try { applyConfig(row[0] ?? row.id, JSON.parse(row[1] ?? row.data), target || undefined); } catch {} }
 }
 // Re-read the saved settings at most every few seconds, so all server processes see changes
 // made from the admin panel (e.g. the admin's login e-mail) without a restart.
 let lastRefresh = 0;
-export async function refreshConfig(client, maxAgeMs = 5000) {
-  if (Date.now() - lastRefresh < maxAgeMs) return;
-  lastRefresh = Date.now();
-  try { await loadConfig(client); } catch (e) { console.error('[config]', e.message); }
+export async function refreshConfig(dbOrClient, maxAgeMs = 5000) {
+  const db = dbOrClient?.client ? dbOrClient : null, client = db ? db.client : dbOrClient, holder = db || {};
+  const last = db ? (db._cfgAt || 0) : lastRefresh;
+  if (Date.now() - last < maxAgeMs) return;
+  if (db) db._cfgAt = Date.now(); else lastRefresh = Date.now();
+  try { await loadConfig(client, holder.cfgTarget); } catch (e) { console.error('[config]', e.message); }
 }

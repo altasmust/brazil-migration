@@ -1,10 +1,11 @@
+import {cfgEnv} from './tenant-context.mjs';
 // Blog: posts are items (kind='blog_post') edited in the admin (Site Yönetimi → Blog) and rendered into the
 // shared site shell at /blog/ (list) and /blog/<slug>/ (article). Article HTML is sanitized on save and on render.
 import {parse} from 'node-html-parser';
 
 export const BLOG_POST = /^\/blog\/([a-z0-9-]{2,90})\/$/;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-const siteUrl = () => (process.env.SITE_URL || 'https://brazilmigration.com').replace(/\/$/, '');
+const siteUrl = () => (cfgEnv('SITE_URL') || 'https://brazilmigration.com').replace(/\/$/, '');
 export const slugify = s => String(s || '').toLocaleLowerCase('tr').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
 
 // ---------- sanitizing ----------

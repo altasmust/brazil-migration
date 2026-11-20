@@ -1,3 +1,4 @@
+import {cfgEnv} from './tenant-context.mjs';
 // iyzico Checkout Form (kartla ödeme). Admin → Ödeme Altyapıları → iyzico etkinse müşteri faturasını kartla öder.
 // Akış: start → iyzico ödeme sayfası → iyzico tarayıcıyı callbackUrl'e (token ile) POST eder → sonuç sorgulanır → fatura "Ödendi".
 import {createHmac, randomBytes, randomUUID} from 'node:crypto';
@@ -8,7 +9,7 @@ const parse = s => { try { return JSON.parse(s || '{}'); } catch { return {}; } 
 const err = (status, message) => Object.assign(new Error(message), {status});
 const price = cents => (Math.round(Number(cents) || 0) / 100).toFixed(2);
 const CUR = ['TRY', 'USD', 'EUR', 'GBP'];
-const siteUrl = req => (process.env.SITE_URL || new URL(req.url).origin).replace(/\/$/, '');
+const siteUrl = req => (cfgEnv('SITE_URL') || new URL(req.url).origin).replace(/\/$/, '');
 const trim = (v, n = 100, d = '') => (String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim() || d).slice(0, n);
 
 export async function iyzicoConfig(db) {

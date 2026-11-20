@@ -1,3 +1,4 @@
+import {cfgEnv} from './tenant-context.mjs';
 // Yönetici → Site Yönetimi → Diller: İngilizce taslak önizleme, yayınla/taslağa al, eksik çeviri raporu.
 import {randomBytes} from 'node:crypto';
 import {dict, reloadDict, loadExtra, norm, SITE_LANGS} from './i18n.mjs';
@@ -61,7 +62,7 @@ export async function i18nAdmin(req, db, route) {
     await setCfg(db, cfg); return json({ok: true, menu: cfg.menu});
   }
   if (route === 'i18n/indexnow' && req.method === 'POST') {
-    const base = (process.env.SITE_URL || '').replace(/\/$/, '');
+    const base = (cfgEnv('SITE_URL') || '').replace(/\/$/, '');
     if (!/^https:\/\//.test(base)) return json({error: 'SITE_URL tanımlı değil; canlı adresi ortam değişkenine yazın.'}, 400);
     const xml = await sitemapXML(db), urlList = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].replace(/&amp;/g, '&')).filter(u => u.startsWith(base)).slice(0, 10000);
     const r = await fetch('https://api.indexnow.org/IndexNow', {method: 'POST', headers: {'Content-Type': 'application/json; charset=utf-8'}, body: JSON.stringify({host: new URL(base).host, key: INDEXNOW_KEY, keyLocation: base + '/' + INDEXNOW_KEY + '.txt', urlList})}).catch(e => ({status: 0, statusText: e.message}));

@@ -11,6 +11,7 @@ import {cleanPost} from './blog.mjs';
 import {seedBlog2} from './blog-seed-2.mjs';
 import {seedBlog3, migrateBlogSeo} from './blog-seed-3.mjs';
 import {loadConfig} from './config.mjs';
+import {currentTenant} from './tenant-context.mjs';
 
 const toObject = (rs, row) => {
   if (!row) return null;
@@ -29,7 +30,8 @@ class Statement {
 }
 
 class Database {
-  constructor(client, remote) { this.client = client; this.remote = remote || null; this.mode = remote ? 'replica' : 'direct'; this._ready = null; }
+  // opts.blank: yeni firma veritabanı — yalnız şema + sahip hesabı (Brazil Migration blog/demo tohumları yok). opts.cfgTarget: yapılandırmanın yazılacağı katman.
+  constructor(client, remote, opts = {}) { this.client = client; this.remote = remote || null; this.mode = remote ? 'replica' : 'direct'; this._ready = null; this.blank = !!opts.blank; this.ownerEmail = opts.ownerEmail || null; this.cfgTarget = opts.cfgTarget || 'main'; }
   // Embedded replica: a local copy of the Turso database that reads come from (no network round trip);
   // writes still go to Turso and the copy re-syncs every TURSO_SYNC_SECONDS. If the first sync fails, Turso is used directly.
   async connect() {
@@ -45,7 +47,10 @@ class Database {
     return rs.map(r => ({success: true, meta: {changes: r.rowsAffected}, results: r.rows.map(row => toObject(r, row))}));
   }
   async exec(sql) { await this.ready(); return this.client.executeMultiple(sql); }
-  ready() { return this._ready ??= this.connect().then(() => migrate(this.client)).then(() => migrateOwner(this.client)).then(() => seedBlog(this.client, cleanPost)).then(() => seedBlog2(this.client, cleanPost)).then(() => seedBlog3(this.client, cleanPost)).then(() => migrateBlogSeo(this.client)).then(() => migrateMenuV2(this.client)).then(() => migrateMenuV3(this.client)).then(() => migrateMenuV4(this.client)).then(() => migrateMenuV5(this.client)).then(() => loadConfig(this.client)).then(() => seedDemo(this.client)).catch(e => { this._ready = null; throw e; }); }
+  ready() {
+    if (this.blank) return this._ready ??= this.connect().then(() => migrate(this.client)).then(() => blankInit(this.client, this.ownerEmail)).then(() => loadConfig(this.client, this.cfgTarget)).catch(e => { this._ready = null; throw e; });
+    return this._ready ??= this.connect().then(() => migrate(this.client)).then(() => migrateOwner(this.client)).then(() => seedBlog(this.client, cleanPost)).then(() => seedBlog2(this.client, cleanPost)).then(() => seedBlog3(this.client, cleanPost)).then(() => migrateBlogSeo(this.client)).then(() => migrateMenuV2(this.client)).then(() => migrateMenuV3(this.client)).then(() => migrateMenuV4(this.client)).then(() => migrateMenuV5(this.client)).then(() => loadConfig(this.client, this.cfgTarget)).then(() => seedDemo(this.client)).catch(e => { this._ready = null; throw e; });
+  }
 }
 
 async function migrate(client) {
@@ -56,6 +61,18 @@ async function migrate(client) {
     const parts = sql.split('--> statement-breakpoint').map(s => s.trim()).filter(Boolean);
     await client.batch([...parts.map(s => ({sql: s, args: []})), {sql: 'INSERT OR IGNORE INTO _migrations VALUES (?, ?)', args: [name, Date.now()]}], 'write');
   }
+}
+
+// Yeni firma: sahip hesabı (parolasız; e-postadaki bağlantıyla parola belirlenir) + sahip kaydı.
+async function blankInit(client, ownerEmail) {
+  if (!ownerEmail) return;
+  const row = (await client.execute({sql: 'SELECT id FROM auth_users WHERE email=?', args: [ownerEmail]})).rows[0];
+  if (row) return;
+  const now = Date.now(), uid = crypto.randomUUID();
+  await client.batch([
+    {sql: 'INSERT INTO auth_users VALUES(?,?,?,?,?,?,?,?)', args: [uid, ownerEmail, null, null, 1, 0, 0, now]},
+    {sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('config-owner','config','owner',?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data", args: [JSON.stringify({email: ownerEmail}), now, now]},
+  ], 'write');
 }
 
 let shared;
@@ -69,7 +86,13 @@ export function findTurso(env) {
   const tokenKey = [base + '_AUTH_TOKEN', base + '_DATABASE_AUTH_TOKEN', base + '_TOKEN', 'TURSO_AUTH_TOKEN', 'LIBSQL_AUTH_TOKEN'].find(k => env[k]) || Object.keys(env).find(k => k.endsWith('AUTH_TOKEN') && k.startsWith(base));
   return {url: env[key], authToken: tokenKey ? env[tokenKey] : undefined};
 }
+// İstek bir firmanın bağlamındaysa o firmanın veritabanı; değilse ana (Brazil Migration) veritabanı.
 export function getDatabase() {
+  const t = currentTenant();
+  if (!t.isDefault) { if (!t.db) throw Object.assign(new Error('Firma veritabanı hazır değil.'), {status: 503}); return t.db; }
+  return getMainDatabase();
+}
+export function getMainDatabase() {
   if (shared) return shared;
   const {url, authToken} = findTurso(process.env);
   let client, remote = null;
@@ -90,5 +113,11 @@ export function getDatabase() {
   }
   shared = new Database(client, remote);
   return shared;
+}
+// Firma veritabanı: libsql URL (Turso) ya da yerel dosya.
+export function openTenantDatabase({url, authToken, ownerEmail, cfgTarget}) {
+  if (!url) throw new Error('Firma veritabanı adresi yok.');
+  if (url.startsWith('file:')) { const f = url.slice(5); mkdirSync(dirname(f), {recursive: true}); }
+  return new Database(createClient({url, authToken}), null, {blank: true, ownerEmail, cfgTarget});
 }
 export function createMemoryDatabase() { return new Database(createClient({url: ':memory:'})); }

@@ -1,3 +1,4 @@
+import {currentTenant, runWithTenant} from './tenant-context.mjs';
 // Güvence: günlük veritabanı yedeği (BUCKET → backups/, son 14 kopya), sağlık kontrolü.
 import {gzipSync} from 'node:zlib';
 import {markBackupDownloaded} from './updates.mjs';
@@ -33,14 +34,19 @@ export async function runBackup(db, bucket, by = 'otomatik') {
 
 export function ensureBackups(env) {
   if (!env?.DB || !env?.BUCKET) return;
-  globalThis.__bmBkEnv = env;
+  const T = currentTenant(); (globalThis.__bmBkEnvs ??= new Map()).set(T.id, {t: T, env});
   if (globalThis.__bmBk) return;
   const tick = async () => {
-    const e = globalThis.__bmBkEnv; if (!e || globalThis.__bmBkRun) return;
+    if (globalThis.__bmBkRun) return;
     globalThis.__bmBkRun = true;
-    try { const log = await readLog(e.DB); if (!log.last || Date.now() - log.last > DAY) await runBackup(e.DB, e.BUCKET); }
-    catch (err) { console.error('[backup]', err.message); try { const log = await readLog(e.DB); log.error = String(err.message).slice(0, 300); log.errorAt = Date.now(); await writeLog(e.DB, log); } catch {} }
-    finally { globalThis.__bmBkRun = false; }
+    try {
+      for (const {t, env: e} of [...globalThis.__bmBkEnvs.values()]) {
+        await runWithTenant(t, async () => {
+          try { const log = await readLog(e.DB); if (!log.last || Date.now() - log.last > DAY) await runBackup(e.DB, e.BUCKET); }
+          catch (err) { console.error('[backup]', err.message); try { const log = await readLog(e.DB); log.error = String(err.message).slice(0, 300); log.errorAt = Date.now(); await writeLog(e.DB, log); } catch {} }
+        });
+      }
+    } finally { globalThis.__bmBkRun = false; }
   };
   globalThis.__bmBk = setInterval(tick, 3600e3); if (globalThis.__bmBk.unref) globalThis.__bmBk.unref();
   setTimeout(tick, 60e3);

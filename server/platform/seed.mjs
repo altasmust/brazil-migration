@@ -1,3 +1,4 @@
+import {cfgEnv, cfgSet} from './tenant-context.mjs';
 // Demo accounts for live testing. Created once when the database is empty for them.
 // Only password hashes are stored here. Disable with DEMO_SEED=off; change the passwords after testing.
 const OWNER = () => (process.env.OWNER_EMAIL || 'admin@brazilmigration.com').toLowerCase();
@@ -29,7 +30,7 @@ export async function migrateOwner(client) {
     {sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('config-owner','config','owner',?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated=excluded.updated", args: [JSON.stringify({email: NEWMAIL, updated: now}), now, now]},
     {sql: "INSERT INTO items(id,kind,owner,data,created,updated) VALUES('migration-owner-v1','migration','owner','{}',?,?)", args: [now, now]},
   ], 'write');
-  process.env.OWNER_EMAIL = NEWMAIL;
+  cfgSet('OWNER_EMAIL', NEWMAIL, 'main');
 }
 
 export async function seedDemo(client) {

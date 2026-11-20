@@ -1,3 +1,4 @@
+import {cfgEnv} from './tenant-context.mjs';
 // Asaas (Brezilya) — Pix, boleto ve kartla tahsilat. Admin → Ödeme Altyapıları → Asaas etkinse
 // müşteri BRL faturasını Asaas ödeme sayfasında (invoiceUrl) Pix / boleto / kartla öder.
 // Akış: start → Asaas müşteri + cobrança (billingType UNDEFINED: müşteri yöntemi seçer) → invoiceUrl'e yönlendirme
@@ -8,7 +9,7 @@ import {loadPayments} from './payments.mjs';
 const BASE = mode => process.env.ASAAS_BASE_URL || (mode === 'live' ? 'https://api.asaas.com/v3' : 'https://api-sandbox.asaas.com/v3');
 const parse = s => { try { return JSON.parse(s || '{}'); } catch { return {}; } };
 const err = (status, message, extra = {}) => Object.assign(new Error(message), {status, ...extra});
-const siteUrl = req => (process.env.SITE_URL || new URL(req.url).origin).replace(/\/$/, '');
+const siteUrl = req => (cfgEnv('SITE_URL') || new URL(req.url).origin).replace(/\/$/, '');
 const trim = (v, n = 100, d = '') => (String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim() || d).slice(0, n);
 const PAID = new Set(['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH']);
 

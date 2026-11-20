@@ -1,3 +1,4 @@
+import {currentTenant} from './tenant-context.mjs';
 // Site dilleri (şimdilik İngilizce taslak). /en/<çevrilmiş-adres>/ → Türkçe sayfa sunucuda render edilir, sonra
 // sözlükle (server/platform/i18n/en.json) çevrilir. Birim: satır içi öğeler (b, a, span…) dahil cümle/blok; etiketler
 // <1>…</1>, <2/> yer tutucularıyla korunur (çevirmen kelime sırasını değiştirebilir). Aynı algoritma tarayıcıda
@@ -20,6 +21,7 @@ const DICTS = new Map();
 let EXTRA = {en: new Map(), pt: new Map()}, EXTRA_AT = 0;
 // Yönetici panelinde girilen ek çeviriler (items: config-i18n-extra). Dosya sözlüğünün üstüne biner; sürüm güncellenince de kaybolmaz.
 export async function loadExtra(db, force = false) {
+  if (!currentTenant().isDefault) return;   // çeviri sözlüğü yalnız ana firmanın sitesi içindir
   if (!force && Date.now() - EXTRA_AT < 30000) return;
   EXTRA_AT = Date.now();
   try {

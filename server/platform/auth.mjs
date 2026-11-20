@@ -1,9 +1,10 @@
+import {cfgEnv} from './tenant-context.mjs';
 // Session/password primitives for the unified login.
 import {scrypt as _scrypt, randomBytes, createHash, timingSafeEqual} from 'node:crypto';
 import {promisify} from 'node:util';
 const scrypt = promisify(_scrypt);
 
-export const OWNER_EMAIL = () => (process.env.OWNER_EMAIL || 'admin@brazilmigration.com').toLowerCase();
+export const OWNER_EMAIL = () => (cfgEnv('OWNER_EMAIL') || 'admin@brazilmigration.com').toLowerCase();
 export const now = () => Date.now();
 export const uuid = () => crypto.randomUUID();
 export const fail = (status, message, extra) => { throw Object.assign(new Error(message), {status, extra}); };
@@ -27,14 +28,14 @@ export const PASSWORD_RULE = 'Şifre en az 8 karakter olmalı ve harf ile rakam 
 
 // ---- hosts & cookies ------------------------------------------------------
 const hostOf = req => (req.headers.get('x-forwarded-host') || req.headers.get('host') || new URL(req.url).host).split(',')[0].trim().toLowerCase().replace(/:\d+$/, '');
-export const adminHosts = () => (process.env.ADMIN_HOST || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+export const adminHosts = () => (cfgEnv('ADMIN_HOST') || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 export const onAdminHost = req => adminHosts().includes(hostOf(req));
 export function isAdminRequest(req) {
   const p = new URL(req.url).pathname;
   if (adminHosts().length) return onAdminHost(req);
   return p.startsWith('/api/admin') || p.startsWith('/api/platform/admin') || p.startsWith('/api/auth/admin');
 }
-const secure = req => !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(hostOf(req));
+const secure = req => !/^([a-z0-9-]+\.)?localhost$|^127\.0\.0\.1$|^\[::1\]$/.test(hostOf(req));
 export const cookieName = req => isAdminRequest(req) ? 'bm_admin' : 'bm_session';
 export function readCookie(req, name) {
   const m = (req.headers.get('cookie') || '').match(new RegExp('(?:^|;\\s*)' + name + '=([^;]+)'));
@@ -56,12 +57,12 @@ export function sessionCookie(req, token, maxAge) {
   return `${cookieName(req)}=${token ? encodeURIComponent(token) : ''}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${token ? maxAge : 0}${secure(req) ? '; Secure' : ''}`;
 }
 export function siteUrl(req) {
-  if (process.env.SITE_URL && !/chatgpt\.site/.test(process.env.SITE_URL)) return process.env.SITE_URL.replace(/\/$/, '');
+  if (cfgEnv('SITE_URL') && !/chatgpt\.site/.test(cfgEnv('SITE_URL'))) return cfgEnv('SITE_URL').replace(/\/$/, '');
   const u = new URL(req.url); const h = req.headers.get('x-forwarded-host') || req.headers.get('host') || u.host;
   return `${req.headers.get('x-forwarded-proto') || u.protocol.replace(':', '')}://${h}`;
 }
 export function adminUrl(req) {
-  if (process.env.ADMIN_URL) return process.env.ADMIN_URL.replace(/\/$/, '');
+  if (cfgEnv('ADMIN_URL')) return cfgEnv('ADMIN_URL').replace(/\/$/, '');
   const h = adminHosts()[0]; return h ? 'https://' + h : siteUrl(req);
 }
 

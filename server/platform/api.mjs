@@ -1,3 +1,5 @@
+import {cfgEnv, cfgDel, currentTenant, runWithTenant} from './tenant-context.mjs';
+import {handleTenantApi} from './tenant-api.mjs';
 // Unified login, registration, partner onboarding, admin account management and panel modules.
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
@@ -191,17 +193,18 @@ async function runReminders(db) {
     const hhmm = new Date(d.start).toLocaleTimeString('tr-TR', {timeZone: tz, hour: '2-digit', minute: '2-digit'});
     try {
       await sendMail({to: d.email, subject: `Ön görüşmeniz ${mins} dakika sonra (${hhmm})`, title: 'Merhaba ' + String(d.name || '').split(' ')[0] + ',',
-        text: `Brazil Migration ile ön görüşmeniz ${mins} dakika sonra, saat ${hhmm}'de (${tz === 'America/Sao_Paulo' ? 'São Paulo' : 'Türkiye'} saati) başlıyor. Aşağıdaki butondan katılabilirsiniz${d.room ? '; oda kodunuz: ' + d.room : ''}. Katılmadan önce kamera ve mikrofon izni vermeniz, mümkünse kulaklık kullanmanız önerilir.`,
+        text: `${currentTenant().isDefault ? 'Brazil Migration' : currentTenant().name} ile ön görüşmeniz ${mins} dakika sonra, saat ${hhmm}'de (${tz === 'America/Sao_Paulo' ? 'São Paulo' : 'Türkiye'} saati) başlıyor. Aşağıdaki butondan katılabilirsiniz${d.room ? '; oda kodunuz: ' + d.room : ''}. Katılmadan önce kamera ve mikrofon izni vermeniz, mümkünse kulaklık kullanmanız önerilir.`,
         link, button: 'Görüşmeye katıl', from: d.roomLink ? mc.from : undefined});
       if (cfg.notifyEmail && validEmail(cfg.notifyEmail)) await sendMail({to: cfg.notifyEmail, subject: `${mins} dk sonra ön görüşme: ${d.name}`, text: `${d.name} (${d.email}) · ${hhmm} · ${d.service || ''}`, link: d.teamRoomLink || d.meet || undefined, button: 'Görüşme odasını aç', from: d.teamRoomLink ? mc.from : undefined});
     } catch (e) { console.error('[reminder]', e.message); }
   }
 }
+// Her firma (ve ana firma) için ayrı veritabanı: kayıtlı tüm firmalar dakikada bir taranır, her biri kendi bağlamında çalışır.
 export function ensureReminders(env) {
   if (!env?.DB) return;
-  globalThis.__bmRemDb = env.DB;
+  const T = currentTenant(); (globalThis.__bmRemT ??= new Map()).set(T.id, {t: T, db: env.DB});
   if (globalThis.__bmRem) return;
-  const tick = () => globalThis.__bmRemDb && runReminders(globalThis.__bmRemDb).catch(e => console.error('[reminder]', e.message));
+  const tick = () => { for (const {t, db} of globalThis.__bmRemT.values()) runWithTenant(t, () => runReminders(db)).catch(e => console.error('[reminder]', e.message)); };
   globalThis.__bmRem = setInterval(tick, 60e3); if (globalThis.__bmRem.unref) globalThis.__bmRem.unref();
   setTimeout(tick, 3000);
 }
@@ -209,13 +212,14 @@ export {runReminders};
 
 export async function handleAuth(req, env, route) {
   const db = env.DB; ensureReminders(env); ensureBackups(env);
+  if (route.startsWith('tenant/')) return handleTenantApi(req, env, route);
   route = route.replace(/^admin\//, '');
   if (route === 'health' && req.method === 'GET') return health(db);
   if (req.method !== 'GET') sameOrigin(req);
   { const g = await growthPublic(req, db, route); if (g) return g; }
   if (route === 'payment-methods' && req.method === 'GET') return json({methods: enabledMethods(await loadPayments(db)).map(m => m.id === 'havale' ? m : {id: m.id, name: m.name})});
   if (route === 'cities' && req.method === 'GET') return json({countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES});
-  if (route === 'config' && req.method === 'GET') return json({mail: mailConfigured(), verifier: verifierConfigured(), adminSeparate: adminHosts().length > 0, whatsapp: (process.env.WHATSAPP_NUMBER || '').replace(/\D/g, '') || null});
+  if (route === 'config' && req.method === 'GET') return json({mail: mailConfigured(), verifier: verifierConfigured(), adminSeparate: adminHosts().length > 0, whatsapp: (cfgEnv('WHATSAPP_NUMBER') || '').replace(/\D/g, '') || null});
 
   if (route === 'me' && req.method === 'GET') {
     const u = await currentUser(db, req); if (!u) return json({user: null});
@@ -427,7 +431,7 @@ export async function handleAuth(req, env, route) {
 
   if (route === 'setup' && req.method === 'POST') { // first owner password, protected by ADMIN_SETUP_KEY
     if (!isAdminRequest(req)) fail(404, 'Bulunamadı.');
-    const key = process.env.ADMIN_SETUP_KEY;
+    const key = cfgEnv('ADMIN_SETUP_KEY');
     if (!key) fail(503, 'ADMIN_SETUP_KEY ortam değişkeni tanımlı değil.');
     if (clean(b.setupKey, 200) !== key) fail(403, 'Kurulum anahtarı hatalı.');
     if (!passwordOk(b.password) || b.password.length < 12) fail(400, 'Yönetici şifresi en az 12 karakter olmalı ve harf ile rakam içermelidir.');
@@ -441,7 +445,7 @@ export async function handleAuth(req, env, route) {
   if (route === 'status' && req.method === 'GET') {
     if (!isAdminRequest(req)) fail(404, 'Bulunamadı.');
     const u = await one(db, 'SELECT hash FROM auth_users WHERE email=?', OWNER_EMAIL());
-    return json({setupNeeded: !u?.hash, setupKeyConfigured: !!process.env.ADMIN_SETUP_KEY});
+    return json({setupNeeded: !u?.hash, setupKeyConfigured: !!cfgEnv('ADMIN_SETUP_KEY')});
   }
   fail(404, 'İşlem bulunamadı.');
 }
@@ -458,7 +462,7 @@ const MAX_UPLOAD = () => Number(process.env.MAX_UPLOAD_MB || (process.env.VERCEL
 
 // ---- Didit identity verification (free plan: ~30 full checks / month) ----
 export const diditReady = env => env.DIDIT_ENABLED === 'true' && !!env.DIDIT_API_KEY && !!env.DIDIT_WORKFLOW_ID;
-const KYC_LIMIT = () => Number(process.env.DIDIT_MONTHLY_LIMIT || 30);
+const KYC_LIMIT = () => Number(cfgEnv('DIDIT_MONTHLY_LIMIT') || 30);
 const monthStart = () => { const d = new Date(); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1); };
 const KYC_FINAL = new Set(['Approved', 'Declined', 'Abandoned', 'Expired', 'Kyc Expired']);
 async function didit(env, path, body, fetchImpl = fetch) {
@@ -718,7 +722,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     for (const r of await rows(db, "SELECT created FROM people WHERE role IN ('customer','advisor') AND created>?", d14)) { const d = day(r.created); if (d in series.signups) series.signups[d]++; }
     const [leadsAll, bookingsAll] = await Promise.all([n("SELECT COUNT(*) AS n FROM items WHERE kind='lead'"), n("SELECT COUNT(*) AS n FROM items WHERE kind='booking'")]);
     const docsPending = await n("SELECT COUNT(*) AS n FROM items WHERE kind='document' AND json_extract(data,'$.status') IN ('Yüklendi','İncelemede') AND COALESCE(json_extract(data,'$.direction'),'out')='out'");
-    return json({customers, customers30, partnersActive, partnersReview, bookings7, bookingsOpen, leads30, credReq, docsPending, kyc: {used: poolUsed, limit: Number(process.env.DIDIT_MONTHLY_LIMIT || 30)}, upcoming, newest, review, days, series, funnel: {leads: leadsAll, bookings: bookingsAll, customers}, system: {mail: mailProvider(), didit: diditReady(process.env), db: db.mode || 'direct'}});
+    return json({customers, customers30, partnersActive, partnersReview, bookings7, bookingsOpen, leads30, credReq, docsPending, kyc: {used: poolUsed, limit: Number(cfgEnv('DIDIT_MONTHLY_LIMIT') || 30)}, upcoming, newest, review, days, series, funnel: {leads: leadsAll, bookings: bookingsAll, customers}, system: {mail: mailProvider(), didit: diditReady(process.env), db: db.mode || 'direct'}});
   }
   if (route === 'demo' && req.method === 'GET') {
     const n = await one(db, "SELECT COUNT(*) AS n FROM people WHERE id IN ('demo-partner','demo-customer')");
@@ -774,12 +778,12 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const list = await Promise.all(advisors.map(async a => ({id: a.id, name: a.name, email: a.email, status: a.status, partner: partners[a.id] || null, ...(await creditState(db, a.id))})));
     const reqs = (await rows(db, "SELECT id, owner, data, created, updated FROM items WHERE kind='kyc_credit_req' ORDER BY created DESC LIMIT 200")).map(r => ({id: r.id, owner: r.owner, ...parse(r.data), at: r.created, updated: r.updated}));
     const poolUsed = (await one(db, "SELECT COUNT(*) AS n FROM items WHERE kind='kyc_session' AND created>=?", creditMonthStart()))?.n || 0;
-    return json({partners: list, requests: reqs, pool: {limit: Number(process.env.DIDIT_MONTHLY_LIMIT || 30), used: Number(poolUsed), distributed: list.reduce((n, x) => n + x.allowance, 0)}, defaultMonthly: DEFAULT_MONTHLY});
+    return json({partners: list, requests: reqs, pool: {limit: Number(cfgEnv('DIDIT_MONTHLY_LIMIT') || 30), used: Number(poolUsed), distributed: list.reduce((n, x) => n + x.allowance, 0)}, defaultMonthly: DEFAULT_MONTHLY});
   }
   if (['settings/mail', 'settings/didit', 'settings/ai', 'profile'].includes(route) && req.method === 'GET') {
-    if (route === 'settings/ai') { const d = (await getItem(db, 'config-ai'))?.data || {}; return json({ai: {apiKey: (d.apiKey || process.env.ANTHROPIC_API_KEY) ? MASK : '', minConfidence: d.minConfidence || Number(process.env.AI_VERIFY_MIN_CONFIDENCE || 0.85), updated: d.updated || null}, ready: verifierConfigured()}); }
-    if (route === 'settings/mail') { const d = (await getItem(db, 'config-mail'))?.data || {}; return json({mail: {active: d.active !== false, host: d.host || 'smtp.hostinger.com', port: d.port || 465, secure: d.secure !== false, user: d.user || '', pass: d.pass ? MASK : '', fromName: d.fromName || 'Brazil Migration', fromEmail: d.fromEmail || '', replyTo: d.replyTo || '', saved: !!d.host, updated: d.updated || null}, provider: mailProvider(), configured: mailConfigured(), envResend: !!process.env.RESEND_API_KEY}); }
-    if (route === 'settings/didit') { const d = (await getItem(db, 'config-didit'))?.data || {}; return json({didit: {enabled: d.enabled ?? process.env.DIDIT_ENABLED === 'true', apiKey: (d.apiKey || process.env.DIDIT_API_KEY) ? MASK : '', workflowId: d.workflowId || process.env.DIDIT_WORKFLOW_ID || '', limit: d.limit || Number(process.env.DIDIT_MONTHLY_LIMIT || 30), updated: d.updated || null}, ready: diditReady(process.env), callback: siteUrl(req) + '/partner/?kyc=done'}); }
+    if (route === 'settings/ai') { const d = (await getItem(db, 'config-ai'))?.data || {}; return json({ai: {apiKey: (d.apiKey || cfgEnv('ANTHROPIC_API_KEY')) ? MASK : '', minConfidence: d.minConfidence || Number(cfgEnv('AI_VERIFY_MIN_CONFIDENCE') || 0.85), updated: d.updated || null}, ready: verifierConfigured()}); }
+    if (route === 'settings/mail') { const d = (await getItem(db, 'config-mail'))?.data || {}; return json({mail: {active: d.active !== false, host: d.host || 'smtp.hostinger.com', port: d.port || 465, secure: d.secure !== false, user: d.user || '', pass: d.pass ? MASK : '', fromName: d.fromName || 'Brazil Migration', fromEmail: d.fromEmail || '', replyTo: d.replyTo || '', saved: !!d.host, updated: d.updated || null}, provider: mailProvider(), configured: mailConfigured(), envResend: !!cfgEnv('RESEND_API_KEY')}); }
+    if (route === 'settings/didit') { const d = (await getItem(db, 'config-didit'))?.data || {}; return json({didit: {enabled: d.enabled ?? cfgEnv('DIDIT_ENABLED') === 'true', apiKey: (d.apiKey || cfgEnv('DIDIT_API_KEY')) ? MASK : '', workflowId: d.workflowId || cfgEnv('DIDIT_WORKFLOW_ID') || '', limit: d.limit || Number(cfgEnv('DIDIT_MONTHLY_LIMIT') || 30), updated: d.updated || null}, ready: diditReady(process.env), callback: siteUrl(req) + '/partner/?kyc=done'}); }
     const owner = await one(db, "SELECT name FROM people WHERE role='owner' LIMIT 1");
     return json({profile: {email: u.email, name: owner?.name || 'Yönetici'}});
   }
@@ -1052,7 +1056,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     if (status === 'Ödendi' && advisor) ops.push(q(db, 'INSERT OR IGNORE INTO ledger VALUES(?,?,?,?,?,?,?)', uuid(), id, p.id, advisor, amount, Math.round(amount * data.rate / 100), now()));
     await db.batch(ops);
     let mailed = false;
-    if (b.notify && p.email) { const site = (process.env.SITE_URL || new URL(req.url).origin).replace(/\/$/, ''); const m = await sendMail({to: p.email, subject: `Yeni faturanız: ${data.title}`, title: 'Yeni faturanız hazır', text: `Merhaba ${p.name || ''}, ${data.title} için ${(amount / 100).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${currency} tutarında faturanız oluşturuldu.${data.due ? ' Son ödeme tarihi: ' + data.due + '.' : ''} Faturanızı panelinizden görüntüleyip ödeyebilirsiniz.`, link: site + (p.role === 'advisor' ? '/partner/' : '/panel/') + '#finance', button: 'Faturayı görüntüle'}); mailed = !!m.sent; }
+    if (b.notify && p.email) { const site = (cfgEnv('SITE_URL') || new URL(req.url).origin).replace(/\/$/, ''); const m = await sendMail({to: p.email, subject: `Yeni faturanız: ${data.title}`, title: 'Yeni faturanız hazır', text: `Merhaba ${p.name || ''}, ${data.title} için ${(amount / 100).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${currency} tutarında faturanız oluşturuldu.${data.due ? ' Son ödeme tarihi: ' + data.due + '.' : ''} Faturanızı panelinizden görüntüleyip ödeyebilirsiniz.`, link: site + (p.role === 'advisor' ? '/partner/' : '/panel/') + '#finance', button: 'Faturayı görüntüle'}); mailed = !!m.sent; }
     return json({ok: true, id, mailed});
   }
   if (route === 'invoices/status' && req.method === 'POST') {
@@ -1126,7 +1130,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const port = Math.round(Number(b.port) || 465); if (port < 1 || port > 65535) fail(400, 'Port geçersiz.');
     const data = {active: b.active !== false, host: clean(b.host, 200), port, secure: b.secure !== false, user, pass: b.pass && b.pass !== MASK ? String(b.pass).slice(0, 300) : old.pass || '', fromName: clean(b.fromName, 80) || 'Brazil Migration', fromEmail, replyTo: validEmail(clean(b.replyTo, 254)) ? clean(b.replyTo, 254) : '', updated: now()};
     await db.batch([putItem(db, 'config-mail', 'config', 'owner', data), audit(db, actor, 'settings.mail', data.host)]);
-    if (!data.active) for (const k of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS']) delete process.env[k];
+    if (!data.active) for (const k of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS']) cfgDel(k);
     applyConfig('config-mail', data);
     return json({ok: true, provider: mailProvider(), configured: mailConfigured()});
   }
@@ -1144,7 +1148,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const minConfidence = Math.max(0.5, Math.min(0.99, Number(b.minConfidence) || 0.85));
     const data = {apiKey: b.remove ? '' : key, minConfidence, updated: now()};
     await db.batch([putItem(db, 'config-ai', 'config', 'owner', data), audit(db, actor, 'settings.ai', data.apiKey ? 'on' : 'off')]);
-    if (!data.apiKey) delete process.env.ANTHROPIC_API_KEY;
+    if (!data.apiKey) cfgDel('ANTHROPIC_API_KEY');
     applyConfig('config-ai', data);
     return json({ok: true, ready: verifierConfigured()});
   }
@@ -1160,7 +1164,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   }
   if (route === 'settings/didit' && req.method === 'POST') {
     const old = (await getItem(db, 'config-didit'))?.data || {};
-    const data = {enabled: !!b.enabled, apiKey: b.apiKey && b.apiKey !== MASK ? clean(b.apiKey, 300) : old.apiKey || process.env.DIDIT_API_KEY || '', workflowId: clean(b.workflowId, 120), limit: Math.max(1, Math.min(10000, Math.round(Number(b.limit) || 30))), updated: now()};
+    const data = {enabled: !!b.enabled, apiKey: b.apiKey && b.apiKey !== MASK ? clean(b.apiKey, 300) : old.apiKey || cfgEnv('DIDIT_API_KEY') || '', workflowId: clean(b.workflowId, 120), limit: Math.max(1, Math.min(10000, Math.round(Number(b.limit) || 30))), updated: now()};
     if (data.enabled && (!data.apiKey || !data.workflowId)) fail(400, 'Etkinleştirmek için API anahtarı ve Workflow ID gerekli.');
     await db.batch([putItem(db, 'config-didit', 'config', 'owner', data), audit(db, actor, 'settings.didit', data.enabled ? 'on' : 'off')]);
     applyConfig('config-didit', data);

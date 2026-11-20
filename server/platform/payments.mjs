@@ -1,3 +1,4 @@
+import {cfgEnv} from './tenant-context.mjs';
 // Payment modules (admin → Faturalandırma → Ödeme Altyapıları). Settings live in item 'config-payments'.
 // Secret fields are never sent back to the browser; an unchanged (masked) secret keeps the stored value.
 export const MASK = '••••••••';
@@ -38,7 +39,7 @@ export function publicView(all) {
   return PROVIDERS.map(p => {
     const c = all[p.id] || {}, values = {};
     for (const f of p.fields) values[f.k] = f.secret ? (c.values?.[f.k] ? MASK : '') : (c.values?.[f.k] ?? (f.type === 'accounts' ? [] : ''));
-    return {...p, help: String(p.help || '').replace('{site}', (process.env.SITE_URL || 'https://brazilmigration.com').replace(/\/$/, '')), enabled: !!c.enabled, mode: c.mode || 'test', label: c.label || '', values, ready: ready(p, c), updated: c.updated || null};
+    return {...p, help: String(p.help || '').replace('{site}', (cfgEnv('SITE_URL') || 'https://brazilmigration.com').replace(/\/$/, '')), enabled: !!c.enabled, mode: c.mode || 'test', label: c.label || '', values, ready: ready(p, c), updated: c.updated || null};
   });
 }
 function ready(p, c) {

@@ -1,21 +1,22 @@
+import {cfgEnv} from './tenant-context.mjs';
 // Outgoing e-mail. Order: SMTP (admin → Ayarlar → E-posta Ayarları, or SMTP_* env) → Resend (RESEND_API_KEY) → test mode.
 // In test mode nothing is sent and the action link is returned to the screen (devLink) so live tests can continue.
 // Set EMAIL_TEST_MODE=off to hide links when nothing is configured.
 import nodemailer from 'nodemailer';
 
-const smtpReady = () => !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
-const fromAddress = () => process.env.EMAIL_FROM || (process.env.SMTP_USER ? `Brazil Migration <${process.env.SMTP_USER}>` : '');
-export const mailConfigured = () => (smtpReady() && !!fromAddress()) || !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+const smtpReady = () => !!(cfgEnv('SMTP_HOST') && cfgEnv('SMTP_USER') && cfgEnv('SMTP_PASS'));
+const fromAddress = () => cfgEnv('EMAIL_FROM') || (cfgEnv('SMTP_USER') ? `Brazil Migration <${cfgEnv('SMTP_USER')}>` : '');
+export const mailConfigured = () => (smtpReady() && !!fromAddress()) || !!(cfgEnv('RESEND_API_KEY') && cfgEnv('EMAIL_FROM'));
 export const testMode = () => !mailConfigured() && process.env.EMAIL_TEST_MODE !== 'off';
-export const mailProvider = () => smtpReady() ? 'smtp' : process.env.RESEND_API_KEY && process.env.EMAIL_FROM ? 'resend' : 'test';
+export const mailProvider = () => smtpReady() ? 'smtp' : cfgEnv('RESEND_API_KEY') && cfgEnv('EMAIL_FROM') ? 'resend' : 'test';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 let transport = null, transportKey = '';
 function smtp() {
-  const key = [process.env.SMTP_HOST, process.env.SMTP_PORT, process.env.SMTP_SECURE, process.env.SMTP_USER, process.env.SMTP_PASS].join('|');
+  const key = [cfgEnv('SMTP_HOST'), cfgEnv('SMTP_PORT'), cfgEnv('SMTP_SECURE'), cfgEnv('SMTP_USER'), cfgEnv('SMTP_PASS')].join('|');
   if (!transport || key !== transportKey) {
-    const port = Number(process.env.SMTP_PORT || 465);
-    transport = nodemailer.createTransport({host: process.env.SMTP_HOST, port, secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE !== 'false' : port === 465, auth: {user: process.env.SMTP_USER, pass: process.env.SMTP_PASS}, connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 20000});
+    const port = Number(cfgEnv('SMTP_PORT') || 465);
+    transport = nodemailer.createTransport({host: cfgEnv('SMTP_HOST'), port, secure: cfgEnv('SMTP_SECURE') ? cfgEnv('SMTP_SECURE') !== 'false' : port === 465, auth: {user: cfgEnv('SMTP_USER'), pass: cfgEnv('SMTP_PASS')}, connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 20000});
     transportKey = key;
   }
   return transport;
@@ -33,7 +34,7 @@ export async function sendMail({to, subject, title, text, link, button, throwOnE
   }
   try {
     if (smtpReady()) {
-      const msg = {replyTo: process.env.EMAIL_REPLY_TO || undefined, to, subject, html, text: plain};
+      const msg = {replyTo: cfgEnv('EMAIL_REPLY_TO') || undefined, to, subject, html, text: plain};
       // İstenen gönderen adresi (ör. bilgi@…); SMTP sunucusu reddederse varsayılan adresle tekrar dener.
       if (from) { try { await smtp().sendMail({...msg, from}); } catch (e) { console.error('[mail] gönderen reddedildi, varsayılanla deneniyor:', e.message); await smtp().sendMail({...msg, from: fromAddress()}); } }
       else await smtp().sendMail({...msg, from: fromAddress()});
@@ -41,8 +42,8 @@ export async function sendMail({to, subject, title, text, link, button, throwOnE
     }
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {Authorization: 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json'},
-      body: JSON.stringify({from: process.env.EMAIL_FROM, to: [to], subject, html, text: plain}),
+      headers: {Authorization: 'Bearer ' + cfgEnv('RESEND_API_KEY'), 'Content-Type': 'application/json'},
+      body: JSON.stringify({from: cfgEnv('EMAIL_FROM'), to: [to], subject, html, text: plain}),
     });
     if (!r.ok) { const t = await r.text(); console.error('[mail] resend', r.status, t); if (throwOnError) throw new Error('Resend: ' + r.status); return {sent: false}; }
     return {sent: true};
