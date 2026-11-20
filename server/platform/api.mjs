@@ -5,6 +5,7 @@ import {assertQuota, usage, limitsFor, PLAN_NAMES} from './plans.mjs';
 import {casesAdmin, casesCustomer, maybeRunCaseReminders} from './cases.mjs';
 import {salesPublic, salesAdmin, maybeRunSalesReminders} from './sales.mjs';
 import {networkAdmin} from './network.mjs';
+import {commsAdmin, setLang} from './comms.mjs';
 // Unified login, registration, partner onboarding, admin account management and panel modules.
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
@@ -256,6 +257,10 @@ export async function handleAuth(req, env, route) {
     const pm = isAdminRequest(req) ? null : await one(db, "SELECT i.data FROM items i JOIN people p ON i.owner=p.id WHERE p.uid=? AND i.kind='account_meta' LIMIT 1", u.id);
     const imp = isAdminRequest(req) ? false : await isImpersonated(db, req);
     return json({user: {email: u.email, country: pm ? parse(pm.data).country || '' : '', impersonated: imp}, accounts});
+  }
+  if (route === 'lang' && req.method === 'POST') { // giriş yapmış kullanıcı otomatik e-postalarının dilini seçer
+    const u = await currentUser(db, req); if (!u) fail(401, 'Giriş gerekli.');
+    await setLang(db, u.email, (await body(req)).lang); return json({ok: true});
   }
   if (route === 'impersonate' && req.method === 'GET') {
     if (isAdminRequest(req)) fail(404, 'İşlem bulunamadı.');
@@ -703,6 +708,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   { const g = await casesAdmin(req, db, route, {audit, actor}); if (g) return g; }
   { const g = await salesAdmin(req, db, route, {audit, actor, createCustomer: (d, r, f) => createCustomerFromLead(d, r, f, actor)}); if (g) return g; }
   { const g = await networkAdmin(req, db, route, {audit, actor}); if (g) return g; }
+  { const g = await commsAdmin(req, db, route, {audit, actor, translate: async (q, sl, tl) => translateText(q, sl, tl, await translateConfig(db))}); if (g) return g; }
 
   if (route === 'meta' && req.method === 'GET') return json({types: ACCOUNT_TYPES, perms: PERMS, permLabels: PERM_LABELS, defaults: DEFAULT_PERMS, panels: PANELS, countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES, mail: mailConfigured(), verifier: verifierConfigured()});
 

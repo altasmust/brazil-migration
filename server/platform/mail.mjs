@@ -28,7 +28,14 @@ export async function sendMail(o) {
   if (!currentTenant().isDefault) { const nm = firmName(), r = s => (typeof s === 'string' ? s.split('Brazil Migration').join(nm) : s); o = {...o, subject: r(o.subject), title: r(o.title), text: r(o.text), button: r(o.button)}; }
   return sendMailRaw(o);
 }
-async function sendMailRaw({to, subject, title, text, link, button, throwOnError, from}) {
+// Giden müşteri e-postaları gelen kutusu için günlüğe yazılır (bağlantı saklanmaz; hata e-postayı engellemez).
+async function track(o, res) {
+  if (o.nolog || !o.to || /[?&](sifre|token|t|code|kod|k)=/i.test(String(o.link || ''))) return res; // oturum/doğrulama bağlantılı e-postalar günlüğe girmez
+  try { const [{logMail}, {getDatabase}] = await Promise.all([import('./comms.mjs'), import('./db.mjs')]); await logMail(getDatabase(), {to: o.to, subject: o.subject, text: o.text, ok: !!res?.sent}); } catch {}
+  return res;
+}
+async function sendMailRaw(o) { return track(o, await sendMailDo(o)); }
+async function sendMailDo({to, subject, title, text, link, button, throwOnError, from}) {
   const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#1a2e1f">
   <h2 style="color:#1b5e20">${esc(title || subject)}</h2><p style="line-height:1.6">${esc(text)}</p>
   ${link ? `<p><a href="${esc(link)}" style="display:inline-block;background:#1b5e20;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none">${esc(button || 'Devam et')}</a></p><p style="font-size:12px;color:#667">Buton çalışmazsa bu bağlantıyı tarayıcınıza yapıştırın:<br>${esc(link)}</p>` : ''}

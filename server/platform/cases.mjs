@@ -4,6 +4,7 @@
 // yalnız aşama yol haritası (application.data.stages) ve kapanış durumu şablon aşamasıyla eşitlenir.
 import {fail, clean, now, uuid, validEmail} from './auth.mjs';
 import {sendMail} from './mail.mjs';
+import {mailTpl} from './comms.mjs';
 import {currentTenant, cfgEnv} from './tenant-context.mjs';
 
 const json = (data, status = 200) => Response.json(data, {status, headers: {'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff'}});
@@ -156,6 +157,8 @@ async function customerMap(db) { const m = new Map(); for (const p of await all(
 const nextDeadline = st => (st.deadlines || []).filter(d => d.date).map(d => ({label: d.label, date: d.date, days: daysTo(d.date)})).sort((a, b) => a.days - b.days).find(d => d.days >= -30) || null;
 
 // ---------------- Yönetici uçları (/api/platform/admin/cases/...) ----------------
+// Kalan gün ifadesi müşterinin dilinde.
+const LEFT = {en: n => (n === 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} days`), pt: n => (n === 0 ? 'hoje' : n === 1 ? 'amanhã' : `em ${n} dias`), fa: n => (n === 0 ? 'امروز' : n === 1 ? 'فردا' : `${n} روز دیگر`)};
 export async function casesAdmin(req, db, route, {audit, actor} = {}) {
   if (!route.startsWith('cases/')) return null;
   const log = async (a, t) => { try { await audit?.(db, actor || 'Yönetici', a, t).run(); } catch {} };
@@ -350,7 +353,7 @@ export async function runCaseReminders(db, nowMs = Date.now()) {
       await notice(db, row.owner, `${title} (${when})`, 'services'); await notice(db, app.advisor || 'owner', `${cust?.name || 'Müşteri'} · ${title}`, 'applications');
       if (cust?.email && validEmail(cust.email)) {
         const base = (cfgEnv('SITE_URL') || '').replace(/\/$/, '');
-        try { await sendMail({to: cust.email, subject: `${firmName()}: ${d.label} — ${left}`, title: 'Merhaba ' + String(cust.name || '').split(' ')[0] + ',', text: `${app.service || 'Dosyanız'} ile ilgili önemli bir tarih yaklaşıyor: ${d.label} — ${when} (${left}). Danışmanınız sizinle iletişime geçecektir; sorunuz varsa panelden yazabilirsiniz.`, link: base ? base + '/panel/#services' : undefined, button: 'Dosyamı aç'}); } catch (e) { console.error('[case-reminder]', e.message); }
+        try { await mailTpl(db, {to: cust.email, key: 'case.deadline', vars: lg => ({firm: firmName(), label: d.label, first: String(cust.name || '').split(' ')[0], service: app.service || '', when, left: LEFT[lg] ? LEFT[lg](days) : left}), link: base ? base + '/panel/#services' : undefined}); } catch (e) { console.error('[case-reminder]', e.message); }
       }
       sent++;
     }

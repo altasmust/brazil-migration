@@ -4,6 +4,7 @@
 // Hukuki not: bu modüldeki imza "basit elektronik imza"dır (bağlantı + onay + zaman/IP/belge özeti kaydı); nitelikli e-imza değildir.
 import {fail, clean, now, uuid, validEmail, sha, siteUrl} from './auth.mjs';
 import {sendMail} from './mail.mjs';
+import {mailTpl, langOf, validLang} from './comms.mjs';
 import {currentTenant, cfgEnv} from './tenant-context.mjs';
 import {loadSplits, splitFor, serviceKey} from './commission.mjs';
 import {clientIp} from '../waf.mjs';
@@ -195,11 +196,16 @@ async function createPlan(db, req, b, by) {
   let mailed = false;
   if (b.notify && p.email) {
     const lines = items.map(i => `${i.n}. ${i.due} — ${money(i.amount, currency)}`).join('\n');
-    const m = await sendMail({to: p.email, subject: `Ödeme planınız: ${title}`, title: 'Ödeme planınız hazır', text: `Merhaba ${p.name || ''}, "${title}" için ${money(totalC, currency)} tutarındaki ödemeniz ${sched.length} parçaya bölündü:\n\n${lines}\n\nHer ödemeyi panelinizin Finans bölümünden yapabilirsiniz.`, link: baseUrl(req) + '/panel/#finance', button: 'Ödemelerimi gör'});
+    const m = await mailTpl(db, {to: p.email, key: 'plan.created', vars: {title, name: p.name || '', total: money(totalC, currency), count: sched.length, lines}, link: baseUrl(req) + '/panel/#finance'});
     mailed = !!m.sent;
   }
   return {id: planId, number: prefix, mailed, items};
 }
+
+// Vade ifadesi müşterinin dilinde ("bugün", "3 gün içinde", "2 gün önce").
+const WHEN = {tr: [n => 'bugün', n => `${n} gün içinde`, n => `${n} gün önce`], en: [() => 'today', n => `in ${n} days`, n => `${n} days ago`], pt: [() => 'hoje', n => `em ${n} dias`, n => `${n} dias atrás`], fa: [() => 'امروز', n => `تا ${n} روز دیگر`, n => `${n} روز پیش`]};
+const whenLoc = (left, lang) => { const w = WHEN[lang] || WHEN.tr; return left === 0 ? w[0](0) : left > 0 ? w[1](left) : w[2](-left); };
+const setLangSafe = async (db, email, lang) => { try { const {setLang} = await import('./comms.mjs'); await setLang(db, email, lang); } catch {} };
 
 // ---------------- Hatırlatıcılar (yalnız taksit planı faturaları) ----------------
 export async function runSalesReminders(db, nowMs = now()) {
@@ -220,7 +226,7 @@ export async function runSalesReminders(db, nowMs = now()) {
     const text = kind === 'pre' ? `Merhaba ${p.name || ''}, "${d.title}" ödemeniz (${amt}) ${when} (${d.due}) vadesine ulaşıyor.` : `Merhaba ${p.name || ''}, "${d.title}" ödemenizin (${amt}) vadesi ${d.due} tarihinde dolmuştu (${when}). Henüz ödemeniz görünmüyor; yaptıysanız dekontu panelden yükleyebilirsiniz.`;
     try {
       await notice(db, p.id, text.replace(/^Merhaba [^,]*, /, ''), 'finance');
-      if (p.email) await sendMail({to: p.email, subject: title, title, text: text + ' Ödemeyi panelinizin Finans bölümünden yapabilirsiniz.', link: base ? base + '/panel/#finance' : undefined, button: 'Ödemeye git'});
+      if (p.email) await mailTpl(db, {to: p.email, key: kind === 'pre' ? 'installment.pre' : 'installment.over', vars: {title: d.title, name: p.name || '', amount: amt, due: d.due, when: whenLoc(left, await langOf(db, p.email))}, link: base ? base + '/panel/#finance' : undefined});
       if (kind === 'pre') rem.pre = nowMs; else { rem.over = [...(rem.over || []), nowMs]; if (rem.over.length === 1) await notice(db, 'owner', `Geciken taksit: ${p.name || p.email} · ${d.title}`, 'odemeplani'); }
       await put(db, r.id, 'invoice', r.owner, {...d, rem}); sent++;
     } catch (e) { console.error('[sales-reminder]', e.message); }
@@ -263,7 +269,8 @@ export async function salesPublic(req, db, route) {
     const r = await upsertLead(db, {name, email, phone, service, country: b.country, note: b.message, source: 'Başvuru formu', consent: true, consentText: c.consentText, historyText: 'Başvuru formundan geldi.'}, 'Form');
     if (r.created) await notice(db, 'owner', `Yeni başvuru: ${name}${service ? ' · ' + service : ''}`, 'adaylar');
     const brand = await firmBrand(db);
-    await sendMail({to: email, subject: `Talebiniz alındı — ${brand.name}`, title: `Merhaba ${name.split(' ')[0]},`, text: c.thanks || FORM_DEFAULT.thanks}).catch(() => {});
+    if (validLang(b.lang)) await setLangSafe(db, email, b.lang);
+    await mailTpl(db, {to: email, key: 'lead.thanks', hint: b.lang, vars: {first: name.split(' ')[0], firm: brand.name, thanks: c.thanks || FORM_DEFAULT.thanks}}).catch(() => {});
     if (c.notifyEmail && validEmail(c.notifyEmail) && r.created) await sendMail({to: c.notifyEmail, subject: `Yeni başvuru: ${name}`, text: `${name} (${email}${phone ? ', ' + phone : ''}) ${service ? '· ' + service : ''}\n${clean(b.message, 500)}`}).catch(() => {});
     return json({ok: true, message: c.thanks});
   }
@@ -402,7 +409,7 @@ export async function salesAdmin(req, db, route, ctx = {}) {
     pushHist(q.d, 'Teklif gönderildi.', actor, 'sent'); await put(db, q.id, 'quote', q.owner, q.d);
     if (q.d.leadId) { const l = await get(db, q.d.leadId, 'lead'); if (l && ['new', 'contacted', 'meeting'].includes(l.d.stage || 'new')) { pushHist(l.d, `Aşama: ${stageName(l.d.stage || 'new')} → Teklif verildi`, 'Sistem', 'stage'); l.d.stage = 'quoted'; await put(db, l.id, 'lead', l.owner, l.d); } }
     const link = quoteLink(req, q); let mailed = false;
-    if (b.notify !== false) { const m = await sendMail({to: q.d.email, subject: `Teklifiniz: ${q.d.title}`, title: `Merhaba ${q.d.name.split(' ')[0]},`, text: `${q.d.title} için teklifiniz hazır (${q.d.number}). Toplam: ${money(q.d.amount, q.d.currency)}. Geçerlilik: ${q.d.validUntil}. Bağlantıdan inceleyip kabul edebilir veya yanıtlayabilirsiniz.`, link, button: 'Teklifi görüntüle'}); mailed = !!m.sent; }
+    if (b.notify !== false) { const m = await mailTpl(db, {to: q.d.email, key: 'quote.ready', vars: {title: q.d.title, first: q.d.name.split(' ')[0], number: q.d.number, total: money(q.d.amount, q.d.currency), valid: q.d.validUntil}, link}); mailed = !!m.sent; }
     await log('quote.send', q.id); return json({ok: true, link, mailed});
   }
   if (route === 'sales/quotes/link' && req.method === 'GET') { const q = await get(db, clean(url.searchParams.get('id'), 80), 'quote'); if (!q || !q.d.token) fail(404, 'Teklif henüz gönderilmedi.'); return json({link: quoteLink(req, q)}); }
@@ -452,7 +459,7 @@ export async function salesAdmin(req, db, route, ctx = {}) {
     const un = unresolved(c.d.body); if (un.length) fail(400, 'Metinde doldurulmamış alanlar var: ' + un.join(', ') + '. Taslağı düzenleyin.');
     if (!c.d.token) c.d.token = token(); c.d.status = 'sent'; c.d.sentAt = now(); pushHist(c.d, 'İmza için gönderildi.', actor, 'sent'); await put(db, c.id, 'contract', c.owner, c.d);
     const link = contractLink(req, c); let mailed = false;
-    if (b.notify !== false) { const m = await sendMail({to: c.d.email, subject: `İmzanız bekleniyor: ${c.d.title}`, title: `Merhaba ${c.d.name.split(' ')[0]},`, text: `${c.d.title} (${c.d.number}) imzanıza hazır. Bağlantıdan metni okuyup elektronik olarak imzalayabilirsiniz.`, link, button: 'Sözleşmeyi incele ve imzala'}); mailed = !!m.sent; }
+    if (b.notify !== false) { const m = await mailTpl(db, {to: c.d.email, key: 'contract.sign', vars: {title: c.d.title, first: c.d.name.split(' ')[0], number: c.d.number}, link}); mailed = !!m.sent; }
     await log('contract.send', c.id); return json({ok: true, link, mailed});
   }
   if (route === 'sales/contracts/void' && req.method === 'POST') {
