@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1b5e20">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>Uygulamayı yükle ve bildirimler</title>
+<style>
+:root{--brand:#1b5e20;--bg:#f4f7f2;--ink:#17261b;--mute:#68776b;--line:#d7dfd2}
+*{box-sizing:border-box}body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:720px;margin:0 auto;padding:18px 16px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 0 14px}.top a{color:var(--brand);font-size:14px}
+.lang{display:flex;gap:6px}.lang button{font:inherit;font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:#fff;cursor:pointer}.lang button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.card{background:#fff;border:1px solid #e3e9de;border-radius:18px;padding:20px;box-shadow:0 6px 24px rgba(23,38,27,.06);margin-bottom:16px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 8px}.mute{color:var(--mute);font-size:14px;margin:0 0 12px}
+.btn{display:inline-block;font:inherit;background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;text-decoration:none;margin:4px 6px 4px 0}.btn.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand)}.btn[disabled]{opacity:.5}
+ol{padding-left:20px;margin:6px 0}li{margin:4px 0}label.row{display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:8px 0}
+.chip{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;background:#e6f2e7;color:var(--brand);margin-left:6px}.chip.off{background:#f1f1f1;color:#666}.msg{margin:10px 0;color:var(--brand);font-weight:600}.err{color:#b3261e}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="/panel/" id="back">←</a><div class="lang"><button data-l="tr">TR</button><button data-l="en">EN</button><button data-l="pt">PT</button></div></div>
+  <div id="app"></div>
+</div>
+<script src="/bm/push.js?v=1"></script>
+<script>
+(function(){
+  var TX={
+    tr:{back:'← Panele dön',h:'Uygulamayı yükle ve bildirimler',sub:'Brazil Migration’ı telefonunuza uygulama gibi kurun; yeni mesaj, belge ve randevu bildirimlerini anında alın. Ücretsizdir, mağaza hesabı gerekmez.',
+      i:'1) Uygulamayı yükleyin',ibtn:'Uygulamayı yükle',idone:'Uygulama yüklü ✓',iand:'Android / Chrome: “Uygulamayı yükle” düğmesine basın ya da tarayıcı menüsünden “Ana ekrana ekle”yi seçin.',iios:'iPhone / iPad: Safari’de Paylaş düğmesine (⬆︎) dokunun → “Ana Ekrana Ekle” → Ekle. Bildirimler yalnızca ana ekrandan açtığınız uygulamada çalışır (iOS 16.4 ve üstü).',
+      n:'2) Bildirimleri açın',nd:'Yeni mesaj, belge, görüşme ve güncellemeler için bu cihaza bildirim gönderilir.',nbtn:'Bildirimleri aç',noff:'Bildirimleri kapat',non:'Bildirimler bu cihazda açık',noffs:'Kapalı',nden:'Tarayıcı bildirimlere izin vermiyor. Adres çubuğundaki kilit simgesinden “Bildirimler”i açıp tekrar deneyin.',
+      nuns:'Bu tarayıcı bildirimleri desteklemiyor. Android’de Chrome’u, iPhone’da uygulamayı ana ekrandan açmayı deneyin.',niosneed:'iPhone’da bildirim için önce uygulamayı Ana Ekrana ekleyip oradan açın.',
+      det:'Bildirimde ayrıntıyı göster',detd:'Kapalıyken kilit ekranında yalnızca “Yeni bildiriminiz var” yazar (gizlilik için önerilir). Açıkken bildirim başlığı da görünür.',test:'Test bildirimi gönder',tested:'Test gönderildi.',notest:'Test gönderilemedi.',
+      login:'Bildirimleri yönetmek için giriş yapın.',go:'Giriş yap',on:'Açıldı.',off:'Kapatıldı.',devs:'Bu hesapta bildirim açık cihaz: '},
+    en:{back:'← Back to panel',h:'Install the app & notifications',sub:'Install Brazil Migration on your phone like an app and get new message, document and appointment alerts instantly. Free; no store account needed.',
+      i:'1) Install the app',ibtn:'Install app',idone:'App installed ✓',iand:'Android / Chrome: tap “Install app”, or choose “Add to Home screen” from the browser menu.',iios:'iPhone / iPad: in Safari tap Share (⬆︎) → “Add to Home Screen” → Add. Notifications only work in the app opened from the Home Screen (iOS 16.4+).',
+      n:'2) Turn on notifications',nd:'This device will get alerts for new messages, documents, calls and updates.',nbtn:'Turn on notifications',noff:'Turn off notifications',non:'Notifications are on for this device',noffs:'Off',nden:'The browser blocks notifications. Allow “Notifications” from the lock icon in the address bar and try again.',
+      nuns:'This browser does not support notifications. Try Chrome on Android, or open the app from the Home Screen on iPhone.',niosneed:'On iPhone, first add the app to the Home Screen and open it from there.',
+      det:'Show details in notifications',detd:'When off, the lock screen only says “You have a new notification” (recommended for privacy). When on, the notification title is shown.',test:'Send test notification',tested:'Test sent.',notest:'Could not send the test.',
+      login:'Sign in to manage notifications.',go:'Sign in',on:'Turned on.',off:'Turned off.',devs:'Devices with notifications on this account: '},
+    pt:{back:'← Voltar ao painel',h:'Instalar o app e notificações',sub:'Instale a Brazil Migration no celular como um app e receba na hora avisos de mensagens, documentos e compromissos. Grátis, sem conta de loja.',
+      i:'1) Instale o app',ibtn:'Instalar app',idone:'App instalado ✓',iand:'Android / Chrome: toque em “Instalar app” ou escolha “Adicionar à tela inicial” no menu do navegador.',iios:'iPhone / iPad: no Safari toque em Compartilhar (⬆︎) → “Adicionar à Tela de Início” → Adicionar. As notificações só funcionam no app aberto pela Tela de Início (iOS 16.4+).',
+      n:'2) Ative as notificações',nd:'Este aparelho receberá avisos de novas mensagens, documentos, chamadas e atualizações.',nbtn:'Ativar notificações',noff:'Desativar notificações',non:'Notificações ativadas neste aparelho',noffs:'Desativadas',nden:'O navegador bloqueou as notificações. Permita “Notificações” no cadeado da barra de endereço e tente de novo.',
+      nuns:'Este navegador não suporta notificações. No Android use o Chrome; no iPhone abra o app pela Tela de Início.',niosneed:'No iPhone, primeiro adicione o app à Tela de Início e abra-o por lá.',
+      det:'Mostrar detalhes nas notificações',detd:'Desligado, a tela de bloqueio mostra só “Você tem uma nova notificação” (recomendado para privacidade). Ligado, o título da notificação aparece.',test:'Enviar notificação de teste',tested:'Teste enviado.',notest:'Não foi possível enviar o teste.',
+      login:'Entre para gerenciar as notificações.',go:'Entrar',on:'Ativadas.',off:'Desativadas.',devs:'Aparelhos com notificações nesta conta: '}
+  };
+  var cur='tr';try{cur=localStorage.getItem('bm-lang')||((navigator.language||'tr').slice(0,2))}catch(e){}if(!TX[cur])cur='tr';
+  var T=function(k){return TX[cur][k]||TX.tr[k]},$=function(s){return document.querySelector(s)};
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+  var S=null,MSG='',ERR='',deferred=null,login=false;
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e;draw()});
+  window.addEventListener('appinstalled',function(){deferred=null;draw()});
+  function load(){return BMPush.state().then(function(s){S=s;login=false}).catch(function(e){if(e&&e.status===401)login=true;else S={supported:BMPush.supported,permission:typeof Notification!=='undefined'?Notification.permission:'unsupported'}}).then(draw)}
+  function draw(){
+    document.title=T('h');$('#back').textContent=T('back');document.querySelectorAll('.lang button').forEach(function(b){b.classList.toggle('on',b.dataset.l===cur)});
+    var h='<h1>'+esc(T('h'))+'</h1><p class="mute">'+esc(T('sub'))+'</p>'+(MSG?'<div class="msg">'+esc(MSG)+'</div>':'')+(ERR?'<div class="msg err">'+esc(ERR)+'</div>':'');
+    h+='<div class="card"><h2>'+esc(T('i'))+(BMPush.standalone?'<span class="chip">'+esc(T('idone'))+'</span>':'')+'</h2>';
+    if(!BMPush.standalone){if(deferred)h+='<button class="btn" id="inst">'+esc(T('ibtn'))+'</button>';h+='<p class="mute">'+esc(BMPush.ios?T('iios'):T('iand'))+'</p>'}
+    h+='</div><div class="card"><h2>'+esc(T('n'))+(S&&S.subscribed?'<span class="chip">'+esc(T('non'))+'</span>':'<span class="chip off">'+esc(T('noffs'))+'</span>')+'</h2>';
+    if(login)h+='<p class="mute">'+esc(T('login'))+'</p><a class="btn" href="/giris/">'+esc(T('go'))+'</a>';
+    else if(!S||!S.supported)h+='<p class="mute">'+esc(BMPush.needsInstall?T('niosneed'):T('nuns'))+'</p>';
+    else if(BMPush.needsInstall)h+='<p class="mute">'+esc(T('niosneed'))+'</p>';
+    else{
+      h+='<p class="mute">'+esc(T('nd'))+'</p>';
+      if(S.permission==='denied')h+='<p class="mute err">'+esc(T('nden'))+'</p>';
+      else if(!S.subscribed)h+='<button class="btn" id="on">'+esc(T('nbtn'))+'</button>';
+      else{h+='<label class="row"><input type="checkbox" id="det"'+(S.detail?' checked':'')+'><span><b>'+esc(T('det'))+'</b><br><span class="mute">'+esc(T('detd'))+'</span></span></label><button class="btn ghost" id="test">'+esc(T('test'))+'</button><button class="btn ghost" id="off">'+esc(T('noff'))+'</button>'+(S.devices?'<p class="mute">'+esc(T('devs'))+S.devices+'</p>':'')}
+    }
+    h+='</div>';$('#app').innerHTML=h;MSG='';ERR='';bind();
+  }
+  function q(id){return document.getElementById(id)}
+  function bind(){
+    if(q('inst'))q('inst').onclick=function(){deferred.prompt();deferred.userChoice.then(function(){deferred=null;draw()})};
+    if(q('on'))q('on').onclick=function(){this.disabled=true;BMPush.enable(false).then(function(){MSG=T('on');return load()}).catch(function(e){ERR=e&&e.denied?T('nden'):(e&&e.message)||'';load()})};
+    if(q('off'))q('off').onclick=function(){BMPush.disable().then(function(){MSG=T('off');return load()}).catch(function(e){ERR=e.message;load()})};
+    if(q('det'))q('det').onchange=function(){var on=this.checked;BMPush.setDetail(on).catch(function(e){ERR=e.message;load()})};
+    if(q('test'))q('test').onclick=function(){BMPush.test().then(function(r){MSG=r.ok?T('tested'):T('notest');draw()}).catch(function(){ERR=T('notest');draw()})};
+  }
+  document.querySelectorAll('.lang button').forEach(function(b){b.onclick=function(){cur=b.dataset.l;try{localStorage.setItem('bm-lang',cur)}catch(e){}draw()}});
+  draw();load();
+})();
+</script>
+</body>
+</html>

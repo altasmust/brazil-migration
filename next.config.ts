@@ -24,7 +24,7 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   skipTrailingSlashRedirect: true,
   poweredByHeader: false,
-  serverExternalPackages: ['@libsql/client'],
+  serverExternalPackages: ['@libsql/client', 'web-push'],
   async redirects() {
     return [
       {source: '/index.html', destination: '/', permanent: true},

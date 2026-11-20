@@ -11,6 +11,7 @@ import {privacyPublic, privacyAdmin, consentStmt} from './privacy.mjs';
 import {securityPublic, securityAdmin, twoFactorOn, verifySecondFactor} from './security.mjs';
 import {reportsAdmin} from './reports.mjs';
 import {integrationsAdmin, ensureWebhooks} from './integrations.mjs';
+import {pushPublic, ensurePush} from './push.mjs';
 // Unified login, registration, partner onboarding, admin account management and panel modules.
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
@@ -245,7 +246,7 @@ export function ensureReminders(env) {
 export {runReminders};
 
 export async function handleAuth(req, env, route) {
-  const db = env.DB; ensureReminders(env); ensureBackups(env); ensureWebhooks(env);
+  const db = env.DB; ensureReminders(env); ensureBackups(env); ensureWebhooks(env); ensurePush(env);
   if (route === 'tenant/check' || route === 'tenant/create' || route === 'tenant/list') return handleTenantApi(req, env, route);
   route = route.replace(/^admin\//, '');
   if (route === 'health' && req.method === 'GET') return health(db);
@@ -254,6 +255,7 @@ export async function handleAuth(req, env, route) {
   { const g = await salesPublic(req, db, route); if (g) return g; }
   { const g = await privacyPublic(req, db, route); if (g) return g; }
   { const g = await securityPublic(req, db, route); if (g) return g; }
+  { const g = await pushPublic(req, db, route); if (g) return g; }
   if (route === 'payment-methods' && req.method === 'GET') return json({methods: enabledMethods(await loadPayments(db)).map(m => m.id === 'havale' ? m : {id: m.id, name: m.name})});
   if (route === 'cities' && req.method === 'GET') return json({countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES});
   if (route === 'config' && req.method === 'GET') return json({mail: mailConfigured(), verifier: verifierConfigured(), adminSeparate: adminHosts().length > 0, whatsapp: (cfgEnv('WHATSAPP_NUMBER') || '').replace(/\D/g, '') || null});
@@ -714,7 +716,7 @@ function validPerms(ps) {
   return out;
 }
 export async function handlePlatformAdmin(req, env, route, ctx = {}) {
-  const db = env.DB; ensureReminders(env); ensureBackups(env); ensureWebhooks(env);
+  const db = env.DB; ensureReminders(env); ensureBackups(env); ensureWebhooks(env); ensurePush(env);
   if (req.method !== 'GET') sameOrigin(req);
   const u = await currentUser(db, req);
   if (!u || u.email !== OWNER_EMAIL()) fail(401, 'Yönetici girişi gerekli.');
