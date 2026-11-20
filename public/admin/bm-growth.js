@@ -220,7 +220,7 @@
     const hint = T.isMain ? 'Ana firma: tüm özellikler sınırsız.' : 'Planınızın sınırları aşağıda. Sınıra yaklaşırken planınızı yükseltmek için bizimle iletişime geçin.';
     const addr = T.baseUrl ? `<p class="bmg-hint">Firma adresiniz: <a href="${esc(T.baseUrl)}" target="_blank" rel="noopener">${esc(T.baseUrl)}</a></p>` : '';
     root.innerHTML = `<div class="bmg-2"><section class="panel bmg-p"><header class="panel-head"><h2>${ic('shield-check')} ${esc(T.name)}</h2><span class="bmc-login on">${esc(T.planName)}</span></header>
-      <p class="bmg-hint">${hint}</p>${planRow('Müşteri', U.customers, L.customers)}${planRow('Ekip üyesi (danışman, avukat, muhasebe…)', U.staff, L.staff)}${addr}</section></div>`;
+      <p class="bmg-hint">${hint}</p>${planRow('Müşteri', U.customers, L.customers)}${planRow('Ekip üyesi (danışman, avukat, muhasebe…)', U.staff, L.staff)}${L.meetMin === undefined ? '' : planRow('Çevirili görüşme (bu ay, dakika)', U.meetMin, L.meetMin)}${addr}</section></div>`;
   }); return wrap('Plan ve Kullanım', 'Firmanızın planı ve kullanım durumu.'); };
   const tenantRow = (t, plans) => {
     const opts = plans.map(p => `<option value="${p.key}" ${p.key === t.plan ? 'selected' : ''}>${esc(p.name)}</option>`).join('');

@@ -17,10 +17,15 @@ const LANGS = {
   tr: { code:'tr', sr:'tr-TR', tts:'tr-TR', short:'TR', label:'Türkçe', sw:'url(/bm/flags/tr.svg) center/cover' },
   pt: { code:'pt', sr:'pt-BR', tts:'pt-BR', short:'PT', label:'Português', sw:'url(/bm/flags/br.svg) center/cover' },
   en: { code:'en', sr:'en-US', tts:'en-US', short:'EN', label:'English', sw:'url(/bm/flags/gb.svg) center/cover' },
-  fa: { code:'fa', sr:'fa-IR', tts:'fa-IR', short:'FA', label:'فارسی', sw:'url(/bm/flags/ir.svg) center/cover' }
+  fa: { code:'fa', sr:'fa-IR', tts:'fa-IR', short:'FA', label:'فارسی', sw:'url(/bm/flags/ir.svg) center/cover' },
+  es: { code:'es', sr:'es-ES', tts:'es-ES', short:'ES', label:'Español', sw:'url(/bm/flags/es.svg) center/cover' },
+  ru: { code:'ru', sr:'ru-RU', tts:'ru-RU', short:'RU', label:'Русский', sw:'url(/bm/flags/ru.svg) center/cover' },
+  ar: { code:'ar', sr:'ar-SA', tts:'ar-SA', short:'AR', label:'العربية', sw:'url(/bm/flags/sa.svg) center/cover' },
+  de: { code:'de', sr:'de-DE', tts:'de-DE', short:'DE', label:'Deutsch', sw:'url(/bm/flags/de.svg) center/cover' },
+  fr: { code:'fr', sr:'fr-FR', tts:'fr-FR', short:'FR', label:'Français', sw:'url(/bm/flags/fr.svg) center/cover' }
 };
 
-const LOC = { tr:'tr-TR', pt:'pt-BR', en:'en-GB', fa:'fa-IR' };
+const LOC = { tr:'tr-TR', pt:'pt-BR', en:'en-GB', fa:'fa-IR', es:'es-ES', ru:'ru-RU', ar:'ar-SA', de:'de-DE', fr:'fr-FR' };
 const I18N = {
   tr: {
     tagline:'Tercümanlı görüntülü görüşme', camOffPreview:'Kamera kapalı', mic:'Mikrofon', cam:'Kamera',
@@ -253,7 +258,7 @@ const S = {
   startedAt: null, timerId: null, lines: [], msgs: 0, unread: 0, panelOpen: false, panelTab: 'log',
   audioCtx: null, meterRaf: 0
 };
-const t = (k, vars) => { let s = (I18N[S.me][k] ?? I18N.tr[k] ?? k); if (vars) for (const v in vars) s = s.replace('{' + v + '}', vars[v]); return s; };
+const t = (k, vars) => { let s = ((I18N[S.me] || I18N.en || {})[k] ?? (I18N.en || {})[k] ?? I18N.tr[k] ?? k); if (vars) for (const v in vars) s = s.replace('{' + v + '}', vars[v]); return s; };
 const other = l => (S.peerLang && S.peerLang !== l) ? S.peerLang : (l === 'tr' ? 'pt' : 'tr');
 const store = { get(k){ try { return localStorage.getItem('ij-' + k); } catch(e){ return null; } }, set(k,v){ try { localStorage.setItem('ij-' + k, v); } catch(e){} } };
 const initials = n => (n || '?').trim().split(/\s+/).slice(0,2).map(x => x[0]).join('').toUpperCase() || '?';
@@ -264,7 +269,7 @@ function toast(msg, bad){ const el = document.createElement('div'); el.className
 /* ===== i18n ===== */
 function applyLang(){
   document.documentElement.lang = LOC[S.me] || 'tr';
-  document.documentElement.dir = S.me === 'fa' ? 'rtl' : 'ltr';
+  document.documentElement.dir = (S.me === 'fa' || S.me === 'ar') ? 'rtl' : 'ltr';
   document.querySelectorAll('[data-i]').forEach(el => el.textContent = t(el.dataset.i));
   document.querySelectorAll('[data-iph]').forEach(el => el.placeholder = t(el.dataset.iph));
   document.querySelectorAll('[data-i-aria]').forEach(el => el.setAttribute('aria-label', t(el.dataset.iAria)));
@@ -940,7 +945,7 @@ window.addEventListener('beforeunload', () => send({ type:'bye' }));
     const r = await fetch('/api/auth/meeting', {cache:'no-store'}); const d = await r.json();
     if (d && d.enabled === false){
       const o = document.createElement('div'); o.className = 'bm-off';
-      o.innerHTML = '<div><img src="/brazil-migration-logo.png" alt="Brazil Migration"><h2>' + (S.me === 'pt' ? 'Chamadas indisponíveis no momento' : 'Görüşme şu an kullanılamıyor') + '</h2><p>' + (S.me === 'pt' ? 'Entre em contato com a equipe Brazil Migration.' : 'Lütfen Brazil Migration ekibiyle iletişime geçin.') + ' <a href="/iletisim/">' + (S.me === 'pt' ? 'Contato' : 'İletişim') + '</a></p></div>';
+      o.innerHTML = '<div><img src="/brazil-migration-logo.png" alt="Brazil Migration"><h2>' + (d.reason === 'quota' ? (S.me === 'pt' ? 'Limite mensal de chamadas atingido' : 'Aylık görüşme kotası doldu') : S.me === 'pt' ? 'Chamadas indisponíveis no momento' : 'Görüşme şu an kullanılamıyor') + '</h2><p>' + (S.me === 'pt' ? 'Entre em contato com a equipe Brazil Migration.' : 'Lütfen Brazil Migration ekibiyle iletişime geçin.') + ' <a href="/iletisim/">' + (S.me === 'pt' ? 'Contato' : 'İletişim') + '</a></p></div>';
       document.body.appendChild(o); try { S.stream && S.stream.getTracks().forEach(x => x.stop()); } catch(e){}
       return;
     }

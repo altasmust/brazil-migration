@@ -1,7 +1,7 @@
 import {cfgEnv, cfgDel, currentTenant, runWithTenant} from './tenant-context.mjs';
 import {handleTenantApi} from './tenant-api.mjs';
 import {listTenants, updateTenant, tenantById} from './tenant.mjs';
-import {assertQuota, usage, limitsFor, PLAN_NAMES} from './plans.mjs';
+import {assertQuota, usage, limitsFor, PLAN_NAMES, meetingQuota} from './plans.mjs';
 import {casesAdmin, casesCustomer, maybeRunCaseReminders} from './cases.mjs';
 import {salesPublic, salesAdmin, maybeRunSalesReminders} from './sales.mjs';
 import {networkAdmin} from './network.mjs';
@@ -330,7 +330,8 @@ export async function handleAuth(req, env, route) {
     if (sv.cloudflare?.enabled) { try { ice.push(...await cloudflareIce(sv.cloudflare)); } catch (e) { console.error('[turn]', e.message); } }
     if (sv.metered?.enabled && sv.metered.u && sv.metered.p) ice.push(...meteredIce(sv.metered));
     if (sv.custom?.enabled) ice.push(...parseIce(sv.custom.text));
-    return json({enabled: !!mc.enabled, ice});
+    const q = mc.enabled ? await meetingQuota(db) : {exceeded: false};
+    return json({enabled: !!mc.enabled && !q.exceeded, ...(q.exceeded ? {reason: 'quota'} : {}), ice});
   }
   if (route === 'tts' && req.method === 'POST') { // görüşmede sesli çeviri: MP3 (yalnız kendi sitemizden)
     const origin = req.headers.get('origin') || req.headers.get('referer') || '';

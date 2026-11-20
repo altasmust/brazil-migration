@@ -1,6 +1,6 @@
 import {cfgEnv} from './tenant-context.mjs';
 // Görüşme dökümü → metin dosyası + (Anthropic anahtarı varsa) iki dilli yapay zekâ özeti
-const LN = {tr: 'Türkçe', pt: 'Português', en: 'English', fa: 'فارسی'};
+const LN = {tr: 'Türkçe', pt: 'Português', en: 'English', fa: 'فارسی', es: 'Español', ru: 'Русский', ar: 'العربية', de: 'Deutsch', fr: 'Français'};
 const s = (x, n = 2000) => String(x ?? '').replace(/[\u0000-\u0008\u000b-\u001f]/g, '').slice(0, n);
 
 export function cleanLines(lines) {

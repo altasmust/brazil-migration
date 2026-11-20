@@ -1,7 +1,7 @@
 // Görüşme çevirisi: sunucu üzerinden, önbellekli, yedekli.
 // Sıra: (varsa) adminin girdiği resmî servis → Google (2 uç) → MyMemory. Kota/uyarı metinleri asla çeviri sayılmaz.
 const C = globalThis.__bmTr ??= {cache: new Map(), down: new Map(), stats: {req: 0, hit: 0, fail: 0, by: {}}};
-export const TR_LANGS = ['tr', 'pt', 'en', 'fa'];
+export const TR_LANGS = ['tr', 'pt', 'en', 'fa', 'es', 'ru', 'ar', 'de', 'fr'];
 const BAD = /MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID LANGUAGE PAIR|NO QUERY SPECIFIED|PLEASE SELECT TWO DISTINCT LANGUAGES|USAGE ?LIMITS/i;
 const T = ms => AbortSignal.timeout(ms);
 const isDown = k => (C.down.get(k) || 0) > Date.now();
@@ -43,7 +43,7 @@ async function googleCloud(q, sl, tl, cfg) {
 async function deepl(q, sl, tl, cfg) {
   if (sl === 'fa' || tl === 'fa') return null; // DeepL Farsça desteklemiyor → ücretsiz yedeğe düşer
   const host = /:fx$/.test(cfg.key) ? 'api-free.deepl.com' : 'api.deepl.com';
-  const tgt = {pt: 'PT-BR', en: 'EN-US', tr: 'TR'}[tl];
+  const tgt = {pt: 'PT-BR', en: 'EN-US', tr: 'TR', es: 'ES', ru: 'RU', ar: 'AR', de: 'DE', fr: 'FR'}[tl];
   const r = await fetch(`https://${host}/v2/translate`, {method: 'POST', signal: T(7000), headers: {Authorization: 'DeepL-Auth-Key ' + cfg.key, 'Content-Type': 'application/json'}, body: JSON.stringify({text: [q], source_lang: sl.toUpperCase(), target_lang: tgt})});
   if (r.status === 429 || r.status === 456) { markDown('pro', 10 * 60e3); return null; }
   if (!r.ok) return null;

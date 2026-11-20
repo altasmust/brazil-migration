@@ -1,7 +1,7 @@
 // Sesli çeviri (görüşme): metni sunucuda MP3'e çevirir. Telefonlarda tarayıcının speechSynthesis'i görüşme
 // sırasında ses oturumunu ele geçirip videoyu durduruyordu; MP3 normal <audio> ile çalınınca video etkilenmez.
 // Sıra: Azure Speech (Sunucu Modülleri → "Azure Speech", ayda 500 bin karakter ücretsiz) → Google ücretsiz ses.
-const VOICES = {tr: ['tr-TR', 'tr-TR-EmelNeural'], pt: ['pt-BR', 'pt-BR-FranciscaNeural'], en: ['en-US', 'en-US-JennyNeural'], fa: ['fa-IR', 'fa-IR-DilaraNeural']};
+const VOICES = {tr: ['tr-TR', 'tr-TR-EmelNeural'], pt: ['pt-BR', 'pt-BR-FranciscaNeural'], en: ['en-US', 'en-US-JennyNeural'], fa: ['fa-IR', 'fa-IR-DilaraNeural'], es: ['es-ES', 'es-ES-ElviraNeural'], ru: ['ru-RU', 'ru-RU-SvetlanaNeural'], ar: ['ar-SA', 'ar-SA-ZariyahNeural'], de: ['de-DE', 'de-DE-KatjaNeural'], fr: ['fr-FR', 'fr-FR-DeniseNeural']};
 const cache = new Map();
 const xml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 let skipAzureUntil = 0;
