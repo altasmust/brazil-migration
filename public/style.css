@@ -102,3 +102,6 @@ body{font-family:'Poppins',Arial,sans-serif;font-size:16px;line-height:1.75}h1,h
 .land-dots path.ld-run{stroke-dasharray:0 4.6}
 [data-theme=dark] .land-dots path{stroke:#628573}
 .lens-map .land-dots path{stroke-width:1.4}
+/* dar telefon başlığı: dil seçici + giriş + tema + menü sayfayı yana kaydırmasın */
+@media(max-width:420px){header.new-header{padding-left:14px;padding-right:14px;gap:6px}.brand-logo img{width:116px}.nav-right{gap:6px}.login-link{font-size:11px;padding:8px 9px}.theme-toggle{min-width:34px;padding:5px!important}.menu-toggle{min-width:34px}}
+@media(max-width:340px){.brand-logo img{width:100px}.nav-right{gap:4px}.login-link{padding:8px 7px}}
