@@ -9,6 +9,7 @@ import {commsAdmin, setLang} from './comms.mjs';
 import {assistantAdmin} from './assistant.mjs';
 import {privacyPublic, privacyAdmin, consentStmt} from './privacy.mjs';
 import {securityPublic, securityAdmin, twoFactorOn, verifySecondFactor} from './security.mjs';
+import {reportsAdmin} from './reports.mjs';
 // Unified login, registration, partner onboarding, admin account management and panel modules.
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
@@ -727,6 +728,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   { const g = await assistantAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
   { const g = await privacyAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
   { const g = await securityAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
+  { const g = await reportsAdmin(req, db, route, {audit, actor}); if (g) return g; }
   { const g = await commsAdmin(req, db, route, {audit, actor, translate: async (q, sl, tl) => translateText(q, sl, tl, await translateConfig(db))}); if (g) return g; }
 
   if (route === 'meta' && req.method === 'GET') return json({types: ACCOUNT_TYPES, perms: PERMS, permLabels: PERM_LABELS, defaults: DEFAULT_PERMS, panels: PANELS, countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES, mail: mailConfigured(), verifier: verifierConfigured()});
