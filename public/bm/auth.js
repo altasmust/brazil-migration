@@ -52,7 +52,11 @@
 
     $('#bm-login-form').addEventListener('submit', async e => {
       e.preventDefault(); const f = e.target; busy(f, true);
-      try { goHome(await api('login', {email: f.email.value, password: f.password.value})); }
+      try {
+        const d = await api('login', {email: f.email.value, password: f.password.value, code: f.code.value});
+        if (d.need2fa) { $('#bm-code-l').hidden = false; f.code.focus(); return msg(box, 'ok', 'Kimlik doğrulama uygulamanızdaki 6 haneli kodu (veya bir kurtarma kodunu) girin.'); }
+        goHome(d);
+      }
       catch (err) {
         msg(box, 'err', esc(err.message) + (err.data?.unverified ? ' <button class="bm-link" id="bm-resend">Doğrulama e-postasını tekrar gönder</button>' : ''));
         const rb = $('#bm-resend'); if (rb) rb.onclick = async () => { const d = await api('resend', {email: f.email.value}); msg(box, 'ok', 'Doğrulama e-postası tekrar gönderildi.' + devNote(d)); };

@@ -8,6 +8,7 @@ import {networkAdmin} from './network.mjs';
 import {commsAdmin, setLang} from './comms.mjs';
 import {assistantAdmin} from './assistant.mjs';
 import {privacyPublic, privacyAdmin, consentStmt} from './privacy.mjs';
+import {securityPublic, securityAdmin, twoFactorOn, verifySecondFactor} from './security.mjs';
 // Unified login, registration, partner onboarding, admin account management and panel modules.
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
@@ -250,6 +251,7 @@ export async function handleAuth(req, env, route) {
   { const g = await growthPublic(req, db, route); if (g) return g; }
   { const g = await salesPublic(req, db, route); if (g) return g; }
   { const g = await privacyPublic(req, db, route); if (g) return g; }
+  { const g = await securityPublic(req, db, route); if (g) return g; }
   if (route === 'payment-methods' && req.method === 'GET') return json({methods: enabledMethods(await loadPayments(db)).map(m => m.id === 'havale' ? m : {id: m.id, name: m.name})});
   if (route === 'cities' && req.method === 'GET') return json({countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES});
   if (route === 'config' && req.method === 'GET') return json({mail: mailConfigured(), verifier: verifierConfigured(), adminSeparate: adminHosts().length > 0, whatsapp: (cfgEnv('WHATSAPP_NUMBER') || '').replace(/\D/g, '') || null});
@@ -456,6 +458,14 @@ export async function handleAuth(req, env, route) {
       fail(401, 'E-posta veya şifre hatalı.');
     }
     if (!u.verified) fail(403, 'E-posta adresiniz henüz doğrulanmadı. Gelen kutunuzu kontrol edin.', {unverified: true});
+    if (await twoFactorOn(db, u.id)) { // iki aşamalı doğrulama: kod yoksa iste; hatalı kod parola hatasıyla aynı kilit sayacına işler
+      const code = clean(b.code, 40);
+      if (!code) return json({ok: false, need2fa: true});
+      if (!(await verifySecondFactor(db, u.id, code))) {
+        await q(db, 'UPDATE auth_users SET failed=failed+1, locked_until=CASE WHEN failed+1>=8 THEN ? ELSE locked_until END WHERE id=?', now() + 15 * 6e4, u.id).run();
+        fail(401, 'Doğrulama kodu hatalı.', {need2fa: true});
+      }
+    }
     await q(db, 'UPDATE auth_users SET failed=0, locked_until=0 WHERE id=?', u.id).run();
     if (!admin) { // bind invitations created by advisors/staff to this login
       await q(db, "UPDATE people SET uid=?, status='active' WHERE email=? AND uid IS NULL AND status='invited' AND created>?", u.id, email, now() - 30 * 864e5).run();
@@ -708,7 +718,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   if (!u || u.email !== OWNER_EMAIL()) fail(401, 'Yönetici girişi gerekli.');
   const actor = 'Yönetici';
   { const g = await growthAdmin(req, db, route); if (g) return g; }
-  { const g = await backupAdmin(req, env, route); if (g) return g; }
+  { const g = await backupAdmin(req, env, route, {audit, actor}); if (g) return g; }
   { const g = await updatesAdmin(req, db, route, {audit, actor}); if (g) return g; }
   { const g = await i18nAdmin(req, db, route); if (g) return g; }
   { const g = await casesAdmin(req, db, route, {audit, actor}); if (g) return g; }
@@ -716,6 +726,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   { const g = await networkAdmin(req, db, route, {audit, actor}); if (g) return g; }
   { const g = await assistantAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
   { const g = await privacyAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
+  { const g = await securityAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
   { const g = await commsAdmin(req, db, route, {audit, actor, translate: async (q, sl, tl) => translateText(q, sl, tl, await translateConfig(db))}); if (g) return g; }
 
   if (route === 'meta' && req.method === 'GET') return json({types: ACCOUNT_TYPES, perms: PERMS, permLabels: PERM_LABELS, defaults: DEFAULT_PERMS, panels: PANELS, countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES, mail: mailConfigured(), verifier: verifierConfigured()});

@@ -12,7 +12,7 @@ import {iconizeHTML} from './icons.mjs';
 import {BLOG_POST, blogIndexHTML, blogPostHTML, blogJsonLd, homeBlogHTML} from './blog.mjs';
 
 const PUBLIC = () => join(/* turbopackIgnore: true */ process.cwd(), 'public');
-export const PANEL = /^\/(admin|panel|partner|avukat|kyc|firma-ac|teklif|basvuru|verilerim|gizlilik-bildirimi)(\/|$)/;
+export const PANEL = /^\/(admin|panel|partner|avukat|kyc|firma-ac|teklif|basvuru|verilerim|guvenlik|gizlilik-bildirimi)(\/|$)/;
 const OLD_HOSTS = /https?:\/\/brasil-yeni-baslangic\.fatih-altas\.chatgpt\.site/g;
 // Eski önizleme alan adı (chatgpt.site) veya boş SITE_URL → asıl alan adı
 const siteUrl = () => { const u = (cfgEnv('SITE_URL') || '').replace(/\/$/, ''); return !u || /chatgpt\.site/.test(u) ? 'https://brazilmigration.com' : u; };

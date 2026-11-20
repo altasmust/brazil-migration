@@ -72,7 +72,20 @@ export async function createSession(db, req, userId) {
   const token = randomBytes(32).toString('base64url');
   const scope = isAdminRequest(req) ? 'admin' : 'site';
   await db.prepare('INSERT INTO auth_sessions VALUES(?,?,?,?,?)').bind(sha(token), userId, scope, now() + SESSION_DAYS * 864e5, now()).run();
+  await recordSessionMeta(db, req, userId, sha(token));
   return sessionCookie(req, token, SESSION_DAYS * 86400);
+}
+// Cihaz özeti (tarayıcı · işletim sistemi, IP'nin yalnız ilk iki bölümü). "Oturumlarım" ekranı için; hata girişi engellemez.
+const agentName = ua => { ua = String(ua || ''); const br = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Tarayıcı'; const os = /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /iPhone|iPad|iOS/.test(ua) ? 'iOS' : /Mac OS/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : ''; return br + (os ? ' · ' + os : ''); };
+const coarseIp = ip => { ip = String(ip || ''); return !ip ? '' : ip.includes(':') ? ip.split(':').slice(0, 3).join(':') + '::' : ip.split('.').slice(0, 2).join('.') + '.x.x'; };
+async function recordSessionMeta(db, req, userId, tokenSha) {
+  try {
+    const h = req.headers, ip = (h.get('cf-connecting-ip') || (h.get('x-forwarded-for') || '').split(',')[0] || h.get('x-real-ip') || '').trim();
+    await db.batch([
+      db.prepare("DELETE FROM items WHERE kind='sessmeta' AND owner=? AND substr(id,4) NOT IN (SELECT token FROM auth_sessions WHERE user=?)").bind(userId, userId),
+      db.prepare("INSERT INTO items(id,kind,owner,data,created,updated) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated=excluded.updated").bind('sm-' + tokenSha, 'sessmeta', userId, JSON.stringify({agent: agentName(h.get('user-agent')), ip: coarseIp(ip), country: String(h.get('x-vercel-ip-country') || h.get('cf-ipcountry') || '').slice(0, 3)}), now(), now()),
+    ]);
+  } catch {}
 }
 export async function currentUser(db, req) {
   const token = readCookie(req, cookieName(req));

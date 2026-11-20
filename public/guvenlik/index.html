@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Hesap güvenliği</title>
+<style>
+:root{--brand:#1b5e20;--bg:#f4f7f2;--ink:#17261b;--mute:#68776b;--line:#d7dfd2}
+*{box-sizing:border-box}body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:720px;margin:0 auto;padding:18px 16px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 0 14px}.top a{color:var(--brand);font-size:14px}
+.lang{display:flex;gap:6px}.lang button{font:inherit;font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:#fff;cursor:pointer}.lang button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.card{background:#fff;border:1px solid #e3e9de;border-radius:18px;padding:20px;box-shadow:0 6px 24px rgba(23,38,27,.06);margin-bottom:16px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 8px}.mute{color:var(--mute);font-size:14px;margin:0 0 12px}
+.btn{display:inline-block;font:inherit;background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;text-decoration:none;margin:4px 6px 4px 0}.btn.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand)}.btn.danger{background:#b3261e}.btn.small{padding:5px 11px;font-size:13px;margin:0}
+input{font:inherit;width:100%;border:1px solid var(--line);border-radius:10px;padding:9px;margin:4px 0 10px}
+.key{font:600 18px/1.4 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.08em;background:#eef3ef;border-radius:10px;padding:10px 12px;word-break:break-all;margin:8px 0}
+.codes{display:grid;grid-template-columns:1fr 1fr;gap:6px;font:600 15px ui-monospace,Menlo,Consolas,monospace;background:#fff8e1;border:1px solid #f0d98a;border-radius:10px;padding:12px;margin:8px 0}
+.ses{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #eef1eb;padding:10px 0;font-size:14.5px}.ses small{color:var(--mute);display:block}.chip{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;background:#e6f2e7;color:var(--brand);margin-left:6px}
+.msg{margin:10px 0;color:var(--brand);font-weight:600}.err{color:#b3261e}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="/panel/" id="back">←</a><div class="lang"><button data-l="tr">TR</button><button data-l="en">EN</button><button data-l="pt">PT</button></div></div>
+  <div id="app"><div class="card"><p class="mute">…</p></div></div>
+</div>
+<script>
+(function(){
+  var TX={
+    tr:{back:'← Panele dön',h:'Hesap güvenliği',login:'Bu sayfayı görmek için giriş yapın.',go:'Giriş yap',
+      t2:'İki aşamalı doğrulama',t2d:'Parolanıza ek olarak kimlik doğrulama uygulamanızdaki (Google Authenticator, Microsoft Authenticator, Authy vb.) 6 haneli kodu ister. Hesabınızı parola sızıntılarına karşı korur.',
+      on:'Açık',off:'Kapalı',start:'Kurulumu başlat',key:'Kurulum anahtarı (uygulamaya elle girin):',openapp:'Uygulamada aç',code:'Uygulamadaki 6 haneli kod',enable:'Etkinleştir',
+      rc:'Kurtarma kodları',rcd:'Telefonunuza erişemezseniz her kod bir kez kullanılabilir. Güvenli bir yere kaydedin — bir daha gösterilmeyecek.',dl:'İndir',cp:'Kopyala',copied:'Kopyalandı.',left:'Kalan kurtarma kodu: ',
+      dis:'İki aşamalı doğrulamayı kapat',pw:'Parolanız',dcode:'Kod veya kurtarma kodu',disbtn:'Kapat',enabledMsg:'İki aşamalı doğrulama açıldı.',disMsg:'İki aşamalı doğrulama kapatıldı.',
+      ss:'Açık oturumlar',ssd:'Hesabınıza giriş yapılmış cihazlar. Tanımadığınız bir oturum varsa kapatın ve parolanızı değiştirin.',cur:'Bu cihaz',rev:'Kapat',revall:'Diğer tüm oturumları kapat',since:'Giriş: ',exp:'Bitiş: ',closed:'Oturum kapatıldı.',confirmAll:'Bu cihaz dışındaki tüm oturumlar kapatılsın mı?',unk:'Bilinmeyen cihaz'},
+    en:{back:'← Back to panel',h:'Account security',login:'Please sign in to view this page.',go:'Sign in',
+      t2:'Two-step verification',t2d:'Besides your password, asks for the 6-digit code from your authenticator app (Google Authenticator, Microsoft Authenticator, Authy…). Protects your account against leaked passwords.',
+      on:'On',off:'Off',start:'Start setup',key:'Setup key (type it into the app):',openapp:'Open in app',code:'6-digit code from the app',enable:'Turn on',
+      rc:'Recovery codes',rcd:'If you lose your phone, each code works once. Store them safely — they will not be shown again.',dl:'Download',cp:'Copy',copied:'Copied.',left:'Recovery codes left: ',
+      dis:'Turn off two-step verification',pw:'Your password',dcode:'Code or recovery code',disbtn:'Turn off',enabledMsg:'Two-step verification is on.',disMsg:'Two-step verification is off.',
+      ss:'Active sessions',ssd:'Devices signed in to your account. If you do not recognise one, close it and change your password.',cur:'This device',rev:'Close',revall:'Close all other sessions',since:'Signed in: ',exp:'Expires: ',closed:'Session closed.',confirmAll:'Close every session except this device?',unk:'Unknown device'},
+    pt:{back:'← Voltar ao painel',h:'Segurança da conta',login:'Entre para ver esta página.',go:'Entrar',
+      t2:'Verificação em duas etapas',t2d:'Além da senha, pede o código de 6 dígitos do seu app autenticador (Google Authenticator, Microsoft Authenticator, Authy…). Protege sua conta contra vazamento de senhas.',
+      on:'Ativada',off:'Desativada',start:'Iniciar configuração',key:'Chave de configuração (digite no app):',openapp:'Abrir no app',code:'Código de 6 dígitos do app',enable:'Ativar',
+      rc:'Códigos de recuperação',rcd:'Se perder o celular, cada código vale uma vez. Guarde em local seguro — não serão mostrados de novo.',dl:'Baixar',cp:'Copiar',copied:'Copiado.',left:'Códigos de recuperação restantes: ',
+      dis:'Desativar verificação em duas etapas',pw:'Sua senha',dcode:'Código ou código de recuperação',disbtn:'Desativar',enabledMsg:'Verificação em duas etapas ativada.',disMsg:'Verificação em duas etapas desativada.',
+      ss:'Sessões ativas',ssd:'Dispositivos conectados à sua conta. Se não reconhecer algum, encerre-o e troque a senha.',cur:'Este dispositivo',rev:'Encerrar',revall:'Encerrar todas as outras sessões',since:'Entrada: ',exp:'Expira: ',closed:'Sessão encerrada.',confirmAll:'Encerrar todas as sessões exceto este dispositivo?',unk:'Dispositivo desconhecido'}
+  };
+  var cur='tr';try{cur=localStorage.getItem('bm-lang')||((navigator.language||'tr').slice(0,2))}catch(e){}if(!TX[cur])cur='tr';
+  var $=function(s){return document.querySelector(s)};var T=function(k){return TX[cur][k]||TX.tr[k]||k};
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+  function api(p,body){return fetch('/api/auth/'+p,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,cache:'no-store'}).then(function(r){return r.json().catch(function(){return{}}).then(function(d){if(!r.ok){var e=new Error(d.error||'Hata');e.status=r.status;throw e}return d})})}
+  var fmt=function(ms){return new Date(ms).toLocaleString(cur==='tr'?'tr-TR':cur==='pt'?'pt-BR':'en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})};
+  var D=null,SETUP=null,CODES=null,MSG='';
+  function load(){return api('security/me').then(function(d){D=d;draw()}).catch(function(e){if(e.status===401){$('#app').innerHTML='<div class="card"><p>'+esc(T('login'))+'</p><a class="btn" href="/giris/">'+esc(T('go'))+'</a></div>'}else{$('#app').innerHTML='<div class="card err">'+esc(e.message)+'</div>'}})}
+  function draw(){
+    document.title=T('h');$('#back').textContent=T('back');
+    document.querySelectorAll('.lang button').forEach(function(b){b.classList.toggle('on',b.dataset.l===cur)});
+    var tf=D.twofa,h='<h1>'+esc(T('h'))+'</h1><p class="mute">'+esc(D.email)+'</p>'+(MSG?'<div class="msg" id="msg">'+esc(MSG)+'</div>':'');
+    h+='<div class="card"><h2>'+esc(T('t2'))+' <span class="chip">'+esc(tf.enabled?T('on'):T('off'))+'</span></h2><p class="mute">'+esc(T('t2d'))+'</p>';
+    if(CODES){h+='<h2>'+esc(T('rc'))+'</h2><p class="mute">'+esc(T('rcd'))+'</p><div class="codes">'+CODES.map(function(c){return'<span>'+esc(c)+'</span>'}).join('')+'</div><button class="btn small" id="dlc">'+esc(T('dl'))+'</button> <button class="btn small ghost" id="cpc">'+esc(T('cp'))+'</button>'}
+    else if(tf.enabled){h+='<p class="mute">'+esc(T('left'))+tf.recovery+'</p><h2>'+esc(T('dis'))+'</h2><input id="dpw" type="password" autocomplete="current-password" placeholder="'+esc(T('pw'))+'"><input id="dcd" inputmode="numeric" autocomplete="one-time-code" placeholder="'+esc(T('dcode'))+'"><button class="btn danger" id="dis">'+esc(T('disbtn'))+'</button>'}
+    else if(SETUP){h+='<p class="mute">'+esc(T('key'))+'</p><div class="key">'+esc(SETUP.secret.replace(/(.{4})/g,'$1 ').trim())+'</div><a class="btn ghost small" href="'+esc(SETUP.uri)+'">'+esc(T('openapp'))+'</a><p></p><input id="ecd" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="'+esc(T('code'))+'"><button class="btn" id="en">'+esc(T('enable'))+'</button>'}
+    else h+='<button class="btn" id="st">'+esc(T('start'))+'</button>';
+    h+='</div>';
+    h+='<div class="card"><h2>'+esc(T('ss'))+'</h2><p class="mute">'+esc(T('ssd'))+'</p>'+D.sessions.map(function(s){return'<div class="ses"><div><b>'+esc(s.agent||T('unk'))+'</b>'+(s.current?'<span class="chip">'+esc(T('cur'))+'</span>':'')+'<small>'+esc((s.ip?s.ip+' · ':'')+(s.country?s.country+' · ':'')+T('since')+fmt(s.created)+' · '+T('exp')+fmt(s.expires))+'</small></div>'+(s.current?'':'<button class="btn small ghost" data-rev="'+esc(s.id)+'">'+esc(T('rev'))+'</button>')+'</div>'}).join('')+(D.sessions.length>1?'<p><button class="btn ghost" id="revall">'+esc(T('revall'))+'</button></p>':'')+'</div>';
+    $('#app').innerHTML=h;MSG='';bind();
+  }
+  function err(e){MSG='';draw();var m=document.createElement('div');m.className='msg err';m.textContent=e.message;$('#app').insertBefore(m,$('#app').children[2]||null)}
+  function bind(){
+    var q=function(id){return document.getElementById(id)};
+    if(q('st'))q('st').onclick=function(){api('security/2fa/setup',{}).then(function(d){SETUP=d;draw()}).catch(err)};
+    if(q('en'))q('en').onclick=function(){api('security/2fa/enable',{code:q('ecd').value}).then(function(d){SETUP=null;CODES=d.recoveryCodes;MSG=T('enabledMsg');return load()}).catch(err)};
+    if(q('dis'))q('dis').onclick=function(){api('security/2fa/disable',{password:q('dpw').value,code:q('dcd').value}).then(function(){MSG=T('disMsg');return load()}).catch(err)};
+    if(q('dlc'))q('dlc').onclick=function(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([CODES.join('\n')+'\n'],{type:'text/plain'}));a.download='kurtarma-kodlari.txt';a.click()};
+    if(q('cpc'))q('cpc').onclick=function(){try{navigator.clipboard.writeText(CODES.join('\n'));this.textContent=T('copied')}catch(e){}};
+    document.querySelectorAll('[data-rev]').forEach(function(b){b.onclick=function(){api('security/sessions/revoke',{id:b.dataset.rev}).then(function(){MSG=T('closed');return load()}).catch(err)}});
+    if(q('revall'))q('revall').onclick=function(){if(confirm(T('confirmAll')))api('security/sessions/revoke-all',{}).then(function(){MSG=T('closed');return load()}).catch(err)};
+  }
+  document.querySelectorAll('.lang button').forEach(function(b){b.onclick=function(){cur=b.dataset.l;try{localStorage.setItem('bm-lang',cur)}catch(e){}if(D)draw()}});
+  load();
+})();
+</script>
+</body>
+</html>
