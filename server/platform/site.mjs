@@ -264,7 +264,15 @@ export function cnpjDigits(v) {
   return calc(12) === +d[12] && calc(13) === +d[13] ? d : '';
 }
 export const cnpjFmt = d => d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+// Footer'da her zaman görünür "Partner olmak istiyorum" düğmesi (menü düzenleyiciden footer değişse de kalır; yalnız ana site)
+function applyFooterPartner(root) {
+  try { if (!currentTenant().isDefault) return; } catch {}
+  const fc = root.querySelector('footer.site-footer .footer-contact');
+  if (!fc || fc.querySelector('a.footer-partner')) return;
+  fc.insertAdjacentHTML('beforeend', '<a class="btn footer-partner" href="/partner-ol/">Partner olmak istiyorum</a>');
+}
 function applyTrust(root, st) {
+  applyFooterPartner(root);
   const f = root.querySelector('footer.site-footer'), fb = f?.querySelector('.footer-bottom'); if (!f || !fb || f.querySelector('.footer-trust')) return;
   const ic = n => `<bm-i class="ic ic-${n}" aria-hidden="true"></bm-i>`;
   const dd = st?.didit || {}, didit = (dd.enabled ?? cfgEnv('DIDIT_ENABLED') === 'true') && !!(dd.apiKey || cfgEnv('DIDIT_API_KEY'));

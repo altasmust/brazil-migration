@@ -82,6 +82,7 @@ try {
   // advisor activates via invite link and sees the customer; accountant (head office) also sees it
   assert.equal((await call('ali', 'auth', 'reset', {token: tokenFrom(aliLink), password: 'AliPass2026'})).status, 200);
   assert.equal((await call('ali', 'auth', 'login', {email: 'ali@test.com', password: 'AliPass2026'})).data.home, '/partner/');
+  assert.equal((await call('ali', 'auth', 'admin/login', {email: 'ali@test.com', password: 'AliPass2026'})).status, 403); // danışman/partner yönetim girişinden giremez, tek giriş ekranını kullanır
   assert.ok((await call('ali', 'workspace', 'bootstrap')).data.customers.some(c => c.email === 'zey@test.com'));
   await call('muh', 'auth', 'reset', {token: tokenFrom(muhLink), password: 'Muhasebe2026'});
   assert.equal((await call('muh', 'auth', 'login', {email: 'muh@test.com', password: 'Muhasebe2026'})).status, 200);
@@ -92,6 +93,7 @@ try {
   assert.equal(r.status, 200);
   await call('p', 'auth', 'verify', {token: tokenFrom(r.data.devLink)});
   assert.equal((await call('p', 'auth', 'login', {email: 'burak@test.com', password: 'Burak2026x'})).status, 200);
+  assert.equal((await call('p', 'auth', 'admin/login', {email: 'burak@test.com', password: 'Burak2026x'})).status, 403); // partner başvurusu yapan firma da yönetim girişinden giremez
   assert.equal((await call('p', 'member', 'partner')).data.partner.status, 'docs_required');
   assert.equal((await call('p', 'workspace', 'bootstrap')).status, 200);
   assert.equal((await call('p', 'workspace', 'profile', {name: 'Burak Y'})).status, 200);

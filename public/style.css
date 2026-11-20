@@ -105,3 +105,5 @@ body{font-family:'Poppins',Arial,sans-serif;font-size:16px;line-height:1.75}h1,h
 /* dar telefon başlığı: dil seçici + giriş + tema + menü sayfayı yana kaydırmasın */
 @media(max-width:420px){header.new-header{padding-left:14px;padding-right:14px;gap:6px}.brand-logo img{width:116px}.nav-right{gap:6px}.login-link{font-size:11px;padding:8px 9px}.theme-toggle{min-width:34px;padding:5px!important}.menu-toggle{min-width:34px}}
 @media(max-width:340px){.brand-logo img{width:100px}.nav-right{gap:4px}.login-link{padding:8px 7px}}
+.footer-contact .footer-partner{display:block;margin-top:10px;background:transparent;color:var(--forest);border:1px solid var(--forest);text-align:center}.footer-contact .footer-partner:hover{background:var(--forest);color:#fff}
+:root[data-theme=dark] .footer-contact .btn.footer-partner{background:transparent;color:#cfe8cf;border-color:#4d7a5d}:root[data-theme=dark] .footer-contact .btn.footer-partner:hover{background:#2f4a3a;color:#fff}
