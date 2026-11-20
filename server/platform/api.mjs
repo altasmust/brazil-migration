@@ -2,6 +2,7 @@ import {cfgEnv, cfgDel, currentTenant, runWithTenant} from './tenant-context.mjs
 import {handleTenantApi} from './tenant-api.mjs';
 import {listTenants, updateTenant, tenantById} from './tenant.mjs';
 import {assertQuota, usage, limitsFor, PLAN_NAMES} from './plans.mjs';
+import {casesAdmin, casesCustomer, maybeRunCaseReminders} from './cases.mjs';
 // Unified login, registration, partner onboarding, admin account management and panel modules.
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
@@ -206,7 +207,7 @@ export function ensureReminders(env) {
   if (!env?.DB) return;
   const T = currentTenant(); (globalThis.__bmRemT ??= new Map()).set(T.id, {t: T, db: env.DB});
   if (globalThis.__bmRem) return;
-  const tick = () => { for (const {t, db} of globalThis.__bmRemT.values()) runWithTenant(t, () => runReminders(db)).catch(e => console.error('[reminder]', e.message)); };
+  const tick = () => { for (const {t, db} of globalThis.__bmRemT.values()) runWithTenant(t, async () => { await runReminders(db); await maybeRunCaseReminders(db); }).catch(e => console.error('[reminder]', e.message)); };
   globalThis.__bmRem = setInterval(tick, 60e3); if (globalThis.__bmRem.unref) globalThis.__bmRem.unref();
   setTimeout(tick, 3000);
 }
@@ -445,6 +446,12 @@ export async function handleAuth(req, env, route) {
     else { const id = uuid(); await q(db, 'INSERT INTO auth_users VALUES(?,?,?,?,?,?,?,?)', id, OWNER_EMAIL(), hash, salt, 1, 0, 0, now()).run(); u = {id}; }
     return json({ok: true}, 200, {'Set-Cookie': await createSession(db, req, u.id)});
   }
+  if (route === 'brand' && req.method === 'GET') { // açık uç: panel ve giriş sayfaları firmanın adını/logosunu buradan alır
+    const T = currentTenant(); if (T.isDefault) return json({main: true}, 200, {'Cache-Control': 'public, max-age=300'});
+    let co = {}; try { co = JSON.parse((await db.prepare("SELECT data FROM items WHERE id='config-company'").first())?.data || '{}'); } catch {}
+    const logo = /^(https:\/\/|\/api\/admin\/asset\/)/.test(String(co.logoUrl || '')) ? co.logoUrl : '';
+    return json({main: false, name: co.brand || T.name || '', logo, color: /^#[0-9a-fA-F]{6}$/.test(String(co.brandColor || '')) ? co.brandColor : ''}, 200, {'Cache-Control': 'public, max-age=120'});
+  }
   if (route === 'status' && req.method === 'GET') {
     if (!isAdminRequest(req)) fail(404, 'Bulunamadı.');
     const u = await one(db, 'SELECT hash FROM auth_users WHERE email=?', OWNER_EMAIL());
@@ -547,6 +554,7 @@ export async function handlePlatform(req, env, route, ctx = {}) {
     return json({modules: list.map(m => ({id: m.id, title: m.title, icon: m.icon, type: m.type, content: m.content, url: m.url, order: m.order})), hidden: builtins.hidden || []});
   }
   const {u, person} = await memberContext(db, req);
+  { const g = await casesCustomer(req, db, route, person); if (g) return g; }
   if (route === 'pay/iyzico/start' && req.method === 'POST') {
     const b = await body(req);
     const ip = clientIp(req.headers) === 'unknown' ? '' : clientIp(req.headers);
@@ -666,6 +674,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   { const g = await backupAdmin(req, env, route); if (g) return g; }
   { const g = await updatesAdmin(req, db, route, {audit, actor}); if (g) return g; }
   { const g = await i18nAdmin(req, db, route); if (g) return g; }
+  { const g = await casesAdmin(req, db, route, {audit, actor}); if (g) return g; }
 
   if (route === 'meta' && req.method === 'GET') return json({types: ACCOUNT_TYPES, perms: PERMS, permLabels: PERM_LABELS, defaults: DEFAULT_PERMS, panels: PANELS, countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES, mail: mailConfigured(), verifier: verifierConfigured()});
 

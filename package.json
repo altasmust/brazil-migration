@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node tests/authorization.mjs && node tests/admin.mjs && node tests/advisor.mjs && node tests/lawyer.mjs && node tests/platform.mjs && node tests/tenants.mjs"
+    "test": "node tests/authorization.mjs && node tests/admin.mjs && node tests/advisor.mjs && node tests/lawyer.mjs && node tests/platform.mjs && node tests/tenants.mjs && node tests/cases.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

@@ -123,6 +123,14 @@ try {
   PLAN_LIMITS.free.customers = keepLimit;
   assert.equal((await call('acme.localhost', 'register', {name: 'Bruno', email: 'bruno@test.com', password: 'Bruno2026pw', consent: true})).status, 200);
 
+  // beyaz etiket: açık marka ucu ve e-posta metinleri firma adına döner (ana firma değişmez)
+  r = await call('acme.localhost', 'brand'); assert.equal(r.status, 200); assert.equal(r.data.main, false); assert.equal(r.data.name, 'Acme Göç');
+  assert.equal((await call('localhost', 'brand')).data.main, true);
+  const {sendMail} = await import('/home/claude/proje/Brazil-Migration/server/platform/mail.mjs');
+  const logs = []; const keepLog = console.log; console.log = (...a) => { logs.push(a.join(' ')); };
+  try { await runWithTenant(acme, () => sendMail({to: 'x@y.test', subject: 'Brazil Migration hesabınız oluşturuldu', text: 'Brazil Migration paneli'})); await sendMail({to: 'x@y.test', subject: 'Brazil Migration hesabınız oluşturuldu', text: 't'}); } finally { console.log = keepLog; }
+  assert.ok(logs.some(l => l.includes('Acme Göç hesabınız oluşturuldu')), logs.join('|')); assert.ok(logs.some(l => l.includes('Brazil Migration hesabınız oluşturuldu')));
+
   // askıya alma ve silme
   await updateTenant(acme.id, {status: 'suspended'});
   assert.equal((await page('acme.localhost', '/')).status, 503);
