@@ -104,6 +104,7 @@
       <p class="bmg-hint">${pub ? adj + ' sayfalar ziyaretçilere ve Google’a açık. Türkçe sayfalarda dil düğmesi ve hreflang etiketleri görünüyor; ' + adj + ' adresler sitemap’te.' : '<b>Taslak:</b> ' + adj + ' sayfalar ziyaretçilere ve Google’a kapalı (404). Sitemap’e girmez, dil düğmesi görünmez, hiçbir sayfadan bağlantı almaz. Yalnız siz önizleme ile görürsünüz.'}</p>
       <div class="form-actions" style="justify-content:flex-start;flex-wrap:wrap">
         ${pub ? '' : `<button class="btn primary small" data-lg="prev">${ic('eye')} ${d.preview ? 'Önizlemeyi aç' : 'Önizlemeyi başlat'}</button>${d.preview ? '<button class="btn small" data-lg="prevoff">Önizlemeyi kapat</button>' : ''}`}
+        <button class="btn small" data-lg="indexnow">${ic('globe')} Bing/Yandex'e bildir</button>
         <button class="btn small" data-lg="scan">${ic('search')} Eksik çevirileri tara</button>
         <button class="btn ${pub ? '' : 'primary'} small" data-lg="${pub ? 'unpub' : 'pub'}">${pub ? 'Taslağa al' : 'Yayınla'}</button></div>
       <p class="bmg-hint" style="margin-top:12px">Önerilen yayın zamanı: Search Console’da Türkçe sayfaların çoğu “Dizine eklendi” göründüğünde. Sözlükte ${d.strings} çeviri var; blog yazıları yalnız o dilde yazı eklendiyse görünür.</p>
@@ -123,6 +124,7 @@
     try {
       if (a === 'sw') { curLg = b.dataset.l in LG ? b.dataset.l : 'en'; render(); }
       else if (a === 'prev') { await A('i18n/preview', 'POST', {on: true}); window.open('/' + curLg + '/', '_blank', 'noopener'); render(); }
+      else if (a === 'indexnow') { b.disabled = true; try { const r = await A('i18n/indexnow', 'POST', {}); say(r.sent + ' adres Bing/Yandex’e (IndexNow) bildirildi.'); } finally { b.disabled = false; } }
       else if (a === 'prevoff') { await A('i18n/preview', 'POST', {on: false}); render(); }
       else if (a === 'pub') { if (!confirm(adj + ' sayfalar herkese ve Google’a açılacak; Türkçe sayfalara dil düğmesi ve hreflang eklenecek, ' + adj + ' adresler sitemap’e girecek. Devam edilsin mi?')) return; await A('i18n/publish', 'POST', {published: true, lang: curLg}); say(L.name + ' yayında.'); render(); }
       else if (a === 'unpub') { if (!confirm(adj + ' sayfalar ziyaretçilere kapatılsın mı? (Önizleme bağlantıları da sıfırlanır.)')) return; await A('i18n/publish', 'POST', {published: false, lang: curLg}); say(L.name + ' taslağa alındı.'); render(); }

@@ -238,6 +238,20 @@ function applyCompany(root, co) {
   if (head && root.querySelector('body')?.getAttribute('data-page') !== 'blog') head.insertAdjacentHTML('beforeend', `<script type="application/ld+json">${JSON.stringify({'@context': 'https://schema.org', '@type': 'ProfessionalService', name: brand, legalName: co.legalName || undefined, url: siteUrl() || undefined, logo: (siteUrl() || '') + '/brazil-migration-logo.png', email: co.email || undefined, telephone: co.phone || undefined, address: co.address ? {'@type': 'PostalAddress', streetAddress: co.address} : undefined, areaServed: ['BR', 'TR', 'IR'], knowsLanguage: ['tr', 'pt-BR', 'en', 'fa'], makesOffer: {'@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Dil engeli olmadan ücretsiz ön görüşme', description: '15 dakikalık, canlı çevirili (Türkçe, Portekizce, İngilizce, Farsça) çevrim içi ön görüşme', url: (siteUrl() || '') + '/canli-cevirili-gorusme/'}, sameAs: socials.map(([, v]) => v)}).replace(/</g, '\\u003c')}</script>`);
 }
 
+// Yapısal veri: iç sayfalara BreadcrumbList, ana sayfalara WebSite (arama motorları ve yapay zekâ özetleri için)
+const HOME_LABEL = {tr: 'Ana Sayfa', en: 'Home', pt: 'Início'};
+function applyCrumbs(root, curPath, lang) {
+  const base = siteUrl(), head = root.querySelector('head'); if (!base || !head) return;
+  if (root.querySelector('body')?.getAttribute('data-page') === 'blog') return;
+  if (/noindex/i.test(root.querySelector('meta[name="robots"]')?.getAttribute('content') || '')) return;
+  root.querySelectorAll('script[data-bm-crumb]').forEach(x => x.remove());
+  const home = lang === 'tr' ? '/' : SITE_LANGS[lang].prefix + '/', ld = o => head.insertAdjacentHTML('beforeend', '<script type="application/ld+json" data-bm-crumb>' + JSON.stringify({'@context': 'https://schema.org', ...o}).replace(/</g, '\\u003c') + '</script>');
+  if (curPath === home) { ld({'@type': 'WebSite', url: base + home, name: root.querySelector('meta[property="og:site_name"]')?.getAttribute('content') || 'Brazil Migration', inLanguage: lang}); return; }
+  if (root.querySelectorAll('script[type="application/ld+json"]').some(x => x.text.includes('BreadcrumbList'))) return;
+  const h1 = (root.querySelector('h1')?.text || '').replace(/\s+/g, ' ').trim(); if (!h1) return;
+  ld({'@type': 'BreadcrumbList', itemListElement: [{'@type': 'ListItem', position: 1, name: HOME_LABEL[lang] || 'Home', item: base + home}, {'@type': 'ListItem', position: 2, name: h1, item: base + curPath}]});
+}
+
 // ---------- footer güven şeridi (her sayfada, footer alt satırının üstünde) ----------
 const LAW = {firm: 'ACG Advogada', lawyer: 'Dra. Ana Carolina', oab: 'OAB/SP 386.588', verify: 'https://cna.oab.org.br/'};
 // Güvence rozetleri: orijinal logolar (public/bm/trust/*.webp) + KYC kalkanı ve KVKK rozeti (SVG, trust-badges.mjs).
@@ -552,6 +566,7 @@ export async function renderLang(db, lang, enPath, {draft = false, missing = nul
     root.querySelectorAll('[alt],[title],[aria-label],[placeholder],[data-tip]').forEach(el => { if (skip(el)) return; for (const a of ['alt', 'title', 'aria-label', 'placeholder', 'data-tip']) { const v = el.getAttribute(a); if (!v || !/[A-Za-zÇĞİÖŞÜçğıöşü]/.test(v)) continue; const k = String(v).replace(/[\s\u00a0]+/g, ' ').trim(); const tv = lookupI18n(k, dd); if (tv != null) el.setAttribute(a, tv); else if (missing && /[ÇĞİÖŞÜçğıöşü]/.test(k)) missing.set(k, 'attr'); } }); }
   if (!bm) applyImgAlt(root, lang, true);
   applyLangLinks(root, bm ? '/blog/' : trPath, st, {draft, noAlt: !!bm?.[1]});
+  if (!draft) applyCrumbs(root, enPath, lang);
   const head = root.querySelector('head');
   // tarayıcıda JS ile üretilen metinler için: aynı sözlük + çevirmen
   head?.insertAdjacentHTML('afterbegin', '<script src="/api/site/i18n/' + lang + '.js?v=' + st.stamp + '"></script>');
@@ -588,6 +603,7 @@ export async function renderPage(db, path, {editor = false, preview = null, blog
   if (st?.menu || preview) applyMenu(root, (st || await siteState(db)).menu);
   try { const S = st || await siteState(db); applyCompany(root, S.company); applyTrust(root, S); if (!editor) { applyImgAlt(root, 'tr'); applyGlobalSeo(root, path, S.seo || {}); applyAnalytics(root, S.analytics || {}, path); applyLivePromo(root, path); applyGrowth(root, path, S); applyPerf(root); applyLangLinks(root, path, S); } } catch (e) { console.error('[site]', e.message); }
   if (path === '/' && !editor && st) { const why = root.querySelector('section.why'); const hb = homeBlogHTML(Object.values(st.blog || {}).filter(p => p.published)); const ft = root.querySelector('footer.site-footer'); if (ft && hb) { ft.insertAdjacentHTML('beforebegin', hb); root.querySelector('head')?.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/bm/blog.css?v=1">'); } }
+  if (!editor) { try { applyCrumbs(root, path, 'tr'); } catch {} }
   let html = '<!doctype html>' + root.toString().replace(/^<!doctype html>/i, '');
   if (siteUrl()) html = html.replace(OLD_HOSTS, siteUrl());
   html = arrowize(html);

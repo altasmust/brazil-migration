@@ -487,3 +487,9 @@
 - 2026-11-17: Next.js 16.4.3 → 16.4.6 (güvenlik yaaması, npm audit 0 açık); build ve testler geçti.
 - 2026-11-17: Next 16.4.6 ile elle brotli/gzip sıkıştırma bozuk sayfa üretti (başlık düşüyor). http.mjs htmlOut artık sıkıştırmıyor; Next kendisi gzip yapıyor. Elle Content-Encoding ayarlama.
 - 2026-11-17: Yönetici üst menü çubuğu büyütüldü (ui-revision.css, ≥1101px: yükseklik 60, yazı 14.5px, geniş dolgu).
+
+## 2026-11-20 — SEO/AI görünürlüğü
+- `applyCrumbs` (site.mjs): iç sayfalara BreadcrumbList, ana sayfalara (TR/EN/PT) WebSite JSON-LD; sayfada zaten breadcrumb varsa eklemez. SITE_URL gerekir.
+- IndexNow: anahtar dosyası `public/<anahtar>.txt` (anahtar i18n-admin.mjs'te), Yönetici → Diller → "Bing/Yandex'e bildir" (`POST i18n/indexnow`, sitemap'teki tüm adresleri gönderir). Her büyük yayından sonra tıklanabilir.
+- `public/llms.txt`: yapay zekâ tarayıcıları için site özeti ve ana sayfa bağlantıları.
+- Hâlâ kullanıcıdan beklenen: Search Console / Bing / Yandex hesaplarında doğrulama kodu + sitemap gönderimi (Ayarlar → Entegrasyonlar → Doğrulama).

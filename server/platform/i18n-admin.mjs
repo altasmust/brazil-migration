@@ -1,7 +1,10 @@
 // Yönetici → Site Yönetimi → Diller: İngilizce taslak önizleme, yayınla/taslağa al, eksik çeviri raporu.
 import {randomBytes} from 'node:crypto';
 import {dict, reloadDict, loadExtra, norm, SITE_LANGS} from './i18n.mjs';
-import {siteState, renderLang, invalidateSite} from './site.mjs';
+import {siteState, renderLang, invalidateSite, sitemapXML} from './site.mjs';
+
+// IndexNow: Bing, Yandex ve diğer katılımcı arama motorlarına URL'leri tek istekle bildirir (anahtar dosyası public/<anahtar>.txt)
+const INDEXNOW_KEY = '01e3eb67e298ab1ef7926d860860ca77';
 
 const parse = s => { try { return JSON.parse(s || '{}') || {}; } catch { return {}; } };
 const json = (data, status = 200, headers = {}) => Response.json(data, {status, headers: {'Cache-Control': 'private, no-store', ...headers}});
@@ -56,6 +59,13 @@ export async function i18nAdmin(req, db, route) {
     const clean = v => String(v || '').replace(/[<>"]/g, '').trim().slice(0, 30);
     cfg.menu = {labels: {tr: clean(b.labels?.tr) || 'Türkçe', en: clean(b.labels?.en) || 'English', pt: clean(b.labels?.pt) || 'Português'}, format: ['code-label', 'label', 'code'].includes(b.format) ? b.format : 'code-label'};
     await setCfg(db, cfg); return json({ok: true, menu: cfg.menu});
+  }
+  if (route === 'i18n/indexnow' && req.method === 'POST') {
+    const base = (process.env.SITE_URL || '').replace(/\/$/, '');
+    if (!/^https:\/\//.test(base)) return json({error: 'SITE_URL tanımlı değil; canlı adresi ortam değişkenine yazın.'}, 400);
+    const xml = await sitemapXML(db), urlList = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].replace(/&amp;/g, '&')).filter(u => u.startsWith(base)).slice(0, 10000);
+    const r = await fetch('https://api.indexnow.org/IndexNow', {method: 'POST', headers: {'Content-Type': 'application/json; charset=utf-8'}, body: JSON.stringify({host: new URL(base).host, key: INDEXNOW_KEY, keyLocation: base + '/' + INDEXNOW_KEY + '.txt', urlList})}).catch(e => ({status: 0, statusText: e.message}));
+    return json({ok: r.status === 200 || r.status === 202, status: r.status, sent: urlList.length}, r.status === 200 || r.status === 202 ? 200 : 502);
   }
   if (route === 'i18n/publish') {
     const L = pick(b.lang);
