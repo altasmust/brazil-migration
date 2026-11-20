@@ -20,7 +20,7 @@ const put = (db, id, kind, owner, data) => stmt(db, id, kind, owner, data).run()
 const del = (db, id) => db.prepare('DELETE FROM items WHERE id=?').bind(id).run();
 const get = async (db, id, kind) => { const r = await first(db, 'SELECT * FROM items WHERE id=?', id); return r && (!kind || r.kind === kind) ? {...r, d: parse(r.data)} : null; };
 const readBody = async req => { const t = await req.text(); if (t.length > 300000) fail(413, 'İstek çok büyük.'); try { return JSON.parse(t || '{}') || {}; } catch { fail(400, 'Geçersiz istek.'); } };
-const notice = (db, owner, title, link) => put(db, uuid(), 'notice', owner, {title, link, read: false});
+export const notice = (db, owner, title, link) => put(db, uuid(), 'notice', owner, {title, link, read: false});
 const DAY = 864e5;
 const dayStr = ms => new Date(ms).toISOString().slice(0, 10);
 const validDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s + 'T00:00:00Z'));

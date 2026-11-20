@@ -5,6 +5,7 @@ import {assertQuota, usage, limitsFor, PLAN_NAMES, meetingQuota} from './plans.m
 import {casesAdmin, casesCustomer, maybeRunCaseReminders} from './cases.mjs';
 import {salesPublic, salesAdmin, maybeRunSalesReminders} from './sales.mjs';
 import {networkAdmin} from './network.mjs';
+import {directoryPublic, directoryAdmin} from './directory.mjs';
 import {commsAdmin, setLang} from './comms.mjs';
 import {assistantAdmin} from './assistant.mjs';
 import {privacyPublic, privacyAdmin, consentStmt} from './privacy.mjs';
@@ -256,6 +257,7 @@ export async function handleAuth(req, env, route) {
   { const g = await privacyPublic(req, db, route); if (g) return g; }
   { const g = await securityPublic(req, db, route); if (g) return g; }
   { const g = await pushPublic(req, db, route); if (g) return g; }
+  { const g = await directoryPublic(req, db, route); if (g) return g; }
   if (route === 'payment-methods' && req.method === 'GET') return json({methods: enabledMethods(await loadPayments(db)).map(m => m.id === 'havale' ? m : {id: m.id, name: m.name})});
   if (route === 'cities' && req.method === 'GET') return json({countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES});
   if (route === 'config' && req.method === 'GET') return json({mail: mailConfigured(), verifier: verifierConfigured(), adminSeparate: adminHosts().length > 0, whatsapp: (cfgEnv('WHATSAPP_NUMBER') || '').replace(/\D/g, '') || null});
@@ -728,6 +730,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   { const g = await casesAdmin(req, db, route, {audit, actor}); if (g) return g; }
   { const g = await salesAdmin(req, db, route, {audit, actor, createCustomer: (d, r, f) => createCustomerFromLead(d, r, f, actor)}); if (g) return g; }
   { const g = await networkAdmin(req, db, route, {audit, actor}); if (g) return g; }
+  { const g = await directoryAdmin(req, db, route, {audit, actor}); if (g) return g; }
   { const g = await assistantAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
   { const g = await privacyAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
   { const g = await securityAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
