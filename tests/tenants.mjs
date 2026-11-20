@@ -19,6 +19,7 @@ const {getMainDatabase} = await import('/home/claude/proje/Brazil-Migration/serv
 
 const auth = platform('auth');
 const siteH = site();
+const adminH = platform('admin');
 const jars = {};
 async function call(host, path, body, method) {
   const headers = {Host: host, Origin: 'http://' + host};
@@ -27,6 +28,14 @@ async function call(host, path, body, method) {
   const req = new Request('http://' + host + '/api/auth/' + path, {method: method || (body === undefined ? 'GET' : 'POST'), headers, body: payload});
   const res = await auth(req, {params: Promise.resolve({path: path.split('?')[0].split('/')})});
   const set = res.headers.get('set-cookie'); if (set) jars[host] = set.split(';')[0];
+  const text = await res.text(); let data; try { data = JSON.parse(text); } catch { data = text; }
+  return {status: res.status, data};
+}
+async function adm(host, path, body) {
+  const headers = {Host: host, Origin: 'http://' + host};
+  if (jars[host]) headers.Cookie = jars[host];
+  let payload; if (body !== undefined) { payload = JSON.stringify(body); headers['Content-Type'] = 'application/json'; }
+  const res = await adminH(new Request('http://' + host + '/api/platform/admin/' + path, {method: body === undefined ? 'GET' : 'POST', headers, body: payload}), {params: Promise.resolve({path: path.split('?')[0].split('/')})});
   const text = await res.text(); let data; try { data = JSON.parse(text); } catch { data = text; }
   return {status: res.status, data};
 }
@@ -101,6 +110,19 @@ try {
   assert.equal((await page('acme.localhost', '/brezilya-oturum-izni/')).status, 404);
   p = await page('localhost', '/brezilya-oturum-izni/'); assert.equal(p.status, 200);                                            // ana firma eskisi gibi
 
+  // plan ve kota: firma kendi planını/kullanımını görür, platform firma listesi firmaya kapalıdır, sınır dolunca 402
+  const {PLAN_LIMITS} = await import('/home/claude/proje/Brazil-Migration/server/platform/plans.mjs');
+  r = await adm('acme.localhost', 'tenant/usage');
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.equal(r.data.tenant.plan, 'free'); assert.equal(r.data.tenant.isMain, false);
+  assert.equal(r.data.limits.customers, PLAN_LIMITS.free.customers); assert.ok(r.data.usage.customers >= 0);
+  assert.equal((await adm('acme.localhost', 'tenants')).status, 404);
+  const keepLimit = PLAN_LIMITS.free.customers; PLAN_LIMITS.free.customers = 0;
+  r = await call('acme.localhost', 'register', {name: 'Bruno', email: 'bruno@test.com', password: 'Bruno2026pw', consent: true});
+  assert.equal(r.status, 402, JSON.stringify(r.data));
+  PLAN_LIMITS.free.customers = keepLimit;
+  assert.equal((await call('acme.localhost', 'register', {name: 'Bruno', email: 'bruno@test.com', password: 'Bruno2026pw', consent: true})).status, 200);
+
   // askıya alma ve silme
   await updateTenant(acme.id, {status: 'suspended'});
   assert.equal((await page('acme.localhost', '/')).status, 503);
@@ -109,7 +131,7 @@ try {
   await updateTenant(beta.id, {status: 'deleted'});
   assert.equal((await page('beta.localhost', '/')).status, 404);
 
-  console.log('PASS: tenant creation, slug rules, host routing, per-tenant DB/login/config/files isolation, storefront, suspend/delete');
+  console.log('PASS: tenant creation, slug rules, host routing, per-tenant DB/login/config/files isolation, storefront, plan/quota, suspend/delete');
 } finally {
   rmSync(dir, {recursive: true, force: true});
 }

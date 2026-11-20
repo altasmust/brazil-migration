@@ -212,8 +212,33 @@
   }); return wrap('Güncellemeler', 'Yeni sürüm bildirimi, değişiklik listesi ve yedek alarak güvenli güncelleme.'); };
 
   // ---------------- rotalar + menü ----------------
-  const routes = {yorumlar: reviewsPage, aboneler: subsPage, fiyatlar: pricesPage, yedekler: backupsPage, diller: langsPage, guncellemeler: updatesPage};
-  Object.assign(names, {yorumlar: 'Müşteri Yorumları', aboneler: 'Aboneler & Bülten', fiyatlar: 'Paket Fiyatları', yedekler: 'Yedekler & Hata Kaydı', diller: 'Diller', guncellemeler: 'Güncellemeler'});
+  // ---------------- Plan ve kullanım + Firmalar (platform yöneticisi) ----------------
+  const bar = (used, lim) => { const pct = lim ? Math.min(100, Math.round(used / lim * 100)) : 0; return '<div style="height:8px;background:#e3eae3;border-radius:6px;overflow:hidden;margin:6px 0 2px"><div style="height:100%;width:' + (lim ? pct : 100) + '%;background:' + (pct >= 90 ? '#cb4c59' : '#1b5e20') + '"></div></div>'; };
+  const planRow = (name, used, lim) => `<div style="margin:14px 0"><b>${name}</b> <span style="float:right">${used ?? 0} / ${lim === undefined ? 'sınırsız' : lim}</span>${bar(used || 0, lim)}</div>`;
+  const planPage = () => { run(async root => {
+    const d = await A('tenant/usage'), T = d.tenant, L = d.limits || {}, U = d.usage || {};
+    const hint = T.isMain ? 'Ana firma: tüm özellikler sınırsız.' : 'Planınızın sınırları aşağıda. Sınıra yaklaşırken planınızı yükseltmek için bizimle iletişime geçin.';
+    const addr = T.baseUrl ? `<p class="bmg-hint">Firma adresiniz: <a href="${esc(T.baseUrl)}" target="_blank" rel="noopener">${esc(T.baseUrl)}</a></p>` : '';
+    root.innerHTML = `<div class="bmg-2"><section class="panel bmg-p"><header class="panel-head"><h2>${ic('shield-check')} ${esc(T.name)}</h2><span class="bmc-login on">${esc(T.planName)}</span></header>
+      <p class="bmg-hint">${hint}</p>${planRow('Müşteri', U.customers, L.customers)}${planRow('Ekip üyesi (danışman, avukat, muhasebe…)', U.staff, L.staff)}${addr}</section></div>`;
+  }); return wrap('Plan ve Kullanım', 'Firmanızın planı ve kullanım durumu.'); };
+  const tenantRow = (t, plans) => {
+    const opts = plans.map(p => `<option value="${p.key}" ${p.key === t.plan ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
+    const active = t.status === 'active', u = t.usage;
+    return `<li style="display:block"><div><b>${esc(t.name)}</b> <small>${esc(t.slug)} · ${esc(t.owner_email)} · ${active ? 'Aktif' : 'Durduruldu'} · müşteri ${u ? u.customers : '?'} · ekip ${u ? u.staff : '?'}</small></div>
+      <div class="form-actions" style="justify-content:flex-start;margin-top:6px"><select data-tn="plan" data-id="${t.id}" style="width:auto;min-width:180px;max-width:260px">${opts}</select>
+      <button class="btn small" data-tn="${active ? 'suspend' : 'activate'}" data-id="${t.id}">${active ? 'Durdur' : 'Yeniden etkinleştir'}</button></div></li>`;
+  };
+  const tenantsPage = () => { run(async root => {
+    const d = await A('tenants?usage=1');
+    const list = d.tenants.length ? `<ul class="bmg-ul">${d.tenants.map(t => tenantRow(t, d.plans)).join('')}</ul>` : '<div class="bmc-empty sm"><b>Henüz firma yok.</b><span>Firmalar /firma-ac/ sayfasından kendileri açar.</span></div>';
+    root.innerHTML = `<section class="panel bmg-p"><header class="panel-head"><h2>${ic('building')} Firmalar (${d.tenants.length})</h2></header>
+      <p class="bmg-hint">Platformda açılan firmalar. Plan değiştirince sınırlar hemen uygulanır; durdurulan firmanın adresi ziyaretçilere kapanır, verisi silinmez.</p>${list}</section>`;
+  }); return wrap('Firmalar', 'Platformdaki tüm firmalar.'); };
+  document.addEventListener('change', async e => { const s = e.target.closest('select[data-tn="plan"]'); if (!s) return; try { await A('tenants/update', 'POST', {id: s.dataset.id, plan: s.value}); say('Plan güncellendi.'); } catch (err) { say(err.message); } });
+  document.addEventListener('click', async e => { const b = e.target.closest('button[data-tn]'); if (!b) return; try { await A('tenants/update', 'POST', {id: b.dataset.id, status: b.dataset.tn === 'suspend' ? 'suspended' : 'active'}); say('Firma güncellendi.'); render(); } catch (err) { say(err.message); } });
+  const routes = {yorumlar: reviewsPage, aboneler: subsPage, fiyatlar: pricesPage, yedekler: backupsPage, diller: langsPage, guncellemeler: updatesPage, plan: planPage, firmalar: tenantsPage};
+  Object.assign(names, {yorumlar: 'Müşteri Yorumları', aboneler: 'Aboneler & Bülten', fiyatlar: 'Paket Fiyatları', yedekler: 'Yedekler & Hata Kaydı', diller: 'Diller', guncellemeler: 'Güncellemeler', plan: 'Plan ve Kullanım', firmalar: 'Firmalar'});
   const _overview = overview;
   overview = function () { const r = route(); return routes[r] ? routes[r]() : _overview(); };
   const nav = $('#navigation');
@@ -224,7 +249,16 @@
     if (site) site.after(el); else nav.appendChild(el);
     site?.querySelector('.dropdown')?.insertAdjacentHTML('beforeend', '<a href="#diller">Diller (EN · PT)</a>');
     const ay = [...nav.querySelectorAll('details')].find(d => d.querySelector('summary')?.textContent.trim() === 'Ayarlar');
-    ay?.querySelector('a[href="#durum"]')?.insertAdjacentHTML('afterend', '<a href="#yedekler">Yedekler &amp; Hata Kaydı</a><a href="#guncellemeler">Güncellemeler</a>');
+    ay?.querySelector('a[href="#durum"]')?.insertAdjacentHTML('afterend', '<a href="#yedekler">Yedekler &amp; Hata Kaydı</a><a href="#guncellemeler">Güncellemeler</a><a href="#plan">Plan ve Kullanım</a>');
+    setTimeout(() => A('tenant/usage').then(d => {
+      const T = d.tenant;
+      if (T.isMain) { ay?.querySelector('.dropdown')?.insertAdjacentHTML('beforeend', '<a href="#firmalar">Firmalar</a>'); return; }
+      // Firma paneli: üst çubukta ana marka yerine firmanın kendi logosu / adı
+      const brand = document.querySelector('header.top a.brand'); if (!brand) return;
+      if (T.logo) { const im = brand.querySelector('img'); if (im) { im.src = T.logo; im.alt = T.name; im.style.maxHeight = '48px'; im.style.width = 'auto'; } }
+      else brand.innerHTML = '<b style="font-size:20px;color:' + (T.color || 'inherit') + '">' + esc(T.name) + '</b>';
+      document.title = T.name + ' · Yönetim Paneli';
+    }).catch(() => {}), 0);
   }
   // yeni güncelleme rozeti + bir kez hatırlatma
   setTimeout(() => A('updates').then(d => { if (!d.latest?.available) return; const a = $('#navigation a[href="#guncellemeler"]'); if (a) a.insertAdjacentHTML('beforeend', ' <span class="bmc-count">Yeni</span>'); const k = 'bm-upd-' + d.latest.latestSha; try { if (!sessionStorage.getItem(k)) { sessionStorage.setItem(k, '1'); say('Yeni site güncellemesi var: Ayarlar → Güncellemeler.'); } } catch {} }).catch(() => {}), 1500);

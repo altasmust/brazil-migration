@@ -11,7 +11,8 @@ const TX = {
   th: {login: 'เข้าสู่ระบบลูกค้า', admin: 'แผงควบคุมบริษัท', start: 'ติดตามเรื่องและเอกสารของคุณออนไลน์', cta: 'เข้าสู่ระบบ'},
 };
 
-export function landingHTML(t) {
+export function landingHTML(t0, company = {}) {
+  const t = {...t0, name: company.brand || t0.name, brand: {...t0.brand, color: company.brandColor || t0.brand?.color, tagline: company.tagline || t0.brand?.tagline, logo: company.logoUrl || t0.brand?.logo}};
   const tx = TX[t.lang] || TX.tr, c = color(t.brand?.color), tag = t.brand?.tagline || tx.start, rtl = t.lang === 'fa';
   return `<!doctype html><html lang="${esc(t.lang)}" dir="${rtl ? 'rtl' : 'ltr'}" translate="no"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(t.name)}</title><meta name="description" content="${esc(tag)}"><meta name="theme-color" content="${c}"><meta property="og:title" content="${esc(t.name)}"><meta property="og:description" content="${esc(tag)}">
 <style>:root{--c:${c}}*{box-sizing:border-box}body{margin:0;font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1c2b22;background:#f6f7f2;min-height:100vh;display:flex;flex-direction:column}
@@ -25,8 +26,8 @@ footer{padding:18px 5%;font-size:13px;color:#6a7a70;text-align:center}</style></
 }
 
 // Dönüş: {status, html} | null
-export async function tenantPage(t, path) {
-  if (path === '/') return {status: 200, html: landingHTML(t)};
+export async function tenantPage(t, path, db) {
+  if (path === '/') { const row = await db.prepare("SELECT data FROM items WHERE id='config-company'").first(); let c = {}; try { c = JSON.parse(row?.data || '{}'); } catch {} return {status: 200, html: landingHTML(t, c)}; }
   if (path === '/giris/') { const html = await readStatic('/giris/'); return html ? {status: 200, html} : null; }
   return null;
 }

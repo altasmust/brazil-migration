@@ -103,7 +103,7 @@ async function siteRun(req, ctx) {
       const db = getDatabase();
       if (!currentTenant().isDefault) {                       // yabancı firma: kendi vitrini; ana firmanın sayfaları sızmaz
         const T = currentTenant(), {tenantPage, tenantRobots, tenantSitemap} = await import('./tenant-site.mjs');
-        if (route === 'page') { const p = req.headers.get('x-bm-path') || url.searchParams.get('p') || '/'; const r = await tenantPage(T, p); return r ? htmlOut(req, r.html, {status: r.status, headers: htmlHeaders}) : new Response('Not found', {status: 404, headers: {'X-Robots-Tag': 'noindex'}}); }
+        if (route === 'page') { const p = req.headers.get('x-bm-path') || url.searchParams.get('p') || '/'; const r = await tenantPage(T, p, db); return r ? htmlOut(req, r.html, {status: r.status, headers: htmlHeaders}) : new Response('Not found', {status: 404, headers: {'X-Robots-Tag': 'noindex'}}); }
         if (route === 'robots') return new Response(tenantRobots(T), {headers: {'Content-Type': 'text/plain; charset=utf-8'}});
         if (route === 'sitemap') return new Response(tenantSitemap(T), {headers: {'Content-Type': 'application/xml; charset=utf-8'}});
         return new Response('Not found', {status: 404});

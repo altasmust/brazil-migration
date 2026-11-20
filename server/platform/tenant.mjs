@@ -145,6 +145,12 @@ export async function createTenant({name, slug, ownerEmail, lang = 'tr', country
   return t;
 }
 
+export async function tenantById(id) {
+  const row = await getMainDatabase().prepare(`SELECT ${cols} FROM tenants WHERE id=?`).bind(id).first();
+  if (!row) throw Object.assign(new Error('Firma bulunamadı.'), {status: 404});
+  const t = buildTenant(row, ''); await t.db.ready(); return t;
+}
+
 export async function listTenants() {
   const r = await getMainDatabase().prepare('SELECT id,slug,name,owner_email,status,plan,domain,db_driver,lang,country,created FROM tenants ORDER BY created DESC').all();
   return r.results;

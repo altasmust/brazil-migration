@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1B5E20">
+<meta name="robots" content="noindex">
+<title>Firmanızı açın | Brazil Migration</title>
+<style>
+:root{--g:#1b5e20;--g2:#2e7d32;--ink:#183b2c;--muted:#68776b;--line:#dfe5d8;--bg:#f4f8f1;--card:#fff;--bad:#b3261e}
+@media(prefers-color-scheme:dark){:root{--ink:#e7efe6;--muted:#9fb0a2;--line:#2c3c30;--bg:#101712;--card:#17211a;--g:#66bb6a;--g2:#81c784;--bad:#f2b8b5}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 16px 56px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:22px}
+.top b{font-size:18px;color:var(--g)}
+.lang{display:flex;gap:6px}
+.lang button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer;font:inherit;font-size:13px}
+.lang button[aria-pressed=true]{background:var(--g);color:#fff;border-color:var(--g)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+@media(max-width:860px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px}
+h1{margin:0 0 8px;font-size:clamp(24px,4vw,34px);line-height:1.2}
+.lead{color:var(--muted);margin:0 0 20px}
+.side h2{margin:0 0 14px;font-size:20px}
+.side ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.side li{padding-left:26px;position:relative}
+.side li:before{content:"✓";position:absolute;left:0;color:var(--g);font-weight:700}
+.side small{display:block;color:var(--muted)}
+label{display:block;font-weight:600;font-size:14px;margin:14px 0 0}
+input,select{width:100%;margin-top:6px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font:inherit}
+input:focus,select:focus{outline:2px solid var(--g2);outline-offset:1px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:520px){.row{grid-template-columns:1fr}}
+.slug{display:flex;align-items:stretch;margin-top:6px}
+.slug input{margin:0;border-radius:12px 0 0 12px;border-right:0}
+.slug span{display:flex;align-items:center;padding:0 12px;border:1px solid var(--line);border-radius:0 12px 12px 0;background:var(--card);color:var(--muted);font-size:14px;white-space:nowrap}
+.hint{font-size:13px;margin-top:6px;min-height:19px;color:var(--muted)}
+.hint.ok{color:var(--g)}.hint.bad{color:var(--bad)}
+.check{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:14px}
+.check input{width:auto;margin-top:3px}
+.hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
+button.go{margin-top:20px;width:100%;border:0;border-radius:14px;padding:14px;background:var(--g);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+button.go:disabled{opacity:.55;cursor:default}
+.msg{margin-top:14px;padding:12px 14px;border-radius:12px;display:none;font-size:14px}
+.msg.bad{display:block;background:#fdecea;color:#7a1a14}
+@media(prefers-color-scheme:dark){.msg.bad{background:#3b1a17;color:#f2b8b5}}
+.done{display:none;text-align:center}
+.done .tick{font-size:48px}
+.done a.btn{display:inline-block;margin-top:14px;padding:12px 20px;border-radius:12px;background:var(--g);color:#fff;text-decoration:none;font-weight:700}
+.dev{margin-top:14px;font-size:13px;word-break:break-all;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><b>Brazil Migration</b><div class="lang" role="group" aria-label="Language"><button type="button" data-l="tr">TR</button><button type="button" data-l="en">EN</button><button type="button" data-l="pt">PT</button></div></div>
+  <div class="grid">
+    <aside class="card side">
+      <h2 data-i="sideTitle"></h2>
+      <ul>
+        <li><b data-i="f1"></b><small data-i="f1d"></small></li>
+        <li><b data-i="f2"></b><small data-i="f2d"></small></li>
+        <li><b data-i="f3"></b><small data-i="f3d"></small></li>
+        <li><b data-i="f4"></b><small data-i="f4d"></small></li>
+        <li><b data-i="f5"></b><small data-i="f5d"></small></li>
+      </ul>
+    </aside>
+    <main class="card">
+      <div id="formBox">
+        <h1 data-i="title"></h1>
+        <p class="lead" data-i="lead"></p>
+        <form id="f" novalidate>
+          <label><span data-i="name"></span><input name="name" required minlength="2" maxlength="80" autocomplete="organization"></label>
+          <label><span data-i="slug"></span>
+            <div class="slug"><input name="slug" required maxlength="30" autocapitalize="off" autocomplete="off" spellcheck="false"><span id="suffix">.brazilmigration.com</span></div>
+          </label>
+          <div class="hint" id="slugHint" role="status" aria-live="polite"></div>
+          <label><span data-i="email"></span><input name="email" type="email" required autocomplete="email"></label>
+          <div class="row">
+            <label><span data-i="lang"></span>
+              <select name="lang"><option value="tr">Türkçe</option><option value="en">English</option><option value="pt">Português</option><option value="fa">فارسی</option><option value="th">ไทย</option></select></label>
+            <label><span data-i="country"></span>
+              <select name="country"><option value="BR">Brasil</option></select></label>
+          </div>
+          <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <label class="check"><input type="checkbox" name="consent" required><span data-i="consent"></span></label>
+          <button class="go" id="go" type="submit" data-i="go"></button>
+          <div class="msg" id="msg" role="alert"></div>
+        </form>
+      </div>
+      <div class="done" id="done">
+        <div class="tick">🎉</div>
+        <h1 data-i="doneTitle"></h1>
+        <p class="lead" data-i="doneText"></p>
+        <a class="btn" id="open" href="#" data-i="open"></a>
+        <div class="dev" id="dev"></div>
+      </div>
+    </main>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var D = {
+    tr: {title: 'Firmanızı açın', lead: 'Kendi adresiniz, kendi müşterileriniz ve ekibinizle çalışan bir göç danışmanlığı yazılımı. Kredi kartı gerekmez.', sideTitle: 'Neler dahil?',
+      f1: 'Kendi adresiniz', f1d: 'firmaadi.brazilmigration.com — logo ve renkleriniz sitenizde görünür.', f2: 'Ayrı ve güvenli veri', f2d: 'Her firmanın veritabanı, dosyaları ve anahtarları tamamen ayrıdır.',
+      f3: 'Müşteri ve dosya yönetimi', f3d: 'Müşteri portalı, belgeler, görüşme ve sözleşmeler tek yerde.', f4: 'Ekibiniz için roller', f4d: 'Danışman, avukat, muhasebe ve ofis personeli yetkileri.', f5: 'Ücretsiz başlayın', f5d: 'Büyüdükçe planınızı yükseltirsiniz.',
+      name: 'Firma adı', slug: 'Firma adresi', email: 'Yönetici e-postası', lang: 'Panel dili', country: 'Ülke', consent: 'Kullanım koşullarını ve kişisel verilerin işlenmesini kabul ediyorum.', go: 'Firmamı aç',
+      slugFmt: '3–30 karakter; küçük harf, rakam ve tire.', checking: 'Kontrol ediliyor…', free: 'Bu adres uygun.', err: 'Lütfen tüm alanları doldurun ve adresin uygun olduğundan emin olun.', neterr: 'Bağlantı hatası. Lütfen tekrar deneyin.',
+      doneTitle: 'Çalışma alanınız hazır', doneText: 'Yönetici parolanızı belirlemeniz için e-postanıza bir bağlantı gönderdik. Bağlantıyı açıp parolanızı oluşturduktan sonra yönetim panelinize girebilirsiniz.', open: 'Giriş sayfasına git', dev: 'Test bağlantısı (yalnız geliştirme modu): '},
+    en: {title: 'Open your firm', lead: 'Immigration advisory software with your own address, clients and team. No credit card needed.', sideTitle: 'What is included?',
+      f1: 'Your own address', f1d: 'yourfirm.brazilmigration.com — your logo and colours on your site.', f2: 'Separate, secure data', f2d: 'Every firm has its own database, files and keys.',
+      f3: 'Client and case management', f3d: 'Client portal, documents, meetings and contracts in one place.', f4: 'Roles for your team', f4d: 'Permissions for advisors, lawyers, accounting and office staff.', f5: 'Start free', f5d: 'Upgrade your plan as you grow.',
+      name: 'Firm name', slug: 'Firm address', email: 'Administrator e-mail', lang: 'Panel language', country: 'Country', consent: 'I accept the terms of use and the processing of personal data.', go: 'Open my firm',
+      slugFmt: '3–30 characters; lowercase letters, digits and hyphens.', checking: 'Checking…', free: 'This address is available.', err: 'Please complete all fields and make sure the address is available.', neterr: 'Connection error. Please try again.',
+      doneTitle: 'Your workspace is ready', doneText: 'We sent a link to your e-mail to set the administrator password. Open it, create your password and sign in to your admin panel.', open: 'Go to sign-in', dev: 'Test link (development mode only): '},
+    pt: {title: 'Abra a sua empresa', lead: 'Software de assessoria migratória com endereço, clientes e equipe próprios. Sem cartão de crédito.', sideTitle: 'O que está incluído?',
+      f1: 'Seu próprio endereço', f1d: 'suaempresa.brazilmigration.com — logotipo e cores no seu site.', f2: 'Dados separados e seguros', f2d: 'Cada empresa tem banco de dados, arquivos e chaves próprios.',
+      f3: 'Gestão de clientes e processos', f3d: 'Portal do cliente, documentos, reuniões e contratos em um só lugar.', f4: 'Papéis para a equipe', f4d: 'Permissões para consultores, advogados, contabilidade e escritório.', f5: 'Comece grátis', f5d: 'Mude de plano conforme crescer.',
+      name: 'Nome da empresa', slug: 'Endereço da empresa', email: 'E-mail do administrador', lang: 'Idioma do painel', country: 'País', consent: 'Aceito os termos de uso e o tratamento de dados pessoais.', go: 'Abrir minha empresa',
+      slugFmt: '3–30 caracteres; letras minúsculas, números e hífen.', checking: 'Verificando…', free: 'Este endereço está disponível.', err: 'Preencha todos os campos e confirme que o endereço está disponível.', neterr: 'Erro de conexão. Tente novamente.',
+      doneTitle: 'Seu espaço de trabalho está pronto', doneText: 'Enviamos um link ao seu e-mail para definir a senha do administrador. Abra-o, crie a senha e entre no painel.', open: 'Ir para o login', dev: 'Link de teste (somente desenvolvimento): '}
+  };
+  var $ = function (s) { return document.querySelector(s); };
+  var f = $('#f'), hint = $('#slugHint'), go = $('#go'), msg = $('#msg');
+  var L = 'tr', slugOk = false, timer = 0, seq = 0;
+  try { L = localStorage.getItem('bm-lang') || ''; } catch (e) { L = ''; }
+  if (!D[L]) { L = (navigator.language || 'tr').slice(0, 2); if (!D[L]) L = 'tr'; }
+
+  var host = location.hostname.replace(/^www\./, '');
+  $('#suffix').textContent = '.' + (host === 'localhost' || /^\d/.test(host) ? 'localhost' : host);
+
+  function apply() {
+    var t = D[L];
+    document.documentElement.lang = L;
+    document.querySelectorAll('[data-i]').forEach(function (n) { n.textContent = t[n.getAttribute('data-i')] || ''; });
+    document.querySelectorAll('.lang button').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.l === L ? 'true' : 'false'); });
+    if (!slugOk && !f.slug.value) hint.textContent = t.slugFmt;
+    if (f.lang && !f.lang.dataset.touched) f.lang.value = L;
+  }
+  document.querySelectorAll('.lang button').forEach(function (b) {
+    b.addEventListener('click', function () { L = b.dataset.l; try { localStorage.setItem('bm-lang', L); } catch (e) {} apply(); checkSlug(true); });
+  });
+  f.lang.addEventListener('change', function () { f.lang.dataset.touched = '1'; });
+
+  function norm(v) { return v.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+/, ''); }
+  function setHint(cls, text) { hint.className = 'hint ' + cls; hint.textContent = text; }
+  function checkSlug(now) {
+    clearTimeout(timer);
+    var v = f.slug.value = norm(f.slug.value);
+    slugOk = false;
+    if (!v) { setHint('', D[L].slugFmt); return; }
+    if (v.length < 3) { setHint('bad', D[L].slugFmt); return; }
+    setHint('', D[L].checking);
+    var my = ++seq;
+    timer = setTimeout(function () {
+      fetch('/api/auth/tenant/check?slug=' + encodeURIComponent(v), {headers: {accept: 'application/json'}})
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (my !== seq) return; slugOk = !!d.ok; setHint(d.ok ? 'ok' : 'bad', d.ok ? D[L].free : (d.reason || D[L].err)); })
+        .catch(function () { if (my === seq) setHint('bad', D[L].neterr); });
+    }, now ? 0 : 350);
+  }
+  f.slug.addEventListener('input', function () { checkSlug(false); });
+  f.name.addEventListener('input', function () {
+    if (f.slug.dataset.touched) return;
+    f.slug.value = norm(f.name.value.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ı/g, 'i').replace(/\s+/g, '-')).replace(/-+/g, '-').slice(0, 30);
+    checkSlug(false);
+  });
+  f.slug.addEventListener('keydown', function () { f.slug.dataset.touched = '1'; });
+
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    msg.className = 'msg';
+    if (!f.name.value.trim() || !f.email.validity.valid || !f.email.value || !slugOk || !f.consent.checked) { msg.className = 'msg bad'; msg.textContent = D[L].err; return; }
+    go.disabled = true;
+    fetch('/api/auth/tenant/create', {
+      method: 'POST', headers: {'content-type': 'application/json'},
+      body: JSON.stringify({name: f.name.value.trim(), slug: f.slug.value, email: f.email.value.trim(), lang: f.lang.value, country: f.country.value, website: f.website.value})
+    }).then(function (r) { return r.json().then(function (d) { return {ok: r.ok, d: d}; }); })
+      .then(function (x) {
+        if (!x.ok || x.d.error) { msg.className = 'msg bad'; msg.textContent = (x.d && x.d.error) || D[L].err; go.disabled = false; return; }
+        $('#formBox').style.display = 'none'; $('#done').style.display = 'block';
+        if (x.d.url) $('#open').href = x.d.url;
+        if (x.d.devLink) $('#dev').textContent = D[L].dev + x.d.devLink;
+      })
+      .catch(function () { msg.className = 'msg bad'; msg.textContent = D[L].neterr; go.disabled = false; });
+  });
+  apply();
+})();
+</script>
+</body>
+</html>

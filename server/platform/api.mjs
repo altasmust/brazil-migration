@@ -1,5 +1,7 @@
 import {cfgEnv, cfgDel, currentTenant, runWithTenant} from './tenant-context.mjs';
 import {handleTenantApi} from './tenant-api.mjs';
+import {listTenants, updateTenant, tenantById} from './tenant.mjs';
+import {assertQuota, usage, limitsFor, PLAN_NAMES} from './plans.mjs';
 // Unified login, registration, partner onboarding, admin account management and panel modules.
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
@@ -212,7 +214,7 @@ export {runReminders};
 
 export async function handleAuth(req, env, route) {
   const db = env.DB; ensureReminders(env); ensureBackups(env);
-  if (route.startsWith('tenant/')) return handleTenantApi(req, env, route);
+  if (route === 'tenant/check' || route === 'tenant/create' || route === 'tenant/list') return handleTenantApi(req, env, route);
   route = route.replace(/^admin\//, '');
   if (route === 'health' && req.method === 'GET') return health(db);
   if (req.method !== 'GET') sameOrigin(req);
@@ -245,6 +247,7 @@ export async function handleAuth(req, env, route) {
     if (name.length < 2 || !validEmail(email)) fail(400, 'Ad soyad ve geçerli bir e-posta girin.');
     if (email === OWNER_EMAIL()) fail(400, 'Bu e-posta yönetici hesabına ayrılmıştır.');
     if (!passwordOk(b.password)) fail(400, PASSWORD_RULE);
+    await assertQuota(db, 'customers');
     if (!b.consent) fail(400, 'Devam etmek için KVKK / gizlilik metnini onaylayın.');
     const user = await newAuthUser(db, email, b.password, false);
     const loc = readLocation(b, req);
@@ -704,6 +707,25 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const custom = Object.values(st.custom).map(c => ({id: c.id, path: c.path, title: c.title, type: 'custom', published: !!c.published, seo: c.seo || {}, blocks: c.blocks || [], updated: c.updated || null}));
     return json({pages, custom, menuSaved: !!st.menu});
   }
+  // Firma planı ve kullanım (her firma kendi yöneticisine); firma yönetimi yalnız platform (ana firma) yöneticisine
+  if (route === 'tenant/usage' && req.method === 'GET') {
+    const T = currentTenant(), lim = limitsFor(T);
+    let co = {}; if (!T.isDefault) { try { co = JSON.parse((await db.prepare("SELECT data FROM items WHERE id='config-company'").first())?.data || '{}'); } catch {} }
+    const safeLogo = /^(https:\/\/|\/api\/admin\/asset\/)/.test(String(co.logoUrl || '')) ? co.logoUrl : '';
+    return json({tenant: {name: co.brand || T.name || 'Brazil Migration', slug: T.slug, plan: T.plan, planName: PLAN_NAMES[T.plan] || T.plan, isMain: !!T.isDefault, baseUrl: T.baseUrl || '', logo: safeLogo, color: /^#[0-9a-fA-F]{6}$/.test(String(co.brandColor || '')) ? co.brandColor : ''}, limits: lim, usage: await usage(db)});
+  }
+  if (route === 'tenants' && req.method === 'GET') {
+    if (!currentTenant().isDefault) fail(404, 'Bulunamadı.');
+    const list = await listTenants(), withUsage = new URL(req.url).searchParams.get('usage') === '1';
+    for (const t of list) { t.planName = PLAN_NAMES[t.plan] || t.plan; if (withUsage) { try { const T = await tenantById(t.id); t.usage = await usage(T.db); } catch { t.usage = null; } } }
+    return json({tenants: list, plans: Object.keys(PLAN_NAMES).map(k => ({key: k, name: PLAN_NAMES[k]}))});
+  }
+  if (route === 'tenants/update' && req.method === 'POST') {
+    if (!currentTenant().isDefault) fail(404, 'Bulunamadı.');
+    const t = await updateTenant(clean(b.id, 40), {plan: b.plan, status: b.status, name: b.name});
+    await audit(db, actor, 'tenant.update', t.slug + ' ' + (b.plan || b.status || '')).run();
+    return json({ok: true, tenant: {id: t.id, slug: t.slug, plan: t.plan, status: t.status}});
+  }
   if (route === 'dashboard' && req.method === 'GET') {
     const t = now(), d7 = t - 7 * 864e5, d30 = t - 30 * 864e5, n = async (sql, ...v) => Number((await one(db, sql, ...v))?.n || 0);
     const [customers, customers30, partnersActive, partnersReview, bookings7, bookingsOpen, leads30, credReq, poolUsed] = await Promise.all([
@@ -810,6 +832,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
     const email = clean(b.email, 254).toLowerCase(), name = clean(b.name, 100);
     if (name.length < 2 || !validEmail(email)) fail(400, 'Ad soyad ve geçerli e-posta gerekli.');
     if (email === OWNER_EMAIL()) fail(400, 'Bu e-posta yönetici hesabıdır.');
+    if (type !== 'customer') await assertQuota(db, 'staff'); else await assertQuota(db, 'customers');
     if (await one(db, 'SELECT id FROM people WHERE email=?', email) || await one(db, 'SELECT id FROM law_accounts WHERE email=?', email)) fail(409, 'Bu e-posta ile kayıtlı bir hesap zaten var.');
     let user = await one(db, 'SELECT * FROM auth_users WHERE email=?', email);
     if (!user) user = await newAuthUser(db, email, null, true);
@@ -1036,7 +1059,8 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   if (route === 'settings/seo' && req.method === 'POST') { const d = cleanSeo(b); d.updated = now(); await db.batch([putItem(db, 'config-seo', 'config', 'owner', d), audit(db, actor, 'settings.seo', d.noindexAll ? 'noindex' : 'index')]); invalidateSite(); return json({seo: d}); }
   if (route === 'settings/company' && req.method === 'POST') {
     const T = (k, n = 200) => clean(b[k], n), url = k => { const v = clean(b.socials?.[k], 300); return /^https:\/\//.test(v) ? v : ''; };
-    const data = {brand: T('brand', 80) || 'Brazil Migration', legalName: T('legalName', 200), taxId: T('taxId', 80), address: T('address', 300), email: validEmail(T('email', 254)) ? T('email', 254) : '', phone: T('phone', 40), whatsapp: T('whatsapp', 40).replace(/[^\d+ ()-]/g, '').trim(), hours: T('hours', 120), showWhatsapp: !!b.showWhatsapp, socials: {instagram: url('instagram'), linkedin: url('linkedin'), facebook: url('facebook'), youtube: url('youtube'), x: url('x')}, updated: now()};
+    const hex = v => /^#[0-9a-f]{6}$/i.test(v) ? v : '', https = v => /^https:\/\/\S{4,300}$/.test(v) ? v : '';
+    const data = {brand: T('brand', 80) || (currentTenant().isDefault ? 'Brazil Migration' : currentTenant().name), brandColor: hex(T('brandColor', 7)), tagline: T('tagline', 160), logoUrl: https(T('logoUrl', 300)), legalName: T('legalName', 200), taxId: T('taxId', 80), address: T('address', 300), email: validEmail(T('email', 254)) ? T('email', 254) : '', phone: T('phone', 40), whatsapp: T('whatsapp', 40).replace(/[^\d+ ()-]/g, '').trim(), hours: T('hours', 120), showWhatsapp: !!b.showWhatsapp, socials: {instagram: url('instagram'), linkedin: url('linkedin'), facebook: url('facebook'), youtube: url('youtube'), x: url('x')}, updated: now()};
     await db.batch([putItem(db, 'config-company', 'config', 'owner', data), audit(db, actor, 'settings.company', data.legalName || data.brand)]); invalidateSite();
     return json({ok: true, company: data});
   }
