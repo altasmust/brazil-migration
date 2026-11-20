@@ -9,6 +9,7 @@ import {getBucket} from './storage.mjs';
 import {withTenant} from './tenant.mjs';
 import {scopedEnv, currentTenant} from './tenant-context.mjs';
 import {withIdentity, isAdminRequest, onAdminHost, adminHosts} from './auth.mjs';
+import {apiV1, ensureWebhooks} from './integrations.mjs';
 import {handleAuth, handlePlatform, handlePlatformAdmin, partnerGate, maybeVerifyCustomerUpload, iyzicoCallback, asaasReturnCb, asaasWebhookCb} from './api.mjs';
 
 export function getEnv() {
@@ -67,6 +68,17 @@ function platformRun(kind, after, req, ctx) {
       return await handlePlatform(r, env, route, {after, user});
     } catch (e) { return errorResponse(e); }
   })();
+}
+// /api/v1 — açık API (Bearer API anahtarı). Çerez/CSRF kullanmaz; firma, istek hostundan çözülür.
+export function openApi() {
+  return (req, ctx) => withTenant(req, async () => {
+    try {
+      if (adminHosts().length && onAdminHost(req)) return notFound();
+      await getDatabase().ready(); await refreshConfig(getDatabase(), 30000); const env = getEnv(); ensureWebhooks(env);
+      const params = ctx?.params ? await ctx.params : {};
+      return await apiV1(req, env, (params.path || []).join('/'));
+    } catch (e) { return errorResponse(e); }
+  });
 }
 export {isAdminRequest};
 const LANGSW_PREVIEW_CSS = '<style>.bm-langsw{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:7px 11px;border:1px dashed #8a6d1a;border-radius:6px;font-size:13px;font-weight:600;color:var(--ink,#183b2c);text-decoration:none}.bm-langsw img{border-radius:2px}@media(max-width:760px){.bm-langsw{min-height:36px;padding:6px 9px}.bm-langsw span{display:none}}</style>';

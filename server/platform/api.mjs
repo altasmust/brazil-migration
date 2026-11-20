@@ -10,6 +10,7 @@ import {assistantAdmin} from './assistant.mjs';
 import {privacyPublic, privacyAdmin, consentStmt} from './privacy.mjs';
 import {securityPublic, securityAdmin, twoFactorOn, verifySecondFactor} from './security.mjs';
 import {reportsAdmin} from './reports.mjs';
+import {integrationsAdmin, ensureWebhooks} from './integrations.mjs';
 // Unified login, registration, partner onboarding, admin account management and panel modules.
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
@@ -244,7 +245,7 @@ export function ensureReminders(env) {
 export {runReminders};
 
 export async function handleAuth(req, env, route) {
-  const db = env.DB; ensureReminders(env); ensureBackups(env);
+  const db = env.DB; ensureReminders(env); ensureBackups(env); ensureWebhooks(env);
   if (route === 'tenant/check' || route === 'tenant/create' || route === 'tenant/list') return handleTenantApi(req, env, route);
   route = route.replace(/^admin\//, '');
   if (route === 'health' && req.method === 'GET') return health(db);
@@ -713,7 +714,7 @@ function validPerms(ps) {
   return out;
 }
 export async function handlePlatformAdmin(req, env, route, ctx = {}) {
-  const db = env.DB; ensureReminders(env); ensureBackups(env);
+  const db = env.DB; ensureReminders(env); ensureBackups(env); ensureWebhooks(env);
   if (req.method !== 'GET') sameOrigin(req);
   const u = await currentUser(db, req);
   if (!u || u.email !== OWNER_EMAIL()) fail(401, 'Yönetici girişi gerekli.');
@@ -729,6 +730,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   { const g = await privacyAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
   { const g = await securityAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
   { const g = await reportsAdmin(req, db, route, {audit, actor}); if (g) return g; }
+  { const g = await integrationsAdmin(req, db, route, {audit, actor}); if (g) return g; }
   { const g = await commsAdmin(req, db, route, {audit, actor, translate: async (q, sl, tl) => translateText(q, sl, tl, await translateConfig(db))}); if (g) return g; }
 
   if (route === 'meta' && req.method === 'GET') return json({types: ACCOUNT_TYPES, perms: PERMS, permLabels: PERM_LABELS, defaults: DEFAULT_PERMS, panels: PANELS, countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES, mail: mailConfigured(), verifier: verifierConfigured()});
