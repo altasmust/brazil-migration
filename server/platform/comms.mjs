@@ -48,6 +48,16 @@ export const TEMPLATES = {
     en: {subject: '{firm}: {label} — {left}', title: 'Hello {first},', text: 'An important date is approaching for {service}: {label} — {when} ({left}). Your advisor will contact you; if you have questions you can write from your panel.', button: 'Open my file'},
     pt: {subject: '{firm}: {label} — {left}', title: 'Olá, {first},', text: 'Uma data importante se aproxima em {service}: {label} — {when} ({left}). Seu consultor entrará em contato; em caso de dúvidas, escreva pelo painel.', button: 'Abrir meu processo'},
     fa: {subject: '{firm}: {label} — {left}', title: 'سلام {first}،', text: 'یک تاریخ مهم برای {service} نزدیک است: {label} — {when} ({left}). مشاور شما با شما تماس خواهد گرفت؛ اگر سؤالی دارید از پنل بنویسید.', button: 'باز کردن پرونده'}},
+  'docs.missing': {label: 'Eksik belge hatırlatması', vars: ['first', 'list'],
+    tr: {subject: 'Eksik belgeleriniz', title: 'Merhaba {first},', text: 'Dosyanız için aşağıdaki belgeler henüz eksik veya yeniden yüklenmeli:\n\n{list}\n\nBelgeleri panelinizden yükleyebilirsiniz. Anlamadığınız bir nokta olursa bize yazın.'},
+    en: {subject: 'Your missing documents', title: 'Hello {first},', text: 'The following documents for your file are still missing or need to be uploaded again:\n\n{list}\n\nYou can upload them from your panel. If anything is unclear, please write to us.'},
+    pt: {subject: 'Seus documentos pendentes', title: 'Olá, {first},', text: 'Os documentos abaixo do seu processo ainda estão pendentes ou precisam ser enviados novamente:\n\n{list}\n\nVocê pode enviá-los pelo painel. Se algo não estiver claro, escreva para nós.'},
+    fa: {subject: 'مدارک ناقص شما', title: 'سلام {first}،', text: 'مدارک زیر برای پرونده شما هنوز ناقص هستند یا باید دوباره بارگذاری شوند:\n\n{list}\n\nمی‌توانید آن‌ها را از پنل خود بارگذاری کنید. اگر نکته‌ای نامشخص بود برای ما بنویسید.'}},
+  'reply.ack': {label: 'Mesaj alındı (otomatik karşılama taslağı)', vars: ['first'],
+    tr: {subject: 'Mesajınızı aldık', title: 'Merhaba {first},', text: 'Mesajınız için teşekkürler. Danışmanımız inceleyip en kısa sürede size dönecek.'},
+    en: {subject: 'We received your message', title: 'Hello {first},', text: 'Thank you for your message. Your advisor will review it and get back to you shortly.'},
+    pt: {subject: 'Recebemos sua mensagem', title: 'Olá, {first},', text: 'Obrigado pela sua mensagem. Seu consultor irá analisá-la e retornará em breve.'},
+    fa: {subject: 'پیام شما دریافت شد', title: 'سلام {first}،', text: 'از پیام شما سپاسگزاریم. مشاور شما آن را بررسی کرده و به‌زودی پاسخ خواهد داد.'}},
   'message.reply': {label: 'Danışmandan yeni mesaj (gelen kutusundan)', vars: ['first', 'firm', 'text'], button: true,
     tr: {subject: '{firm}: yeni mesajınız var', title: 'Merhaba {first},', text: '{text}', button: 'Panelde yanıtla'},
     en: {subject: '{firm}: you have a new message', title: 'Hello {first},', text: '{text}', button: 'Reply in your panel'},
@@ -98,6 +108,28 @@ export async function logMail(db, {to, subject, text, ok, dir = 'out', by, lang}
 }
 
 // ---------------- Yönetici API ----------------
+// Müşteriye yanıt gönder (gelen kutusu ve onaylı AI taslakları ortak kullanır). channel: 'app' (panel destek talebi) | 'email'.
+export async function sendReply(db, {personId, channel, text, subject, ticket, close, actor}) {
+  const id = clean(personId, 120); text = clean(text, 4000);
+  const p = id.startsWith('email:') ? {id, name: id.slice(6), email: id.slice(6), role: 'guest'} : await first(db, PERSON, id); if (!p) fail(404, 'Kişi bulunamadı.'); if (!text) fail(400, 'Mesaj boş olamaz.');
+  if (channel === 'email') {
+    if (!validEmail(String(p.email || ''))) fail(400, 'Bu kişinin geçerli e-postası yok.');
+    const lang = await langOf(db, p.email), firm = currentTenant().isDefault ? 'Brazil Migration' : currentTenant().name || 'Danışmanlık firması';
+    const subj = clean(subject, 150), r = await renderTpl(db, 'message.reply', lang, {first: String(p.name || '').split(' ')[0] || '', firm, text});
+    const m = await sendMail({to: p.email, subject: subj || r.subject, title: r.title, text, nolog: true});
+    await logMail(db, {to: p.email, subject: subj || r.subject, text, ok: !!m.sent, by: actor, lang});
+    return {ok: true, sent: !!m.sent};
+  }
+  if (p.role !== 'customer') fail(400, 'Uygulama içi mesaj yalnız müşterilere gönderilebilir.');
+  let tk = ticket ? await get(db, clean(ticket, 80), 'ticket') : null; if (tk && tk.owner !== id) tk = null;
+  if (!tk) { const open = await first(db, "SELECT id, data FROM items WHERE kind='ticket' AND owner=? AND json_extract(data,'$.status')<>'Kapandı' ORDER BY updated DESC LIMIT 1", id); if (open) tk = {id: open.id, owner: id, d: parse(open.data)}; }
+  const d = tk ? tk.d : {subject: clean(subject, 120) || 'Mesaj', topic: '', status: 'Yanıt Bekliyor', assignee: {id: 'owner', name: 'Yönetim', role: 'owner', label: 'Yönetim'}, messages: []};
+  if ((d.messages || []).length >= 100) fail(400, 'Bu konuşma doldu; yeni bir konu başlığıyla yazın.');
+  d.messages = [...(d.messages || []), {sender: actor || 'Yönetim', text, at: now()}]; d.status = close ? 'Kapandı' : 'Yanıt Bekliyor';
+  await put(db, tk ? tk.id : 'tk-' + uuid(), 'ticket', id, d); await notice(db, id, 'Destek talebinize yanıt geldi.', 'support');
+  return {ok: true};
+}
+
 const PERSON = 'SELECT id, name, email, role FROM people WHERE id=?';
 export async function commsAdmin(req, db, route, ctx = {}) {
   if (!route.startsWith('inbox/')) return null;
@@ -133,23 +165,8 @@ export async function commsAdmin(req, db, route, ctx = {}) {
     return json({person: {id: p.id, name: p.name, email: p.email, role: p.role, guest: id.startsWith('email:')}, lang: await langOf(db, p.email), tickets, items: items.slice(-300)});
   }
   if (route === 'inbox/reply' && req.method === 'POST') {
-    const b = await body(), id = clean(b.person, 120), text = clean(b.text, 4000), p = await who(id); if (!p) fail(404, 'Kişi bulunamadı.'); if (!text) fail(400, 'Mesaj boş olamaz.');
-    if (b.channel === 'email') {
-      if (!validEmail(String(p.email || ''))) fail(400, 'Bu kişinin geçerli e-postası yok.');
-      const lang = await langOf(db, p.email), firm = currentTenant().isDefault ? 'Brazil Migration' : currentTenant().name || 'Danışmanlık firması';
-      const subj = clean(b.subject, 150), r = await renderTpl(db, 'message.reply', lang, {first: String(p.name || '').split(' ')[0] || '', firm, text});
-      const m = await sendMail({to: p.email, subject: subj || r.subject, title: r.title, text, nolog: true});
-      await logMail(db, {to: p.email, subject: subj || r.subject, text, ok: !!m.sent, by: actor, lang});
-      await log('inbox.reply', 'email'); return json({ok: true, sent: !!m.sent});
-    }
-    if (p.role !== 'customer') fail(400, 'Uygulama içi mesaj yalnız müşterilere gönderilebilir.');
-    let tk = b.ticket ? await get(db, clean(b.ticket, 80), 'ticket') : null; if (tk && tk.owner !== id) tk = null;
-    if (!tk) { const open = await first(db, "SELECT id, data FROM items WHERE kind='ticket' AND owner=? AND json_extract(data,'$.status')<>'Kapandı' ORDER BY updated DESC LIMIT 1", id); if (open) tk = {id: open.id, owner: id, d: parse(open.data)}; }
-    const d = tk ? tk.d : {subject: clean(b.subject, 120) || 'Mesaj', topic: '', status: 'Yanıt Bekliyor', assignee: {id: 'owner', name: 'Yönetim', role: 'owner', label: 'Yönetim'}, messages: []};
-    if ((d.messages || []).length >= 100) fail(400, 'Bu konuşma doldu; yeni bir konu başlığıyla yazın.');
-    d.messages = [...(d.messages || []), {sender: actor || 'Yönetim', text, at: now()}]; d.status = b.close ? 'Kapandı' : 'Yanıt Bekliyor';
-    await put(db, tk ? tk.id : 'tk-' + uuid(), 'ticket', id, d); await notice(db, id, 'Destek talebinize yanıt geldi.', 'support');
-    await log('inbox.reply', 'app'); return json({ok: true});
+    const b = await body(), r = await sendReply(db, {personId: clean(b.person, 120), channel: b.channel, text: b.text, subject: b.subject, ticket: b.ticket, close: !!b.close, actor});
+    await log('inbox.reply', b.channel === 'email' ? 'email' : 'app'); return json(r);
   }
   if (route === 'inbox/log' && req.method === 'POST') { // gelen e-postayı elle akışa ekle
     const b = await body(), id = clean(b.person, 120), p = await who(id); if (!p || !validEmail(String(p.email || ''))) fail(404, 'Kişi bulunamadı.');

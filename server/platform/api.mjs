@@ -6,6 +6,7 @@ import {casesAdmin, casesCustomer, maybeRunCaseReminders} from './cases.mjs';
 import {salesPublic, salesAdmin, maybeRunSalesReminders} from './sales.mjs';
 import {networkAdmin} from './network.mjs';
 import {commsAdmin, setLang} from './comms.mjs';
+import {assistantAdmin} from './assistant.mjs';
 // Unified login, registration, partner onboarding, admin account management and panel modules.
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
@@ -708,6 +709,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   { const g = await casesAdmin(req, db, route, {audit, actor}); if (g) return g; }
   { const g = await salesAdmin(req, db, route, {audit, actor, createCustomer: (d, r, f) => createCustomerFromLead(d, r, f, actor)}); if (g) return g; }
   { const g = await networkAdmin(req, db, route, {audit, actor}); if (g) return g; }
+  { const g = await assistantAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
   { const g = await commsAdmin(req, db, route, {audit, actor, translate: async (q, sl, tl) => translateText(q, sl, tl, await translateConfig(db))}); if (g) return g; }
 
   if (route === 'meta' && req.method === 'GET') return json({types: ACCOUNT_TYPES, perms: PERMS, permLabels: PERM_LABELS, defaults: DEFAULT_PERMS, panels: PANELS, countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES, mail: mailConfigured(), verifier: verifierConfigured()});
