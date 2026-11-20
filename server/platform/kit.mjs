@@ -18,3 +18,11 @@ export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;',
 export const csvCell = v => { let s = String(v ?? ''); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",;\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 export const csv = (head, rows) => '﻿' + [head, ...rows].map(r => r.map(csvCell).join(';')).join('\r\n');
 export const csvResponse = (name, head, rows) => new Response(csv(head, rows), {headers: {'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="${name}"`, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff'}});
+
+// Bellekte basit hız sınırı (sunucu örneği başına). true dönerse sınır aşıldı.
+const rl = (globalThis.__bmKitRl ??= new Map());
+export function rateLimited(key, max, windowMs) {
+  const t = now(), e = rl.get(key);
+  if (!e || t - e.t > windowMs) { rl.set(key, {t, n: 1}); if (rl.size > 5000) for (const [k, v] of rl) if (t - v.t > windowMs) rl.delete(k); return false; }
+  e.n++; return e.n > max;
+}

@@ -7,6 +7,7 @@ import {salesPublic, salesAdmin, maybeRunSalesReminders} from './sales.mjs';
 import {networkAdmin} from './network.mjs';
 import {commsAdmin, setLang} from './comms.mjs';
 import {assistantAdmin} from './assistant.mjs';
+import {privacyPublic, privacyAdmin, consentStmt} from './privacy.mjs';
 // Unified login, registration, partner onboarding, admin account management and panel modules.
 import {
   OWNER_EMAIL, now, uuid, fail, clean, validEmail, hashPassword, checkPassword, passwordOk, PASSWORD_RULE,
@@ -248,6 +249,7 @@ export async function handleAuth(req, env, route) {
   if (req.method !== 'GET') sameOrigin(req);
   { const g = await growthPublic(req, db, route); if (g) return g; }
   { const g = await salesPublic(req, db, route); if (g) return g; }
+  { const g = await privacyPublic(req, db, route); if (g) return g; }
   if (route === 'payment-methods' && req.method === 'GET') return json({methods: enabledMethods(await loadPayments(db)).map(m => m.id === 'havale' ? m : {id: m.id, name: m.name})});
   if (route === 'cities' && req.method === 'GET') return json({countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES});
   if (route === 'config' && req.method === 'GET') return json({mail: mailConfigured(), verifier: verifierConfigured(), adminSeparate: adminHosts().length > 0, whatsapp: (cfgEnv('WHATSAPP_NUMBER') || '').replace(/\D/g, '') || null});
@@ -297,6 +299,8 @@ export async function handleAuth(req, env, route) {
       putItem(db, 'profile-' + pid, 'profile', pid, {name, phone: clean(b.phone, 40), address: [loc?.city, loc?.country].filter(Boolean).join(', ')}),
       notice(db, advisor, 'Yeni müşteri kaydı: ' + name + ' (' + reason + ')', 'customers'),
       ...regApplications(db, pid, advisor, b, loc),
+      consentStmt(db, {owner: pid, type: 'privacy-notice', source: 'register', text: clean(b.consentText, 300)}),
+      ...(b.marketing ? [consentStmt(db, {owner: pid, type: 'marketing', source: 'register'})] : []),
     ]);
     const mail = await sendVerify(db, req, user, name);
     return json({ok: true, verifyRequired: true, mailSent: mail.sent, devLink: mail.devLink});
@@ -711,6 +715,7 @@ export async function handlePlatformAdmin(req, env, route, ctx = {}) {
   { const g = await salesAdmin(req, db, route, {audit, actor, createCustomer: (d, r, f) => createCustomerFromLead(d, r, f, actor)}); if (g) return g; }
   { const g = await networkAdmin(req, db, route, {audit, actor}); if (g) return g; }
   { const g = await assistantAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
+  { const g = await privacyAdmin(req, db, route, {audit, actor, bucket: env.BUCKET}); if (g) return g; }
   { const g = await commsAdmin(req, db, route, {audit, actor, translate: async (q, sl, tl) => translateText(q, sl, tl, await translateConfig(db))}); if (g) return g; }
 
   if (route === 'meta' && req.method === 'GET') return json({types: ACCOUNT_TYPES, perms: PERMS, permLabels: PERM_LABELS, defaults: DEFAULT_PERMS, panels: PANELS, countries: Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, Object.keys(v)])), services: PARTNER_SERVICES, mail: mailConfigured(), verifier: verifierConfigured()});

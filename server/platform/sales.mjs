@@ -267,6 +267,7 @@ export async function salesPublic(req, db, route) {
     if (!b.consent) fail(400, 'Devam etmek için onay kutusunu işaretleyin.');
     const services = Array.isArray(c.services) && c.services.length ? c.services : SERVICES, service = services.includes(b.service) ? b.service : clean(b.service, 60);
     const r = await upsertLead(db, {name, email, phone, service, country: b.country, note: b.message, source: 'Başvuru formu', consent: true, consentText: c.consentText, historyText: 'Başvuru formundan geldi.'}, 'Form');
+    { const {recordConsent} = await import('./privacy.mjs'); await recordConsent(db, {email, type: 'privacy-notice', source: 'lead-form', text: c.consentText}).catch(() => {}); }
     if (r.created) await notice(db, 'owner', `Yeni başvuru: ${name}${service ? ' · ' + service : ''}`, 'adaylar');
     const brand = await firmBrand(db);
     if (validLang(b.lang)) await setLangSafe(db, email, b.lang);

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Verilerim ve gizlilik</title>
+<style>
+:root{--brand:#1b5e20;--bg:#f4f7f2;--ink:#17261b;--mute:#68776b;--line:#d7dfd2}
+*{box-sizing:border-box}body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:720px;margin:0 auto;padding:18px 16px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 0 14px}.top a{color:var(--brand);font-size:14px}
+.lang{display:flex;gap:6px}.lang button{font:inherit;font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:#fff;cursor:pointer}.lang button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.card{background:#fff;border:1px solid #e3e9de;border-radius:18px;padding:20px;box-shadow:0 6px 24px rgba(23,38,27,.06);margin-bottom:16px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 8px}.mute{color:var(--mute);font-size:14px;margin:0 0 12px}
+.btn{display:inline-block;font:inherit;background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;text-decoration:none}.btn.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand)}.btn.danger{background:#b3261e}
+textarea{width:100%;font:inherit;border:1px solid var(--line);border-radius:10px;padding:9px;min-height:70px}label.row{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.req{border-top:1px solid #eef1eb;padding:9px 0;font-size:14.5px}.chip{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;background:#eef3ef;margin-left:6px}.msg{margin:10px 0;color:var(--brand);font-weight:600}.err{color:#b3261e}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="/panel/" id="back">←</a><div class="lang"><button data-l="tr">TR</button><button data-l="en">EN</button><button data-l="pt">PT</button></div></div>
+  <div id="app"><div class="card"><p class="mute">…</p></div></div>
+</div>
+<script>
+(function(){
+  var TX={
+    tr:{back:'← Panele dön',h:'Verilerim ve gizlilik',login:'Bu sayfayı görmek için giriş yapın.',go:'Giriş yap',
+      c1:'Duyuru ve bülten e-postaları',c1d:'Kampanya, duyuru ve bülten e-postaları almak istiyorum. Hizmetle ilgili zorunlu bildirimler bu tercihten etkilenmez.',saved:'Tercihiniz kaydedildi.',
+      c2:'Verilerimi indir',c2d:'Hesabınıza bağlı bilgilerin (profil, başvurular, mesajlar, mali kayıtlar, rıza geçmişi) bir kopyasını JSON dosyası olarak indirin.',dl:'Verilerimi indir',
+      c3:'Taleplerim',c3d:'Verilerinizin silinmesini veya düzeltilmesini isteyebilirsiniz. Mali kayıtlar (fatura, ödeme, sözleşme) yasal saklama süresi boyunca anonimleştirilmiş biçimde saklanır.',note:'Notunuz (isteğe bağlı)',del:'Hesabımın ve verilerimin silinmesini iste',rec:'Verilerimin düzeltilmesini iste',sent:'Talebiniz alındı. Yanıt süresi: ',none:'Henüz talebiniz yok.',
+      open:'Bekliyor',done:'Tamamlandı',rejected:'Reddedildi',tdel:'Silme',trec:'Düzeltme',due:'Son yanıt tarihi',contact:'Sorularınız için: ',notice:'Aydınlatma metnini oku',confirm:'Silme talebi gönderilsin mi? Onaylandığında hesabınız kalıcı olarak anonimleştirilir.'},
+    en:{back:'← Back to panel',h:'My data & privacy',login:'Please sign in to view this page.',go:'Sign in',
+      c1:'Announcements & newsletters',c1d:'I would like to receive promotional e-mails, announcements and newsletters. Mandatory service notices are not affected.',saved:'Preference saved.',
+      c2:'Download my data',c2d:'Download a copy of the data linked to your account (profile, cases, messages, financial records, consent history) as a JSON file.',dl:'Download my data',
+      c3:'My requests',c3d:'You can ask for your data to be deleted or corrected. Financial records (invoices, payments, contracts) are kept in anonymised form for the legal retention period.',note:'Your note (optional)',del:'Request deletion of my account and data',rec:'Request correction of my data',sent:'Request received. Response due by: ',none:'You have no requests yet.',
+      open:'Pending',done:'Completed',rejected:'Rejected',tdel:'Deletion',trec:'Correction',due:'Respond by',contact:'Questions: ',notice:'Read the privacy notice',confirm:'Send the deletion request? Once approved your account is permanently anonymised.'},
+    pt:{back:'← Voltar ao painel',h:'Meus dados e privacidade',login:'Entre para ver esta página.',go:'Entrar',
+      c1:'Comunicados e newsletters',c1d:'Quero receber e-mails promocionais, comunicados e newsletters. Avisos obrigatórios do serviço não são afetados.',saved:'Preferência salva.',
+      c2:'Baixar meus dados',c2d:'Baixe uma cópia dos dados da sua conta (perfil, processos, mensagens, registros financeiros, histórico de consentimento) em um arquivo JSON.',dl:'Baixar meus dados',
+      c3:'Minhas solicitações',c3d:'Você pode pedir a exclusão ou a correção dos seus dados. Registros financeiros (faturas, pagamentos, contratos) são mantidos de forma anonimizada pelo prazo legal.',note:'Sua observação (opcional)',del:'Solicitar exclusão da minha conta e dados',rec:'Solicitar correção dos meus dados',sent:'Solicitação recebida. Prazo de resposta: ',none:'Você ainda não tem solicitações.',
+      open:'Pendente',done:'Concluída',rejected:'Recusada',tdel:'Exclusão',trec:'Correção',due:'Responder até',contact:'Dúvidas: ',notice:'Ler o aviso de privacidade',confirm:'Enviar a solicitação de exclusão? Após aprovada, sua conta será anonimizada permanentemente.'}
+  };
+  var cur=(new URLSearchParams(location.search).get('lang')||(navigator.language||'tr').slice(0,2)).toLowerCase();if(!TX[cur])cur='tr';
+  var D=null,app=document.getElementById('app');
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function api(p,body){return fetch('/api/auth/'+p,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,cache:'no-store'}).then(function(r){return r.json().catch(function(){return{}}).then(function(d){if(!r.ok){var e=new Error(d.error||'Hata');e.status=r.status;throw e}return d})})}
+  var fmt=function(ms){return new Date(ms).toLocaleDateString(cur==='tr'?'tr-TR':cur==='pt'?'pt-BR':'en-GB')};
+  function draw(msg,err){
+    var t=TX[cur];document.documentElement.lang=cur;document.title=t.h;document.getElementById('back').textContent=t.back;
+    document.querySelectorAll('.lang button').forEach(function(b){b.classList.toggle('on',b.dataset.l===cur)});
+    if(!D){app.innerHTML='<div class="card"><h1>'+esc(t.h)+'</h1><p class="mute">'+esc(t.login)+'</p><a class="btn" href="/giris/?next=/verilerim/">'+esc(t.go)+'</a></div>';return}
+    var rq=D.requests.length?D.requests.map(function(r){return'<div class="req"><b>'+esc(r.type==='delete'?t.tdel:t.trec)+'</b><span class="chip">'+esc(t[r.status]||r.status)+'</span><br><small>'+fmt(r.at)+(r.status==='open'?' · '+esc(t.due)+': '+fmt(r.due):'')+(r.result?' · '+esc(r.result):'')+'</small></div>'}).join(''):'<p class="mute">'+esc(t.none)+'</p>';
+    app.innerHTML='<h1>'+esc(t.h)+'</h1><p class="mute">'+esc(D.person.name)+' · '+esc(D.person.email)+'</p>'+(msg?'<div class="msg'+(err?' err':'')+'">'+esc(msg)+'</div>':'')+
+      '<div class="card"><h2>'+esc(t.c1)+'</h2><label class="row"><input type="checkbox" id="mk"'+(D.marketing?' checked':'')+'><span>'+esc(t.c1d)+'</span></label></div>'+
+      '<div class="card"><h2>'+esc(t.c2)+'</h2><p class="mute">'+esc(t.c2d)+'</p><a class="btn" href="/api/auth/privacy/me/export" download>'+esc(t.dl)+'</a></div>'+
+      '<div class="card"><h2>'+esc(t.c3)+'</h2><p class="mute">'+esc(t.c3d)+'</p>'+rq+'<p><textarea id="note" maxlength="1000" placeholder="'+esc(t.note)+'"></textarea></p><p><button class="btn ghost" id="rec">'+esc(t.rec)+'</button> <button class="btn danger" id="del">'+esc(t.del)+'</button></p></div>'+
+      '<p class="mute">'+(D.contact?esc(t.contact)+'<a href="mailto:'+esc(D.contact)+'">'+esc(D.contact)+'</a> · ':'')+'<a href="/gizlilik-bildirimi/?lang='+cur+'">'+esc(t.notice)+'</a></p>';
+    document.getElementById('mk').onchange=function(){var v=this.checked;api('privacy/me/consent',{type:'marketing',granted:v}).then(function(){D.marketing=v;draw(t.saved)}).catch(function(e){draw(e.message,1)})};
+    function send(type){if(type==='delete'&&!confirm(t.confirm))return;api('privacy/me/request',{type:type,note:document.getElementById('note').value}).then(function(r){return load(t.sent+fmt(r.due))}).catch(function(e){draw(e.message,1)})}
+    document.getElementById('rec').onclick=function(){send('rectify')};document.getElementById('del').onclick=function(){send('delete')};
+  }
+  function load(msg){return api('privacy/me').then(function(d){D=d;draw(msg)}).catch(function(e){D=null;draw(e.status===401?'':e.message,e.status!==401&&1)})}
+  document.querySelectorAll('.lang button').forEach(function(b){b.onclick=function(){cur=b.dataset.l;draw()}});load();
+})();
+</script>
+</body>
+</html>

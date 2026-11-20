@@ -74,7 +74,11 @@ const tenantLang = () => validLang(currentTenant().lang) || 'tr';
 export async function langOf(db, email, hint) {
   const h = validLang(hint); if (h) return h;
   const e = String(email || '').toLowerCase();
-  if (e) { const r = await first(db, 'SELECT data FROM items WHERE id=?', 'lang:' + e).catch(() => null); const l = r && validLang(parse(r.data).lang); if (l) return l; }
+  if (e) {
+    const r = await first(db, 'SELECT data FROM items WHERE id=?', 'lang:' + e).catch(() => null); const l = r && validLang(parse(r.data).lang); if (l) return l;
+    // müşterinin panelde seçtiği “Tercih edilen dil” (profil)
+    const pr = await first(db, "SELECT i.data FROM items i JOIN people p ON i.owner=p.id WHERE p.email=? AND i.kind='profile' LIMIT 1", e).catch(() => null); const pl = pr && validLang(parse(pr.data).language); if (pl) return pl;
+  }
   return tenantLang();
 }
 export async function setLang(db, email, lang) {
